@@ -32,9 +32,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
     var audioController:PdAudioController?
- 
+    var syntheticTelemetry: SyntheticTelemetrySource?
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool
     {
+        if let telemetryConfig = TelemetryConfig.loadFromBundle() {
+            let telemetry = TelemetryService(config: telemetryConfig)
+            TelemetryService.shared = telemetry
+            telemetry.start()
+            telemetry.recordAppEvent(name: "app_launched")
+            if telemetryConfig.syntheticSourceEnabled {
+                let synthetic = SyntheticTelemetrySource(service: telemetry)
+                synthetic.start()
+                syntheticTelemetry = synthetic
+            }
+        }
+        else {
+            print("Telemetry.plist missing or invalid - telemetry disabled")
+        }
+
         // Override point for customization after application launch.
         audioController = PdAudioController()
         coreLocationController = CoreLocationController()

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  Template for the telemetry gateway config (PROJECT-PLAN.md §6).
+  Copy this file to Telemetry.plist (same directory) and fill in the real
+  values. Telemetry.plist is gitignored — never commit the ingest token.
+-->
+<dict>
+	<key>DeviceId</key>
+	<string>hs-XX</string>
+	<key>BaseURL</key>
+	<string>https://TELEMETRY-BACKEND-HOST</string>
+	<key>IngestToken</key>
+	<string>INGEST_TOKEN_HERE</string>
+	<key>SyntheticSourceEnabled</key>
+	<false/>
+</dict>
+</plist>

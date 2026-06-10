@@ -3,10 +3,14 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 46;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7E7E1E1100000000000000AA /* TelemetryConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0100000000000000AA /* TelemetryConfig.swift */; };
+		7E7E1E1200000000000000AA /* TelemetryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0200000000000000AA /* TelemetryService.swift */; };
+		7E7E1E1300000000000000AA /* SyntheticTelemetrySource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0300000000000000AA /* SyntheticTelemetrySource.swift */; };
+		7E7E1E1400000000000000AA /* Telemetry.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0400000000000000AA /* Telemetry.plist */; };
 		8411A75428BF687700205E32 /* bitwise.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75228BF687700205E32 /* bitwise.c */; };
 		8411A75528BF687700205E32 /* framing.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75328BF687700205E32 /* framing.c */; };
 		8411A77228BF69DB00205E32 /* block.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75828BF69DB00205E32 /* block.c */; };
@@ -139,6 +143,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		7E7E1E0100000000000000AA /* TelemetryConfig.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TelemetryConfig.swift; path = src/Telemetry/TelemetryConfig.swift; sourceTree = "<group>"; };
+		7E7E1E0200000000000000AA /* TelemetryService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TelemetryService.swift; path = src/Telemetry/TelemetryService.swift; sourceTree = "<group>"; };
+		7E7E1E0300000000000000AA /* SyntheticTelemetrySource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = SyntheticTelemetrySource.swift; path = src/Telemetry/SyntheticTelemetrySource.swift; sourceTree = "<group>"; };
+		7E7E1E0400000000000000AA /* Telemetry.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Telemetry.plist; path = src/Telemetry/Telemetry.plist; sourceTree = "<group>"; };
 		8411A75228BF687700205E32 /* bitwise.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bitwise.c; path = ../../libogg/src/bitwise.c; sourceTree = "<group>"; };
 		8411A75328BF687700205E32 /* framing.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = framing.c; path = ../../libogg/src/framing.c; sourceTree = "<group>"; };
 		8411A75628BF68B900205E32 /* os_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = os_types.h; path = ../../libogg/include/ogg/os_types.h; sourceTree = "<group>"; };
@@ -252,6 +260,17 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		7E7E1E2000000000000000AA /* Telemetry */ = {
+			isa = PBXGroup;
+			children = (
+				7E7E1E0100000000000000AA /* TelemetryConfig.swift */,
+				7E7E1E0200000000000000AA /* TelemetryService.swift */,
+				7E7E1E0300000000000000AA /* SyntheticTelemetrySource.swift */,
+				7E7E1E0400000000000000AA /* Telemetry.plist */,
+			);
+			name = Telemetry;
+			sourceTree = "<group>";
+		};
 		8411A75128BF685700205E32 /* oggvorbis */ = {
 			isa = PBXGroup;
 			children = (
@@ -353,6 +372,7 @@
 				84F48CE51F24B14C00869BF2 /* RwaScene.swift */,
 				84F48CE61F24B14C00869BF2 /* RwaState.swift */,
 				84F48CE71F24B14C00869BF2 /* RwaUtilities.swift */,
+				7E7E1E2000000000000000AA /* Telemetry */,
 				84F76B511F24A47000A05F3F /* ViewController */,
 				8436A26C1C3156F400A4E328 /* Products */,
 				84C4C5551F23730B001C5824 /* Frameworks */,
@@ -414,7 +434,6 @@
 			);
 			dependencies = (
 				84203DF128ED98090067F13F /* PBXTargetDependency */,
-				84203DEF28ED97810067F13F /* PBXTargetDependency */,
 			);
 			name = rwaclient;
 			packageProductDependencies = (
@@ -436,6 +455,7 @@
 					8436A26A1C3156F400A4E328 = {
 						CreatedOnToolsVersion = 7.2;
 						LastSwiftMigration = 0820;
+						ProvisioningStyle = Automatic;
 						SystemCapabilities = {
 							com.apple.BackgroundModes = {
 								enabled = 1;
@@ -458,7 +478,6 @@
 			);
 			mainGroup = 8436A2621C3156F400A4E328;
 			packageReferences = (
-				E45AB4C027CE215600D65E93 /* XCRemoteSwiftPackageReference "Zip" */,
 			);
 			productRefGroup = 8436A26C1C3156F400A4E328 /* Products */;
 			projectDirPath = "";
@@ -530,6 +549,7 @@
 				84F48D061F24B2AB00869BF2 /* LaunchScreen.storyboard in Resources */,
 				84F48D001F24B26C00869BF2 /* Assets.xcassets in Resources */,
 				84F48D071F24B2AB00869BF2 /* Main.storyboard in Resources */,
+				7E7E1E1400000000000000AA /* Telemetry.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -617,6 +637,9 @@
 				84F48CF31F24B14C00869BF2 /* RwaScene.swift in Sources */,
 				84F48CEB1F24B14C00869BF2 /* CoreLocationController.swift in Sources */,
 				E45AB4CD27CF5E0100D65E93 /* DownloadManager.swift in Sources */,
+				7E7E1E1100000000000000AA /* TelemetryConfig.swift in Sources */,
+				7E7E1E1200000000000000AA /* TelemetryService.swift in Sources */,
+				7E7E1E1300000000000000AA /* SyntheticTelemetrySource.swift in Sources */,
 				84C70ECA2213148A005C49C3 /* NSData+F53OSCBlob.m in Sources */,
 				84F48CF21F24B14C00869BF2 /* RwaImport.swift in Sources */,
 				8411A77528BF69DB00205E32 /* bitrate.c in Sources */,
@@ -631,10 +654,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		84203DEF28ED97810067F13F /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			productRef = 84203DEE28ED97810067F13F /* Zip */;
-		};
 		84203DF128ED98090067F13F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = "libpd-ios";
@@ -764,9 +783,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = X68HKQ3ZCY;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					PUREDATA,
 					PDINSTANCE,
@@ -781,13 +798,10 @@
 					"\"$(SRCROOT)/../vorbis/lib\"/**",
 				);
 				INFOPLIST_FILE = src/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/libs";
-				OBJROOT = /Users/admin/Repositories/buildtmp;
+				OBJROOT = "/Users/cedric.spindler@fhnw.ch/Projects/rwa/Repositories/buildtmp";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-DPD",
@@ -796,24 +810,14 @@
 					"-DUSEAPI_DUMMY",
 				);
 				OTHER_LDFLAGS = "$(inherited)";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.beryllium.rwa-client";
+				PRODUCT_BUNDLE_IDENTIFIER = ch.fhnw.hsm.rnd.rwa.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "src/rwa client-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.0;
-				USER_HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../F53OSC-master\"",
-					"\"$(SRCROOT)/libs\"/**",
-					"\"$(SRCROOT)/../vas_library\"/**",
-					"\"$(SRCROOT)/../libpd/pure-data/src\"",
-					"\"$(SRCROOT)/../vas_library/examples/PureData/raw_binauralsimple~\"",
-					"\"$(SRCROOT)/../F53OSC\"",
-					"\"$(SRCROOT)/../libpd/libpd_wrapper\"",
-					"\"$(SRCROOT)/../libpd/libpd_wrapper/util\"",
-					"\"$(SRCROOT)/../libpd/objc\"",
-				);
+				USER_HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../F53OSC-master\" \"$(SRCROOT)/libs\"/** \"$(SRCROOT)/../vas_library\"/** \"$(SRCROOT)/../libpd/pure-data/src\" \"$(SRCROOT)/../vas_library/examples/PureData/raw_binauralsimple~\" \"$(SRCROOT)/../F53OSC\" \"$(SRCROOT)/../libpd/libpd_wrapper\" \"$(SRCROOT)/../libpd/libpd_wrapper/util\" \"$(SRCROOT)/../libpd/objc\"";
 			};
 			name = Debug;
 		};
@@ -824,9 +828,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = X68HKQ3ZCY;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					PUREDATA,
 					PDINSTANCE,
@@ -841,13 +843,10 @@
 					"\"$(SRCROOT)/../vorbis/lib\"/**",
 				);
 				INFOPLIST_FILE = src/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/libs";
-				OBJROOT = /Users/admin/Repositories/buildtmp;
+				OBJROOT = "/Users/cedric.spindler@fhnw.ch/Projects/rwa/Repositories/buildtmp";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-DPD",
@@ -856,23 +855,13 @@
 					"-DUSEAPI_DUMMY",
 				);
 				OTHER_LDFLAGS = "$(inherited)";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.beryllium.rwa-client";
+				PRODUCT_BUNDLE_IDENTIFIER = ch.fhnw.hsm.rnd.rwa.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "src/rwa client-Bridging-Header.h";
 				SWIFT_VERSION = 4.0;
-				USER_HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../F53OSC-master\"",
-					"\"$(SRCROOT)/libs\"/**",
-					"\"$(SRCROOT)/../vas_library\"/**",
-					"\"$(SRCROOT)/../libpd/pure-data/src\"",
-					"\"$(SRCROOT)/../vas_library/examples/PureData/raw_binauralsimple~\"",
-					"\"$(SRCROOT)/../F53OSC\"",
-					"\"$(SRCROOT)/../libpd/libpd_wrapper\"",
-					"\"$(SRCROOT)/../libpd/libpd_wrapper/util\"",
-					"\"$(SRCROOT)/../libpd/objc\"",
-				);
+				USER_HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../F53OSC-master\" \"$(SRCROOT)/libs\"/** \"$(SRCROOT)/../vas_library\"/** \"$(SRCROOT)/../libpd/pure-data/src\" \"$(SRCROOT)/../vas_library/examples/PureData/raw_binauralsimple~\" \"$(SRCROOT)/../F53OSC\" \"$(SRCROOT)/../libpd/libpd_wrapper\" \"$(SRCROOT)/../libpd/libpd_wrapper/util\" \"$(SRCROOT)/../libpd/objc\"";
 			};
 			name = Release;
 		};
@@ -898,25 +887,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		E45AB4C027CE215600D65E93 /* XCRemoteSwiftPackageReference "Zip" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/marmelroy/Zip.git";
-			requirement = {
-				kind = upToNextMinorVersion;
-				minimumVersion = 2.1.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		84203DEE28ED97810067F13F /* Zip */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = E45AB4C027CE215600D65E93 /* XCRemoteSwiftPackageReference "Zip" */;
-			productName = Zip;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8436A2631C3156F400A4E328 /* Project object */;
 }

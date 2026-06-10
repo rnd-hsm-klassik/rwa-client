@@ -41,6 +41,10 @@ The following names all refer to the same project:
 - Min iOS: 16.2
 - Build: open `rwaClient/rwaclient.xcodeproj` / `xcodebuild -scheme rwaclient build`
 - Tests: No tests, (start with `xcodebuild test -scheme rwaclient -destination 'platform=iOS Simulator,name=iPhone 15'`)
+- Local setup: copy `rwaClient/src/Telemetry/Telemetry.example.plist` to
+  `Telemetry.plist` (same directory) and fill in device_id, backend URL and
+  ingest token. `Telemetry.plist` is gitignored (contains the token); the build
+  fails on a fresh clone until it exists.
 
 ## Conventions & constraints
 
