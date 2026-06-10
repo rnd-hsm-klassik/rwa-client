@@ -1,1 +1,3 @@
 .DS_Store
+# per-user Xcode state
+xcuserdata/
