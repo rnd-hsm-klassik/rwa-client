@@ -3,13 +3,13 @@
 //  rwa client
 //
 //  Telemetry gateway core (PROJECT-PLAN.md §4 + §6): collects device- and
-//  app-origin events, stamps wall-clock time and envelope context, and
-//  uploads them as JSON batches to POST /v1/batch.
+//  app-origin events, stamps wall-clock time and envelope context, persists
+//  them to the SQLite pending_events store, and uploads them as JSON batches
+//  to POST /v1/batch. Rows are deleted only on HTTP 2xx, so events survive
+//  app relaunches; re-sends are dedup-safe on the backend.
 //
-//  Current stage: in-memory pending buffer fed by SyntheticTelemetrySource.
-//  Next stages: SQLite-backed pending_events store (survives relaunch),
-//  background URLSession for uploads across background/foreground cycles,
-//  BLE/CBOR producer replacing the synthetic source.
+//  Next stages: background URLSession for uploads across background/
+//  foreground cycles, BLE/CBOR producer replacing the synthetic source.
 //
 
 import Foundation
@@ -23,8 +23,6 @@ class TelemetryService {
     static let maxBatchSize = 500
     static let uploadInterval: TimeInterval = 15
     static let maxBackoff: TimeInterval = 300
-    // Memory cap until the SQLite store lands; drop-oldest on overflow.
-    static let maxPendingEvents = 10000
 
     static var shared: TelemetryService?
 
@@ -46,7 +44,8 @@ class TelemetryService {
 
     // All mutable state below is confined to this serial queue.
     private let queue = DispatchQueue(label: "ch.rwa.telemetry", qos: .utility)
-    private var pending: [[String: Any]] = []
+    private var store: TelemetryStore?
+    private var storeFailureLogged = false
     private var appSeq: UInt64 = TelemetryService.appSeqOffset
     private var soundwalkId = "walk-dev"
     private var fwVersion = "unknown"
@@ -64,6 +63,16 @@ class TelemetryService {
     }
 
     func start() {
+        queue.async {
+            let baseDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            if let dir = baseDir?.appendingPathComponent("Telemetry", isDirectory: true) {
+                self.store = TelemetryStore(directory: dir)
+            }
+            if self.store == nil {
+                os_log("telemetry: cannot open event store - events will be dropped", type: .error)
+            }
+        }
+
         let timer = DispatchSource.makeTimerSource(queue: queue)
         timer.schedule(deadline: .now() + TelemetryService.uploadInterval,
                        repeating: TelemetryService.uploadInterval)
@@ -119,31 +128,66 @@ class TelemetryService {
     // MARK: - Queue-confined
 
     private func append(_ event: [String: Any]) {
-        pending.append(event)
-        if pending.count > TelemetryService.maxPendingEvents {
-            pending.removeFirst(pending.count - TelemetryService.maxPendingEvents)
+        // If the store is unavailable, drop telemetry rather than buffer
+        // unboundedly or touch playback (CLAUDE.md constraint).
+        guard let store = store else { return }
+
+        guard JSONSerialization.isValidJSONObject(event),
+              let data = try? JSONSerialization.data(withJSONObject: event),
+              let json = String(data: data, encoding: .utf8)
+        else {
+            os_log("telemetry: dropping non-serializable event", type: .error)
+            return
+        }
+
+        let ok = store.append(sessionId: sessionId,
+                              soundwalkId: soundwalkId,
+                              fwVersion: fwVersion,
+                              appVersion: TelemetryService.appVersion,
+                              eventJSON: json)
+        if !ok && !storeFailureLogged {
+            storeFailureLogged = true
+            os_log("telemetry: event store insert failed - dropping events", type: .error)
         }
     }
 
     private func uploadNextBatch() {
-        if uploading || pending.isEmpty || Date() < nextUploadAllowedAt {
+        guard let store = store else { return }
+        if uploading || Date() < nextUploadAllowedAt {
+            return
+        }
+        guard let batch = store.fetchOldestBatch(limit: TelemetryService.maxBatchSize) else {
             return
         }
 
-        let events = Array(pending.prefix(TelemetryService.maxBatchSize))
+        var events: [[String: Any]] = []
+        for json in batch.eventsJSON {
+            if let data = json.data(using: .utf8),
+               let event = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+                events.append(event)
+            }
+        }
+        if events.isEmpty {
+            // Nothing decodable in this range; clear it so we don't spin.
+            store.deleteThrough(id: batch.lastId)
+            return
+        }
+
+        // Envelope comes from the stored rows, not current state: leftover
+        // events from a previous run upload under their original session.
         let envelope: [String: Any] = [
             "schema": 1,
             "device_id": config.deviceId,
-            "session_id": sessionId,
-            "fw_version": fwVersion,
-            "app_version": TelemetryService.appVersion,
-            "soundwalk_id": soundwalkId,
+            "session_id": batch.sessionId,
+            "fw_version": batch.fwVersion,
+            "app_version": batch.appVersion,
+            "soundwalk_id": batch.soundwalkId,
             "events": events
         ]
 
         guard let body = try? JSONSerialization.data(withJSONObject: envelope) else {
             os_log("telemetry: cannot serialize batch, dropping %d events", type: .error, events.count)
-            pending.removeFirst(events.count)
+            store.deleteThrough(id: batch.lastId)
             return
         }
 
@@ -155,18 +199,19 @@ class TelemetryService {
 
         uploading = true
         let count = events.count
+        let lastId = batch.lastId
         let task = urlSession.dataTask(with: request) { [weak self] _, response, error in
             guard let self = self else { return }
             self.queue.async {
                 self.uploading = false
                 let status = (response as? HTTPURLResponse)?.statusCode ?? -1
                 if error == nil && (200...299).contains(status) {
-                    // Delete only on 2xx; on failure events stay queued and
-                    // the re-send is dedup-safe on the backend.
-                    self.pending.removeFirst(min(count, self.pending.count))
+                    // Delete only on 2xx; on failure rows stay in the store
+                    // and the re-send is dedup-safe on the backend.
+                    store.deleteThrough(id: lastId)
                     self.consecutiveFailures = 0
                     self.nextUploadAllowedAt = Date.distantPast
-                    os_log("telemetry: uploaded %d events, %d still pending", type: .info, count, self.pending.count)
+                    os_log("telemetry: uploaded %d events, %d still pending", type: .info, count, store.pendingCount())
                 } else {
                     self.consecutiveFailures += 1
                     let backoff = min(pow(2.0, Double(self.consecutiveFailures - 1)) * TelemetryService.uploadInterval,
