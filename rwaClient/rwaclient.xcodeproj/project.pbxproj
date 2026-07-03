@@ -802,6 +802,8 @@
 					"\"$(SRCROOT)/../vorbis/lib\"/**",
 				);
 				INFOPLIST_FILE = src/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "RWA Player";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music-games";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/libs";
@@ -814,7 +816,7 @@
 					"-DUSEAPI_DUMMY",
 				);
 				OTHER_LDFLAGS = "$(inherited)";
-				PRODUCT_BUNDLE_IDENTIFIER = ch.fhnw.hsm.rnd.rwa.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fhnw.rwa.player;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -847,6 +849,8 @@
 					"\"$(SRCROOT)/../vorbis/lib\"/**",
 				);
 				INFOPLIST_FILE = src/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "RWA Player";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music-games";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/libs";
@@ -859,7 +863,7 @@
 					"-DUSEAPI_DUMMY",
 				);
 				OTHER_LDFLAGS = "$(inherited)";
-				PRODUCT_BUNDLE_IDENTIFIER = ch.fhnw.hsm.rnd.rwa.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fhnw.rwa.player;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				PROVISIONING_PROFILE_SPECIFIER = "";
