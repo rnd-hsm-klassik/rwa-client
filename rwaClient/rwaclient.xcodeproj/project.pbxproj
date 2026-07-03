@@ -727,7 +727,6 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 9.1;
 				MTL_ENABLE_DEBUG_INFO = YES;
-				OBJROOT = /Users/admin/Repositories/buildtmp;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = "$(inherited)";
 				SDKROOT = iphoneos;
@@ -772,7 +771,6 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 9.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OBJROOT = /Users/admin/Repositories/buildtmp;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = "$(inherited)";
 				SDKROOT = iphoneos;
@@ -807,7 +805,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/libs";
-				OBJROOT = "/Users/cedric.spindler@fhnw.ch/Projects/rwa/Repositories/buildtmp";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-DPD",
@@ -854,7 +851,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/libs";
-				OBJROOT = "/Users/cedric.spindler@fhnw.ch/Projects/rwa/Repositories/buildtmp";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-DPD",
