@@ -424,9 +424,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		8436A26A1C3156F400A4E328 /* rwaclient */ = {
+		8436A26A1C3156F400A4E328 /* rwa-client */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 8436A27F1C3156F400A4E328 /* Build configuration list for PBXNativeTarget "rwaclient" */;
+			buildConfigurationList = 8436A27F1C3156F400A4E328 /* Build configuration list for PBXNativeTarget "rwa-client" */;
 			buildPhases = (
 				8436A2671C3156F400A4E328 /* Sources */,
 				8436A2681C3156F400A4E328 /* Frameworks */,
@@ -438,7 +438,7 @@
 			dependencies = (
 				84203DF128ED98090067F13F /* PBXTargetDependency */,
 			);
-			name = rwaclient;
+			name = "rwa-client";
 			packageProductDependencies = (
 			);
 			productName = "rwa client";
@@ -492,7 +492,7 @@
 			);
 			projectRoot = "";
 			targets = (
-				8436A26A1C3156F400A4E328 /* rwaclient */,
+				8436A26A1C3156F400A4E328 /* rwa-client */,
 			);
 		};
 /* End PBXProject section */
@@ -881,7 +881,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		8436A27F1C3156F400A4E328 /* Build configuration list for PBXNativeTarget "rwaclient" */ = {
+		8436A27F1C3156F400A4E328 /* Build configuration list for PBXNativeTarget "rwa-client" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8436A2801C3156F400A4E328 /* Debug */,

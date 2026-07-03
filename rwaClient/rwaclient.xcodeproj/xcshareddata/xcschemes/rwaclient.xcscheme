@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "8436A26A1C3156F400A4E328"
-               BuildableName = "rwaclient.app"
-               BlueprintName = "rwaclient"
+               BuildableName = "rwa-client.app"
+               BlueprintName = "rwa-client"
                ReferencedContainer = "container:rwaclient.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -45,8 +45,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "8436A26A1C3156F400A4E328"
-            BuildableName = "rwaclient.app"
-            BlueprintName = "rwaclient"
+            BuildableName = "rwa-client.app"
+            BlueprintName = "rwa-client"
             ReferencedContainer = "container:rwaclient.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -62,8 +62,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "8436A26A1C3156F400A4E328"
-            BuildableName = "rwaclient.app"
-            BlueprintName = "rwaclient"
+            BuildableName = "rwa-client.app"
+            BlueprintName = "rwa-client"
             ReferencedContainer = "container:rwaclient.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
