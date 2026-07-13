@@ -131,7 +131,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         {
             print("Could not init audiocontroller")
         }
+
+        installDiagnosticsTab()
         return true
+    }
+
+    /// Appends the Diagnostics ("About") tab as a 5th tab on the storyboard's
+    /// tab bar controller. Done in code so the storyboard stays untouched.
+    private func installDiagnosticsTab() {
+        guard let tabBar = window?.rootViewController as? UITabBarController else { return }
+        let about = AboutViewController(style: .grouped)
+        let nav = UINavigationController(rootViewController: about)
+        let image = UIImage(systemName: "waveform.path.ecg")
+        nav.tabBarItem = UITabBarItem(title: "Diagnostics", image: image, tag: 4)
+        var controllers = tabBar.viewControllers ?? []
+        controllers.append(nav)
+        tabBar.viewControllers = controllers
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

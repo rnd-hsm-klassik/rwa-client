@@ -81,9 +81,12 @@ class TelemetryService {
         }
         timer.resume()
         uploadTimer = timer
+
+        DeviceHealth.shared.setTelemetrySession(sessionId: sessionId, soundwalkId: soundwalkId)
     }
 
     func setSoundwalkId(_ id: String) {
+        DeviceHealth.shared.setSoundwalkId(id)
         queue.async {
             self.soundwalkId = id
         }
@@ -99,6 +102,8 @@ class TelemetryService {
     /// type, t_dev_ms and the type-specific fields. Wall-clock time is
     /// stamped here, on receipt (§4.2).
     func recordDeviceEvent(_ event: [String: Any]) {
+        // Cache latest values for the Diagnostics tab (read-only side channel).
+        DeviceHealth.shared.ingestDeviceEvent(event)
         var stamped = event
         stamped["time"] = TelemetryService.rfc3339.string(from: Date())
         queue.async {
@@ -211,12 +216,17 @@ class TelemetryService {
                     store.deleteThrough(id: lastId)
                     self.consecutiveFailures = 0
                     self.nextUploadAllowedAt = Date.distantPast
-                    os_log("telemetry: uploaded %d events, %d still pending", type: .info, count, store.pendingCount())
+                    let pending = store.pendingCount()
+                    DeviceHealth.shared.setUploadStats(pending: pending, failures: 0, lastStatus: status)
+                    os_log("telemetry: uploaded %d events, %d still pending", type: .info, count, pending)
                 } else {
                     self.consecutiveFailures += 1
                     let backoff = min(pow(2.0, Double(self.consecutiveFailures - 1)) * TelemetryService.uploadInterval,
                                       TelemetryService.maxBackoff)
                     self.nextUploadAllowedAt = Date(timeIntervalSinceNow: backoff)
+                    DeviceHealth.shared.setUploadStats(pending: store.pendingCount(),
+                                                       failures: self.consecutiveFailures,
+                                                       lastStatus: status)
                     os_log("telemetry: upload failed (status %d, failures %d), backing off %.0fs",
                            type: .error, status, self.consecutiveFailures, backoff)
                     if self.consecutiveFailures == 1 {

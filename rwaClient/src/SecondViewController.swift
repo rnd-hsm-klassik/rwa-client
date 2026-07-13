@@ -55,6 +55,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     var timer:Timer? = Timer()
     var unblockStepTime:Timer? = Timer()
     var displayTimer:Timer? = Timer()
+    var rssiTimer:Timer?
     var loadingGame:UIActivityIndicatorView = UIActivityIndicatorView()
  
     var centralManager:CBCentralManager!
@@ -288,6 +289,11 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         bleConnectButton.setTitle("BLE Connected", for: UIControlState())
         bleConnectButton.isEnabled = false
         headTrackerConnected = true
+        DeviceHealth.shared.setBLEConnected(true)
+        rssiTimer?.invalidate()
+        rssiTimer = Timer.scheduledTimer(timeInterval: 2.0, target: self,
+                                         selector: #selector(pollRSSI),
+                                         userInfo: nil, repeats: true)
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Headtracker Connected"), object: nil)
         dataBuffer.length = 0
         
@@ -307,6 +313,9 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         print("Disconnected from Peripheral")
         self.peripheral = nil
+        rssiTimer?.invalidate()
+        rssiTimer = nil
+        DeviceHealth.shared.setBLEConnected(false)
         bleConnectButton.setTitle("BLE Connect", for: UIControlState())
         headTrackerConnected = false
         bleConnectButton.isEnabled = true
@@ -359,6 +368,16 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         }
     }
     
+    @objc func pollRSSI() {
+        peripheral?.readRSSI()
+    }
+
+    func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
+        if error == nil {
+            DeviceHealth.shared.setRSSI(RSSI.intValue)
+        }
+    }
+
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?)
     {
         if error != nil {
