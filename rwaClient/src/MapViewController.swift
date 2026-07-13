@@ -237,6 +237,7 @@ class MapViewController: UIViewController, MKMapViewDelegate
         mapView.showsScale = true;
         mapView.showsUserLocation = true;
         mapView.showAnnotations(mapView.annotations, animated: true)
+        updateScene()
     }
     
     func drawRwaArea(area: RwaArea) {
