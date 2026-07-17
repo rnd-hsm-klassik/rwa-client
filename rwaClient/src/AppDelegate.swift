@@ -132,8 +132,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             print("Could not init audiocontroller")
         }
 
+        applySystemTabIcons()
         installDiagnosticsTab()
         return true
+    }
+
+    /// Swaps the storyboard's placeholder tab icons for SF Symbols that match
+    /// the style of the Diagnostics tab's "waveform.path.ecg" icon. Done in
+    /// code so the storyboard stays untouched.
+    private func applySystemTabIcons() {
+        guard let tabBar = window?.rootViewController as? UITabBarController else { return }
+        let symbolsByTitle = [
+            "Games": "list.bullet",
+            "Control Data": "headphones",
+            "Map": "map"
+        ]
+        for controller in tabBar.viewControllers ?? [] {
+            guard let title = controller.tabBarItem.title,
+                  let symbolName = symbolsByTitle[title] else { continue }
+            controller.tabBarItem.image = UIImage(systemName: symbolName)
+        }
     }
 
     /// Appends the Diagnostics ("About") tab as a 5th tab on the storyboard's
