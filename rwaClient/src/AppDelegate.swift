@@ -33,6 +33,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     var audioController:PdAudioController?
     var syntheticTelemetry: SyntheticTelemetrySource?
+    var currentSceneController: UIViewController?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool
     {
@@ -132,8 +133,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             print("Could not init audiocontroller")
         }
 
-        applySystemTabIcons()
+        hideCurrentSceneTab()
         installDiagnosticsTab()
+        applySystemTabIcons()
         return true
     }
 
@@ -145,7 +147,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let symbolsByTitle = [
             "Games": "list.bullet",
             "Control Data": "headphones",
-            "Map": "map"
+            "Map": "map",
+            "Diagnostics": "waveform.path.ecg"
         ]
         for controller in tabBar.viewControllers ?? [] {
             guard let title = controller.tabBarItem.title,
@@ -154,14 +157,32 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
     }
 
+    /// Hides the "Current Scene" tab from the tab bar. That view controller
+    /// (SecondViewController) still owns the BLE central manager, motion
+    /// updates, and the game loop start/stop logic, so it must stay
+    /// instantiated and loaded even though its tab is no longer shown —
+    /// only the tab bar entry is removed. loadViewIfNeeded() forces its
+    /// viewDidLoad (BLE setup, notification observers) to run immediately
+    /// instead of waiting for the tab to be selected, and the strong
+    /// reference in currentSceneController keeps it alive after it leaves
+    /// the tab bar (otherwise it would deallocate and its notification
+    /// observers — "Start Game", "Connect Headtracker", … — would die with it).
+    private func hideCurrentSceneTab() {
+        guard let tabBar = window?.rootViewController as? UITabBarController,
+              let controllers = tabBar.viewControllers,
+              let currentSceneVC = controllers.first(where: { $0.tabBarItem.title == "Current Scene" }) else { return }
+        currentSceneVC.loadViewIfNeeded()
+        currentSceneController = currentSceneVC
+        tabBar.viewControllers = controllers.filter { $0 !== currentSceneVC }
+    }
+
     /// Appends the Diagnostics ("About") tab as a 5th tab on the storyboard's
     /// tab bar controller. Done in code so the storyboard stays untouched.
     private func installDiagnosticsTab() {
         guard let tabBar = window?.rootViewController as? UITabBarController else { return }
         let about = AboutViewController(style: .grouped)
         let nav = UINavigationController(rootViewController: about)
-        let image = UIImage(systemName: "waveform.path.ecg")
-        nav.tabBarItem = UITabBarItem(title: "Diagnostics", image: image, tag: 4)
+        nav.tabBarItem = UITabBarItem(title: "Diagnostics", image: nil, tag: 4)
         var controllers = tabBar.viewControllers ?? []
         controllers.append(nav)
         tabBar.viewControllers = controllers

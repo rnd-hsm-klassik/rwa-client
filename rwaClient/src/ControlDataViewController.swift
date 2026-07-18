@@ -24,7 +24,9 @@ class ControlDataViewController: UIViewController, UITextFieldDelegate, F53OSCPa
     @IBOutlet var inverseElevationSwitch:UISwitch!
     @IBOutlet var sendGPS2CreatorSwitch:UISwitch!
     @IBOutlet var bleConnectButton: UIButton!
-   
+    @IBOutlet var pdGainSlider: UISlider!
+    @IBOutlet var calibrateOnStartSwitch: UISwitch!
+
     func initGui()
     {
         headTrackerData.isUserInteractionEnabled = false
@@ -41,6 +43,7 @@ class ControlDataViewController: UIViewController, UITextFieldDelegate, F53OSCPa
         headtrackerId.delegate = self
         motherIp.text = rwaCreatorIP
         headtrackerId.text = headtrackerID
+        pdGainSlider.value = 0.5
         updateButtons()
         NotificationCenter.default.addObserver(self, selector: #selector(self.updateButtons), name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
     }
@@ -57,6 +60,7 @@ class ControlDataViewController: UIViewController, UITextFieldDelegate, F53OSCPa
         
         updateButtons()
         motherIp.text = rwaCreatorIP
+        calibrateOnStartSwitch.isOn = calibrateOnStart
     }
     
     override func viewWillDisappear(_ animated: Bool)
@@ -218,13 +222,17 @@ class ControlDataViewController: UIViewController, UITextFieldDelegate, F53OSCPa
         }
     }
     
+    // Same titles the old Current Scene tab's Connect button showed
     func updateConnectBleButton()
     {
         if(headTrackerConnected) {
-            bleConnectButton.setTitle("Disconnect", for: UIControlState())
+            if(useHeadTracker) {
+                bleConnectButton.setTitle("Headtracker connected", for: UIControlState()) }
+            else {
+                bleConnectButton.setTitle("Using Device Orientation", for: UIControlState()) }
         }
         else {
-            bleConnectButton.setTitle("Connect", for: UIControlState())
+            bleConnectButton.setTitle("Connect Headtracker", for: UIControlState())
         }
     }
     
@@ -335,6 +343,24 @@ class ControlDataViewController: UIViewController, UITextFieldDelegate, F53OSCPa
         {
             azimuthOffset = azimuthOrg
             elevationOffset = elevationOrg
+        }
+    }
+
+    @IBAction func pdGain(_ sender: UISlider)
+    {
+        pdGainVal = pdGainSlider.value * 5.0
+        PdBase.send(Float(pdGainVal), toReceiver: "rwamainvolume")
+    }
+
+    @IBAction func updateCalibrateOnStartSwitch(_ sender: UISwitch)
+    {
+        let defaults = UserDefaults.standard
+        calibrateOnStart = sender.isOn
+        if(sender.isOn) {
+            defaults.set("true", forKey: defaultsKeys.calibrateOnStart)
+        }
+        else {
+            defaults.set("false", forKey: defaultsKeys.calibrateOnStart)
         }
     }
 }

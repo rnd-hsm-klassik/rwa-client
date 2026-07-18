@@ -101,6 +101,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
           })
            headTrackerConnected = true
            updateButtons()
+           NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
        }
         
         if (motion.isAccelerometerAvailable) {
@@ -295,6 +296,8 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                                          selector: #selector(pollRSSI),
                                          userInfo: nil, repeats: true)
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Headtracker Connected"), object: nil)
+        // Let the Control Data tab (which now hosts the Connect button) refresh its title
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
         dataBuffer.length = 0
         
         // IMPORTANT: Set the delegate property, otherwise we won't receive the discovery callbacks, like peripheral(_:didDiscoverServices)
@@ -320,6 +323,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         headTrackerConnected = false
         bleConnectButton.isEnabled = true
         hero.disconnectedFromHeadtrackerSince = 0.0;
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
         
         if scanAfterDisconnecting {
             startScanning()
@@ -545,7 +549,9 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         let interval:TimeInterval = schedulerRate/1000
         rwagameloop.isRunning = true
         rwagameloop.startGame()
-        pdGainVal = pdGainSlider.value * 4.0
+        // Use the global pdGainVal (kept up to date by the Control Data tab's
+        // volume slider) instead of this hidden tab's own slider, which is
+        // stuck at its storyboard default and would clobber the user's volume.
         PdBase.send(Float(pdGainVal), toReceiver: "rwamainvolume")
         timer = Timer.scheduledTimer(timeInterval: interval, target: self, selector: #selector(SecondViewController.countUp), userInfo: nil, repeats: true)
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
@@ -606,7 +612,12 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         NotificationCenter.default.addObserver(self, selector: #selector(self.connectHeadtracker), name: NSNotification.Name(rawValue: "Connect Headtracker"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.start), name: NSNotification.Name(rawValue: "Start Game"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.stop), name: NSNotification.Name(rawValue: "Stop Game"), object: nil)
-        
+
+        // Must happen here, not (only) in viewWillAppear: this controller stays
+        // hidden (no tab) so viewWillAppear never runs, and a nil dataBuffer
+        // would crash the first BLE didConnect callback.
+        dataBuffer = NSMutableData()
+
         initGui()
         pdGainSlider.value = 0.5;
         
