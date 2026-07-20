@@ -193,7 +193,7 @@
 		84A4CE2A221317C70057CBE7 /* PdBase_Extension.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PdBase_Extension.h; sourceTree = "<group>"; };
 		84BD68372211B624005A22B5 /* libpd.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = libpd.xcodeproj; path = ../libpd/libpd.xcodeproj; sourceTree = "<group>"; };
 		84BD68472211B748005A22B5 /* vas_dynamicFirChannel.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_dynamicFirChannel.c; path = ../vas_library/source/vas_dynamicFirChannel.c; sourceTree = "<group>"; };
-		84BD68482211B748005A22B5 /* vas_fir.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_fir.c; path = ../vas_library/source/vas_fir.c; sourceTree = "<group>"; };
+		84BD68482211B748005A22B5 /* vas_fir.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_fir.c; path = ../vas-overrides/vas_fir.c; sourceTree = "<group>"; };
 		84BD68492211B748005A22B5 /* vas_gps_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_gps_util.c; path = ../vas_library/source/vas_gps_util.c; sourceTree = "<group>"; };
 		84BD684A2211B748005A22B5 /* vas_fir_binaural.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_fir_binaural.c; path = ../vas_library/source/vas_fir_binaural.c; sourceTree = "<group>"; };
 		84BD684B2211B749005A22B5 /* vas_mem.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_mem.c; path = ../vas_library/source/vas_mem.c; sourceTree = "<group>"; };
@@ -247,7 +247,7 @@
 		84F48D051F24B2AB00869BF2 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = src/Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		84F99CAC1F6046500096B64B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/Info.plist; sourceTree = "<group>"; };
 		E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "rwa_binauralsimple~.c"; path = "../vas_library/examples/PureData/rwa_binauralsimple~.c"; sourceTree = "<group>"; };
-		E4232CB623D9C12B00E44DE3 /* vas_firobject.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_firobject.c; path = ../vas_library/source/vas_firobject.c; sourceTree = "<group>"; };
+		E4232CB623D9C12B00E44DE3 /* vas_firobject.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_firobject.c; path = ../vas-overrides/vas_firobject.c; sourceTree = "<group>"; };
 		E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_fir_list.c; path = ../vas_library/source/vas_fir_list.c; sourceTree = "<group>"; };
 		E45AB4C827CF5E0100D65E93 /* DownloadManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = DownloadManager.swift; path = src/DownloadManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
