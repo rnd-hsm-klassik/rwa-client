@@ -48,6 +48,8 @@
 		8434F3E828BF732500B38E82 /* rwaplayerstereobinauralogg_fabian.pd in Resources */ = {isa = PBXBuildFile; fileRef = 8434F3E428BF732500B38E82 /* rwaplayerstereobinauralogg_fabian.pd */; };
 		8461E16A2120377E00E7DD4F /* RwaLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8461E1692120377E00E7DD4F /* RwaLocation.swift */; };
 		8461E16C21203C4D00E7DD4F /* RwaArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8461E16B21203C4D00E7DD4F /* RwaArea.swift */; };
+		846BDDFD3011841E008E721D /* vas_pdmaxobject.c in Sources */ = {isa = PBXBuildFile; fileRef = 846BDDFC3011841E008E721D /* vas_pdmaxobject.c */; };
+		846BDDFF30118477008E721D /* vas_fir_read.c in Sources */ = {isa = PBXBuildFile; fileRef = 846BDDFE30118477008E721D /* vas_fir_read.c */; };
 		84BD68462211B636005A22B5 /* libpd-ios.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 84BD683F2211B624005A22B5 /* libpd-ios.a */; };
 		84BD684D2211B749005A22B5 /* vas_dynamicFirChannel.c in Sources */ = {isa = PBXBuildFile; fileRef = 84BD68472211B748005A22B5 /* vas_dynamicFirChannel.c */; };
 		84BD684E2211B749005A22B5 /* vas_fir.c in Sources */ = {isa = PBXBuildFile; fileRef = 84BD68482211B748005A22B5 /* vas_fir.c */; };
@@ -191,6 +193,8 @@
 		8436A26B1C3156F400A4E328 /* rwa-client.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "rwa-client.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8461E1692120377E00E7DD4F /* RwaLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RwaLocation.swift; path = src/RwaLocation.swift; sourceTree = "<group>"; };
 		8461E16B21203C4D00E7DD4F /* RwaArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RwaArea.swift; path = src/RwaArea.swift; sourceTree = "<group>"; };
+		846BDDFC3011841E008E721D /* vas_pdmaxobject.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = vas_pdmaxobject.c; path = ../vas_library/source/vas_pdmaxobject.c; sourceTree = SOURCE_ROOT; };
+		846BDDFE30118477008E721D /* vas_fir_read.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = vas_fir_read.c; path = ../vas_library/source/vas_fir_read.c; sourceTree = SOURCE_ROOT; };
 		84A4CE2A221317C70057CBE7 /* PdBase_Extension.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PdBase_Extension.h; sourceTree = "<group>"; };
 		84BD68372211B624005A22B5 /* libpd.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = libpd.xcodeproj; path = ../libpd/libpd.xcodeproj; sourceTree = "<group>"; };
 		84BD68472211B748005A22B5 /* vas_dynamicFirChannel.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_dynamicFirChannel.c; path = ../vas_library/source/vas_dynamicFirChannel.c; sourceTree = "<group>"; };
@@ -355,6 +359,8 @@
 				E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */,
 				E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */,
 				84BD68472211B748005A22B5 /* vas_dynamicFirChannel.c */,
+				846BDDFC3011841E008E721D /* vas_pdmaxobject.c */,
+				846BDDFE30118477008E721D /* vas_fir_read.c */,
 				84BD684A2211B748005A22B5 /* vas_fir_binaural.c */,
 				E4232CB623D9C12B00E44DE3 /* vas_firobject.c */,
 				84BD68482211B748005A22B5 /* vas_fir.c */,
@@ -614,9 +620,11 @@
 				84F48CEE1F24B14C00869BF2 /* GameManager.swift in Sources */,
 				84C70EC82213148A005C49C3 /* F53OSCClient.m in Sources */,
 				8411A75428BF687700205E32 /* bitwise.c in Sources */,
+				846BDDFD3011841E008E721D /* vas_pdmaxobject.c in Sources */,
 				84C70ED02213148A005C49C3 /* F53OSCMessage.m in Sources */,
 				E4232CB923D9C16D00E44DE3 /* vas_fir_list.c in Sources */,
 				8411A78128BF69DB00205E32 /* analysis.c in Sources */,
+				846BDDFF30118477008E721D /* vas_fir_read.c in Sources */,
 				84C70EC42213148A005C49C3 /* F53OSCSocket.m in Sources */,
 				84F48CEA1F24B14C00869BF2 /* AppDelegate.swift in Sources */,
 				8411A77428BF69DB00205E32 /* floor0.c in Sources */,
