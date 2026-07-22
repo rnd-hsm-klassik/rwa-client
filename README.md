@@ -124,3 +124,20 @@ telemetry pipeline can be exercised with the synthetic source
   sent to their Apple ID email.
 - TestFlight builds expire 90 days after upload - plan re-uploads for
   long-running installations accordingly.
+
+## Versioning 
+
+Below are two concise methods to bump the version number.
+
+### Versioning script
+
+Run the following command, replacing `<your_new_version>` with your desired version number:
+```bash
+./update_version.sh <your_new_version>
+```
+
+### Manual method on XCode 
+
+You can also manually update the version number in XCode by navigating to the *rwa-client* target > General > Identity > Version and logging your new version. This will also update all other pertinent versioning entries in the xcode project.
+
+![xcode-manual-version-update](./readme-assets/xcode-version-general.png)
