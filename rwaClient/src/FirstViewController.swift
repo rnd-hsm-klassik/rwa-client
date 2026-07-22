@@ -19,12 +19,10 @@ var fullGamePath:String = String();
 var fullAssetPath:String = String();
 var defaultGame:String = String();
 
-class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate, PdListener {
+class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, PdListener {
 
     @IBOutlet var gameTable:UITableView!
-    @IBOutlet var motherIp: UITextField!
-    @IBOutlet var fetch: UIButton!
-    
+
     var rwaimport:RwaImport = RwaImport()
     var games:GameManager = GameManager()
     
@@ -119,7 +117,9 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         }
     }
     
-    @IBAction func fetchGames(_ sender: UIButton)
+    // Wired to the "Fetch Games" bar button on the Games tab; the Creator IP
+    // (rwaCreatorIP) is set on the Control Data tab.
+    @IBAction func fetchGames(_ sender: Any)
     {
         let alert = UIAlertController(title: "Fetch Games", message: "This will delete existing games on the device, are you sure?", preferredStyle: .alert)
 
@@ -266,22 +266,6 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         
         if(tabBarController != nil) {
             tabBarController?.selectedIndex = 1 }
-    }
-    
-    func textFieldShouldReturn(_ textField: UITextField) -> Bool
-    {
-        textField.resignFirstResponder();
-        let defaults = UserDefaults.standard
-        rwaCreatorIP = motherIp.text!
-        defaults.set(motherIp.text, forKey: defaultsKeys.rwaCreatorIP)
-        sendDummyOscMessage();
-        sendDummyOscMessage();
-        return true;
-    }
-    
-    func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool
-    {
-        return true
     }
 }
 

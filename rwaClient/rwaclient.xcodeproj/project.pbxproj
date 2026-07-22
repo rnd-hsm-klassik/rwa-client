@@ -105,6 +105,7 @@
 		E4232CB723D9C12B00E44DE3 /* vas_firobject.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB623D9C12B00E44DE3 /* vas_firobject.c */; };
 		E4232CB923D9C16D00E44DE3 /* vas_fir_list.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */; };
 		E45AB4CD27CF5E0100D65E93 /* DownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E45AB4C827CF5E0100D65E93 /* DownloadManager.swift */; };
+		E45AB4CE2807220000D65E93 /* ZipExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E45AB4C92807220000D65E93 /* ZipExtractor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -250,6 +251,7 @@
 		E4232CB623D9C12B00E44DE3 /* vas_firobject.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_firobject.c; path = ../vas-overrides/vas_firobject.c; sourceTree = "<group>"; };
 		E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_fir_list.c; path = ../vas_library/source/vas_fir_list.c; sourceTree = "<group>"; };
 		E45AB4C827CF5E0100D65E93 /* DownloadManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = DownloadManager.swift; path = src/DownloadManager.swift; sourceTree = "<group>"; };
+		E45AB4C92807220000D65E93 /* ZipExtractor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ZipExtractor.swift; path = src/ZipExtractor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -365,6 +367,7 @@
 				84F48D021F24B2AB00869BF2 /* LaunchScreen.storyboard */,
 				84F48D041F24B2AB00869BF2 /* Main.storyboard */,
 				E45AB4C827CF5E0100D65E93 /* DownloadManager.swift */,
+				E45AB4C92807220000D65E93 /* ZipExtractor.swift */,
 				84F48CDB1F24B14C00869BF2 /* AppDelegate.swift */,
 				7E7E1E0600000000000000AA /* DeviceHealth.swift */,
 				84F48CDC1F24B14C00869BF2 /* CoreLocationController.swift */,
@@ -662,6 +665,7 @@
 				84F48CF31F24B14C00869BF2 /* RwaScene.swift in Sources */,
 				84F48CEB1F24B14C00869BF2 /* CoreLocationController.swift in Sources */,
 				E45AB4CD27CF5E0100D65E93 /* DownloadManager.swift in Sources */,
+				E45AB4CE2807220000D65E93 /* ZipExtractor.swift in Sources */,
 				7E7E1E1100000000000000AA /* TelemetryConfig.swift in Sources */,
 				7E7E1E1200000000000000AA /* TelemetryService.swift in Sources */,
 				7E7E1E1500000000000000AA /* TelemetryStore.swift in Sources */,

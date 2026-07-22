@@ -44,7 +44,13 @@
                             <constraint firstItem="O5A-sB-RqU" firstAttribute="leading" secondItem="tsR-hK-woN" secondAttribute="leading" id="yQX-uX-1LQ"/>
                         </constraints>
                     </view>
-                    <navigationItem key="navigationItem" title="RWA Client" id="t1M-x7-yuj"/>
+                    <navigationItem key="navigationItem" title="RWA Client" id="t1M-x7-yuj">
+                        <barButtonItem key="rightBarButtonItem" title="Fetch Games" id="fGb-Bt-Itm">
+                            <connections>
+                                <action selector="fetchGames:" destination="9pv-A4-QxB" id="fGb-Ac-t0n"/>
+                            </connections>
+                        </barButtonItem>
+                    </navigationItem>
                     <connections>
                         <outlet property="gameTable" destination="O5A-sB-RqU" id="W2Z-7J-hdf"/>
                     </connections>

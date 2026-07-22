@@ -36,6 +36,7 @@ class GameManager: NSObject
      
     func populateGames()
     {
+        clear() // rebuild from disk; callers may invoke this repeatedly
         let fileManager = FileManager.default
         let docuURLS = try! FileManager.default.contentsOfDirectory(at: destUrl, includingPropertiesForKeys: nil)
         let documentsDirectory = FileManager.default.urls(for:.documentDirectory, in: .userDomainMask)[0]
