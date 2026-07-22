@@ -3,7 +3,8 @@
 	url = https://github.com/libpd/libpd.git
 [submodule "vas_library"]
 	path = vas_library
-	url = https://github.com/funkerresch/vas_library.git
+	url = https://github.com/rnd-hsm-klassik/vas_library.git
+	branch = rwa-player-fixes
 [submodule "pd-extra/pd"]
 	path = pd-extra/pd
 	url = https://github.com/pd-l2ork/pd.git
