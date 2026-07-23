@@ -19,6 +19,8 @@ The following names all refer to the same project:
 - rwaclient-ios
 - rwaClient
 
+Eventually, the App should be named "RWA Player", with a repo slug `rwa-player`.
+
 ## Responsibilities (telemetry gateway, PROJECT-PLAN.md §6)
 
 1. BLE central: subscribe to the rtk-rover telemetry characteristic; decode
@@ -59,10 +61,41 @@ The following names all refer to the same project:
 - Soundwalk content: treat as versioned asset bundles addressed by a manifest
   (OTA-content groundwork, PROJECT-PLAN.md §8.2). Avoid hardcoding bundle paths.
 
+## Legacy view-controller structure (read before touching tabs/BLE)
+
+Assessed 2026-07 — explains why the code and Main.storyboard disagree; this
+state is intentional and stable, don't "fix" it casually.
+
+- `SecondViewController` is the original 2015 "Current Scene" developer screen.
+  It is **not really a view controller but the app's service layer**: it owns the
+  BLE central (headtracker connection + text-protocol parsing), CoreMotion
+  heading/steps, the 10 ms game-loop timer, and north calibration.
+- Its tab is hidden at runtime (`hideCurrentSceneTab()` in AppDelegate), but the
+  controller must stay alive: `loadViewIfNeeded()` forces its BLE setup without
+  the tab ever appearing, and a strong reference keeps its notification
+  observers ("Start Game", "Connect Headtracker", …) from dying. Fragile by
+  design — killing or lazily loading it kills BLE and the game loop.
+- `ControlDataViewController` is the later operator-facing "Control Data" tab
+  (OSC/rwaCreator registration, volume) and duplicates some of the same
+  readouts/controls via shared globals. Settings migration is shrinking it.
+- Diagnostics and Settings tabs are installed **programmatically** in
+  AppDelegate; "Current Scene" exists only in the storyboard. This asymmetry is
+  fine: do NOT re-sync the storyboard (rabbit hole, zero user value; storyboard
+  XML diffs badly). Treat Main.storyboard as legacy scaffolding.
+- Planned cleanup, folded into the CBOR/BLE work-queue item (touch the BLE layer
+  once, not twice): extract `HeadtrackerManager` (BLE + parsing),
+  `MotionHeadingSource` (CoreMotion + steps), and `GameLoopController`
+  (timer + start/stop) as plain objects owned by the AppDelegate, then delete
+  `SecondViewController` and its storyboard scene.
+- Legacy quirk to be aware of: `defaultsKeys` values are the UserDefaults *key
+  strings*, and some are misleading (the headtracker name is stored under the
+  literal key `"rwaht01"`; the default-game key is `""`).
+
 ## Current work queue
 
 1. SQLite event store + envelope stamping
-2. CBOR frame decoder (shared key table with rtk-rover)
+2. CBOR frame decoder (shared key table with rtk-rover) — start with the
+   SecondViewController service extraction (see above)
 3. Batch uploader with backoff + dedup-safe retry
 4. app_event instrumentation at key lifecycle points
 5. Debug screen: last fix quality, carrier solution, NTRIP state, upload backlog
