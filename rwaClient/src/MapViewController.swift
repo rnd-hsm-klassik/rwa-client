@@ -220,13 +220,53 @@ class MapViewController: UIViewController, MKMapViewDelegate
         
     }
     
+    /// The scene/state fields are read-only status displays over the map:
+    /// scene and state are driven by GPS, so there is nothing to edit here.
+    /// Adaptive system colors keep them legible in light and dark mode.
+    private func styleStatusField(_ field: UITextField) {
+        field.isUserInteractionEnabled = false  // no keyboard, taps reach the map
+        field.borderStyle = .none
+        field.layer.cornerRadius = 8
+        field.layer.masksToBounds = true
+        field.backgroundColor = UIColor.secondarySystemBackground.withAlphaComponent(0.85)
+        field.textColor = .label
+        field.textAlignment = .center
+        field.font = UIFont.preferredFont(forTextStyle: .subheadline)
+    }
+
+    /// Lays out the two status fields in code, replacing the storyboard's
+    /// constraints: those anchored the fields to the deprecated
+    /// topLayoutGuide and — presumably by accident — made their width
+    /// proportional to the superview's *height*, which oversized them on
+    /// tall devices. Two equal-width pills sharing the top of the map.
+    private func layoutStatusFields() {
+        let obsolete = view.constraints.filter {
+            $0.firstItem === currentScene || $0.secondItem === currentScene ||
+            $0.firstItem === currentState || $0.secondItem === currentState
+        }
+        NSLayoutConstraint.deactivate(obsolete)
+
+        let guide = view.safeAreaLayoutGuide
+        NSLayoutConstraint.activate([
+            currentScene.topAnchor.constraint(equalTo: guide.topAnchor, constant: 8),
+            currentScene.leadingAnchor.constraint(equalTo: guide.leadingAnchor, constant: 16),
+            currentState.topAnchor.constraint(equalTo: currentScene.topAnchor),
+            currentState.leadingAnchor.constraint(equalTo: currentScene.trailingAnchor, constant: 8),
+            currentState.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -16),
+            currentState.widthAnchor.constraint(equalTo: currentScene.widthAnchor)
+        ])
+    }
+
     override func viewDidLoad() {
-        
+
         NotificationCenter.default.addObserver(self, selector: #selector(self.redraw), name: NSNotification.Name(rawValue: "Redraw Map"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.updateScene), name: NSNotification.Name(rawValue: "Update Scene"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.updateState), name: NSNotification.Name(rawValue: "Update State"), object: nil)
         super.viewDidLoad()
         mapView.delegate = self
+        styleStatusField(currentScene)
+        styleStatusField(currentState)
+        layoutStatusFields()
         if(scenes.isEmpty) {
             mapView.setCenterCoordinate(hero.coordinates, withZoomLevel: 15, animated: true);
           }

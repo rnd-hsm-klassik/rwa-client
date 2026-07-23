@@ -36,6 +36,19 @@ Add Settings tab, RTK positioning and device identity
   override (dev) → Settings "Device ID" → headtracker name. DeviceId in
   Telemetry.plist is optional and should be omitted on real devices.
 
+Make the Map tab's scene/state fields read-only status displays
+
+- The two fields used to open an undismissable keyboard, and typing had no
+  effect (they were never wired to anything). Scene and state are driven
+  by GPS, so there is nothing to edit: the fields no longer accept
+  interaction and are styled with adaptive system colors (translucent
+  rounded pills, centered text) that work in light and dark mode.
+- Their layout moves from the storyboard into MapViewController: the old
+  constraints anchored them to the deprecated topLayoutGuide and made
+  their width proportional to the superview's *height*, which oversized
+  them on tall devices. They are now two equal-width pills pinned to the
+  safe area, so position and appearance live in one place.
+
 Remove the synthetic telemetry source
 
 - Drop SyntheticTelemetrySource and the SyntheticSourceEnabled flag from
