@@ -62,6 +62,43 @@ Two untracked, gitignored files must be created before the project builds:
       rwaClient/src/Telemetry/Telemetry.plist
    ```
 
+### Xcode Cloud
+
+Xcode Cloud clones the repo fresh, so neither gitignored file above exists —
+and `Telemetry.plist` is in Copy Bundle Resources, so its absence fails the
+build outright. `ci_scripts/ci_post_clone.sh` recreates both from workflow
+environment variables; there is no separate secrets store in Xcode Cloud.
+
+Set these under **App Store Connect ▸ Xcode Cloud ▸ (workflow) ▸ Environment**,
+or in Xcode's Report navigator ▸ Cloud ▸ Manage Workflows:
+
+| Variable | Secret | Value |
+| --- | --- | --- |
+| `DEVELOPMENT_TEAM` | no | Apple Developer Team ID (same as in `rwaClient/.xcconfig`) |
+| `TELEMETRY_BASE_URL` | no | backend base URL, no trailing slash |
+| `TELEMETRY_DEVICE_ID` | no | kiosk device id, e.g. `hs-01` |
+| `TELEMETRY_INGEST_TOKEN` | **yes** | bearer token for `/v1/batch` |
+| `TELEMETRY_SYNTHETIC_SOURCE` | no | optional, `true`/`false` (default `false`) |
+
+Notes:
+
+- Tick **Secret** for the ingest token only. Secret values are write-only,
+  masked in build logs and not readable back, and they are per-workflow, so
+  each workflow needs its own copy. The Team ID is not a secret (it ships in
+  every provisioning profile); marking it secret only makes it harder to
+  debug.
+- The script validates all variables before writing anything and fails the
+  build with a named variable if one is empty. This is deliberate: a secret
+  that was not granted to the workflow arrives as an empty string, which would
+  otherwise produce a perfectly valid plist with an empty token and an app that
+  builds, ships, and then 401s against the backend,
+  `TelemetryConfig.loadFromBundle()` does not check.
+- `ci_scripts/` exists both at the repo root and at `rwaClient/ci_scripts/`
+  (a forwarder). Apple's rule for projects that are not at the repo root is
+  inconsistent, and a script in the wrong place is silently skipped rather than
+  reported. Keep both. To confirm it ran, look for `[ci_post_clone]` lines in
+  the build log.
+
 ### Building with Xcode
 
 Open `rwaClient/rwaclient.xcodeproj`, select the **rwaclient** scheme and
