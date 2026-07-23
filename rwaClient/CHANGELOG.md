@@ -7,28 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Make the Games and Map tabs follow light/dark appearance
+## [1.2.0] - 2026-07-24
 
-- Both storyboard scenes baked in literal white backgrounds (Games also on
-  its table view, plus 80% alpha and a near-black caption color). Static
-  colors do not adapt, so in dark mode the areas behind the navigation bar
-  and the tab bar stayed white while the rest of the app went dark — the
-  code-built Control, Diagnostics and Settings tabs were already correct.
-- Swapped for adaptive system colors in code (systemBackground /
-  secondaryLabel), matching the other tabs. Main.storyboard is left
-  untouched.
-
-Fix the Map tab's bottom edge sliding under the tab bar
-
-- The storyboard pinned the map to the deprecated top/bottomLayoutGuides
-  *and* to the superview's centerY simultaneously — mutually unsatisfiable,
-  so Auto Layout broke one at runtime and centred the map against the full
-  view (tab bar included), pushing its lower edge behind the tab bar. The
-  bottom constraint was also present twice, and Interface Builder had
-  already flagged the frame as misplaced.
-- The map is now anchored to the safe area in code (same approach as
-  `layoutStatusFields`), so it ends exactly where the tab bar begins and the
-  map's own attribution stays visible. Main.storyboard is left untouched.
+### Added
 
 Replace the Control Data tab with an actions-only Control tab
 
@@ -68,17 +49,6 @@ Replace the Control Data tab with an actions-only Control tab
   (like the Current Scene tab) and left behind as unreachable scaffolding;
   Main.storyboard is not edited.
 
-Add live telemetry source: GPS/heading/heartbeat with source attribution
-
-- Sample the app's positioning state at 1 Hz into gnss_fix and heading
-  events, plus an app-side heartbeat every 15 s. Events carry an additive
-  "source" field (rtk_tracker / ios_gps / osc_sim, headtracker_rtk /
-  headtracker / ios_motion) so the backend can tell sensors apart; all
-  use the app seq range. Fixes are only emitted on fresh data, so
-  dropouts appear as gaps.
-- Set soundwalk_id on game load, emit walk_started/walk_stopped, and
-  show the active position/heading sources in Diagnostics.
-
 Add Settings tab, RTK positioning and device identity
 
 - New Settings tab (grouped table, installed programmatically like
@@ -97,6 +67,44 @@ Add Settings tab, RTK positioning and device identity
   override (dev) → Settings "Device ID" → headtracker name. DeviceId in
   Telemetry.plist is optional and should be omitted on real devices.
 
+Add live telemetry source: GPS/heading/heartbeat with source attribution
+
+- Sample the app's positioning state at 1 Hz into gnss_fix and heading
+  events, plus an app-side heartbeat every 15 s. Events carry an additive
+  "source" field (rtk_tracker / ios_gps / osc_sim, headtracker_rtk /
+  headtracker / ios_motion) so the backend can tell sensors apart; all
+  use the app seq range. Fixes are only emitted on fresh data, so
+  dropouts appear as gaps.
+- Set soundwalk_id on game load, emit walk_started/walk_stopped, and
+  show the active position/heading sources in Diagnostics.
+
+Add prototype RWA Player App icon, as a companion to the RWA Creator icon
+
+### Fixed
+
+Make the Games and Map tabs follow light/dark appearance
+
+- Both storyboard scenes baked in literal white backgrounds (Games also on
+  its table view, plus 80% alpha and a near-black caption color). Static
+  colors do not adapt, so in dark mode the areas behind the navigation bar
+  and the tab bar stayed white while the rest of the app went dark — the
+  code-built Control, Diagnostics and Settings tabs were already correct.
+- Swapped for adaptive system colors in code (systemBackground /
+  secondaryLabel), matching the other tabs. Main.storyboard is left
+  untouched.
+
+Fix the Map tab's bottom edge sliding under the tab bar
+
+- The storyboard pinned the map to the deprecated top/bottomLayoutGuides
+  *and* to the superview's centerY simultaneously — mutually unsatisfiable,
+  so Auto Layout broke one at runtime and centred the map against the full
+  view (tab bar included), pushing its lower edge behind the tab bar. The
+  bottom constraint was also present twice, and Interface Builder had
+  already flagged the frame as misplaced.
+- The map is now anchored to the safe area in code (same approach as
+  `layoutStatusFields`), so it ends exactly where the tab bar begins and the
+  map's own attribution stays visible. Main.storyboard is left untouched.
+
 Make the Map tab's scene/state fields read-only status displays
 
 - The two fields used to open an undismissable keyboard, and typing had no
@@ -109,6 +117,8 @@ Make the Map tab's scene/state fields read-only status displays
   their width proportional to the superview's *height*, which oversized
   them on tall devices. They are now two equal-width pills pinned to the
   safe area, so position and appearance live in one place.
+
+### Removed
 
 Remove the synthetic telemetry source
 
