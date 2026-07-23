@@ -12,6 +12,8 @@ var coreLocationController:CoreLocationController?
 var registered = false;
 var headtrackerID = ""
 var rwaCreatorIP = ""
+// Telemetry device identity (Settings tab); empty = fall back to headtrackerID
+var deviceId = ""
 var inverseElevation = true;
 var sendGPS2Creator = false;
 var oscClient = F53OSCClient.init()
@@ -24,6 +26,7 @@ struct defaultsKeys {
     static let useHeadtracker = "true";
     static let defaultGame = ""
     static let calibrateOnStart = "false"
+    static let deviceId = "deviceId"
 }
 
 @UIApplicationMain
@@ -139,6 +142,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         {
             print("Could not init audiocontroller")
         }
+
+        deviceId = defaults.string(forKey: defaultsKeys.deviceId) ?? ""
 
         hideCurrentSceneTab()
         installDiagnosticsTab()

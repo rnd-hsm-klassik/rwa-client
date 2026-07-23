@@ -5,10 +5,14 @@
   Template for the telemetry gateway config (PROJECT-PLAN.md §6).
   Copy this file to Telemetry.plist (same directory) and fill in the real
   values. Telemetry.plist is gitignored — never commit the ingest token.
+
+  DeviceId is an optional dev/simulator override. Leave it out (or empty)
+  on real devices: the ID then comes from the Settings tab, falling back
+  to the headtracker name.
 -->
 <dict>
 	<key>DeviceId</key>
-	<string>hs-XX</string>
+	<string></string>
 	<key>BaseURL</key>
 	<string>https://TELEMETRY-BACKEND-HOST</string>
 	<key>IngestToken</key>

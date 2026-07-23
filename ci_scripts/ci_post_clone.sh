@@ -53,7 +53,7 @@ log "repository root: $REPO_ROOT"
 # to this workflow, which would otherwise produce a plist with an empty token
 # and an app that builds fine but 401s against the backend. Fail loudly.
 missing=""
-for var in DEVELOPMENT_TEAM TELEMETRY_BASE_URL TELEMETRY_DEVICE_ID TELEMETRY_INGEST_TOKEN; do
+for var in DEVELOPMENT_TEAM TELEMETRY_BASE_URL TELEMETRY_INGEST_TOKEN; do
     eval "value=\${$var:-}"
     [ -n "$value" ] || missing="$missing $var"
 done
@@ -66,6 +66,9 @@ case "$SYNTHETIC" in
     true|false) ;;
     *) fail "TELEMETRY_SYNTHETIC_SOURCE must be 'true' or 'false', got '$SYNTHETIC'" ;;
 esac
+
+# TELEMETRY_DEVICE_ID is optional, should be empty for real devices
+DEVICE_ID="${TELEMETRY_DEVICE_ID:""}"
 
 # --- rwaClient/.xcconfig ----------------------------------------------------
 XCCONFIG="$REPO_ROOT/rwaClient/.xcconfig"
@@ -82,7 +85,7 @@ cp "$TEMPLATE" "$PLIST"
 
 # plutil takes each value as its own argument, so tokens containing spaces or
 # shell metacharacters survive intact (PlistBuddy -c would re-split them).
-plutil -replace DeviceId               -string "$TELEMETRY_DEVICE_ID"    "$PLIST"
+plutil -replace DeviceId               -string "$DEVICE_ID"              "$PLIST"
 plutil -replace BaseURL                -string "$TELEMETRY_BASE_URL"     "$PLIST"
 plutil -replace IngestToken            -string "$TELEMETRY_INGEST_TOKEN" "$PLIST"
 plutil -replace SyntheticSourceEnabled -bool   "$SYNTHETIC"              "$PLIST"
@@ -98,6 +101,6 @@ token_len=$(plutil -extract IngestToken raw -o - "$PLIST" | tr -d '\n' | wc -c |
 [ "$token_len" -gt 0 ] || fail "generated plist has an empty IngestToken"
 
 log "wrote $PLIST"
-log "  DeviceId=$TELEMETRY_DEVICE_ID BaseURL=$TELEMETRY_BASE_URL"
+log "  DeviceId=$DEVICE_ID BaseURL=$TELEMETRY_BASE_URL"
 log "  SyntheticSourceEnabled=$SYNTHETIC IngestToken=<$token_len chars>"
 log "done"

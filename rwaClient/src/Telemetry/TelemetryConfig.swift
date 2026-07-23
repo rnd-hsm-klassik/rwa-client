@@ -10,7 +10,9 @@
 import Foundation
 
 struct TelemetryConfig {
-    let deviceId: String
+    /// Optional dev/simulator override; on real devices the ID comes from
+    /// the Settings tab (see TelemetryService.currentDeviceId).
+    let deviceId: String?
     let baseURL: URL
     let ingestToken: String
     let syntheticSourceEnabled: Bool
@@ -19,7 +21,6 @@ struct TelemetryConfig {
         guard let url = Bundle.main.url(forResource: "Telemetry", withExtension: "plist"),
               let data = try? Data(contentsOf: url),
               let plist = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any],
-              let deviceId = plist["DeviceId"] as? String,
               let baseURLString = plist["BaseURL"] as? String,
               let baseURL = URL(string: baseURLString),
               let ingestToken = plist["IngestToken"] as? String
@@ -27,6 +28,7 @@ struct TelemetryConfig {
             return nil
         }
 
+        let deviceId = (plist["DeviceId"] as? String).flatMap { $0.isEmpty ? nil : $0 }
         let synthetic = plist["SyntheticSourceEnabled"] as? Bool ?? false
         return TelemetryConfig(deviceId: deviceId,
                                baseURL: baseURL,

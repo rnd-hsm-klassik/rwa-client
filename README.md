@@ -76,7 +76,7 @@ or in Xcode's Report navigator ▸ Cloud ▸ Manage Workflows:
 | --- | --- | --- |
 | `DEVELOPMENT_TEAM` | no | Apple Developer Team ID (same as in `rwaClient/.xcconfig`) |
 | `TELEMETRY_BASE_URL` | no | backend base URL, no trailing slash |
-| `TELEMETRY_DEVICE_ID` | no | kiosk device id, e.g. `hs-01` |
+| `TELEMETRY_DEVICE_ID` | no | optional device id, e.g. `hs-01`, omit for real devices |
 | `TELEMETRY_INGEST_TOKEN` | **yes** | bearer token for `/v1/batch` |
 | `TELEMETRY_SYNTHETIC_SOURCE` | no | optional, `true`/`false` (default `false`) |
 

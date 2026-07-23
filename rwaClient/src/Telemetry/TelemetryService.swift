@@ -139,6 +139,20 @@ class TelemetryService {
         recordAppOriginEvent(type: "app_event", fields: fields)
     }
 
+    /// Device identity, resolved at upload time so a Settings change takes
+    /// effect without reinstalling: Telemetry.plist override (dev) ->
+    /// Settings "Device ID" -> headtracker name (always provisioned,
+    /// since the app needs it to pair).
+    static func resolveDeviceId(configOverride: String?) -> String {
+        if let id = configOverride, !id.isEmpty {
+            return id
+        }
+        if !deviceId.isEmpty {
+            return deviceId
+        }
+        return headtrackerID.isEmpty ? "unknown" : headtrackerID
+    }
+
     // MARK: - Queue-confined
 
     private func append(_ event: [String: Any]) {
@@ -191,7 +205,7 @@ class TelemetryService {
         // events from a previous run upload under their original session.
         let envelope: [String: Any] = [
             "schema": 1,
-            "device_id": config.deviceId,
+            "device_id": TelemetryService.resolveDeviceId(configOverride: config.deviceId),
             "session_id": batch.sessionId,
             "fw_version": batch.fwVersion,
             "app_version": batch.appVersion,
