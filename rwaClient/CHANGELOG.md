@@ -26,9 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Creator); commit by commit - each one build-tested against the app - with
   fixes applied to the commits that introduced them (see Fixed below). This
   should avoid inconsistencies between the app and creator.
-- vas_library switches its FFT backend from Apple vDSP to pffft and adds a
-  lock-free threadpool for partitioned convolution; both are new nested
-  submodules (`pffft`, `C-Thread-Pool`).
+- Upstream vas_library now defaults its FFT backend to pffft on non-Apple
+  platforms and adds a lock-free threadpool for partitioned convolution; both
+  are new nested submodules (`pffft`, `C-Thread-Pool`). The iOS app is
+  unaffected: on Apple platforms vas_util.h still selects vDSP/Accelerate
+  (the app defines no `VAS_USE_*` override), so pffft.c/pffft_common.c are
+  compiled into the target but unused.
 - Add the new/refactored vas_library sources to the app target:
   vas_pdmaxobject.c, vas_fir_read.c, vas_thpool_noMalloc.c, vas_threads.c,
   pffft.c, pffft_common.c.
