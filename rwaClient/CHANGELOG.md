@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Add live telemetry source: GPS/heading/heartbeat with source attribution
+
+- Sample the app's positioning state at 1 Hz into gnss_fix and heading
+  events, plus an app-side heartbeat every 15 s. Events carry an additive
+  "source" field (rtk_tracker / ios_gps / osc_sim, headtracker_rtk /
+  headtracker / ios_motion) so the backend can tell sensors apart; all
+  use the app seq range. Fixes are only emitted on fresh data, so
+  dropouts appear as gaps.
+- Set soundwalk_id on game load, emit walk_started/walk_stopped, and
+  show the active position/heading sources in Diagnostics.
+
 ## [1.1.0] - 2026-07-23
 
 - Fix buffer overflow crash

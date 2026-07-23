@@ -47,7 +47,8 @@ class TelemetryService {
     private var store: TelemetryStore?
     private var storeFailureLogged = false
     private var appSeq: UInt64 = TelemetryService.appSeqOffset
-    private var soundwalkId = "walk-dev"
+    // "none" until a soundwalk loads (gameLoaded -> setSoundwalkId)
+    private var soundwalkId = "none"
     private var fwVersion = "unknown"
     private var uploadTimer: DispatchSourceTimer?
     private var uploading = false
@@ -111,23 +112,31 @@ class TelemetryService {
         }
     }
 
-    /// App-origin event (§4.3 app_event): seq comes from the app counter
-    /// in the offset range, no t_dev_ms.
-    func recordAppEvent(name: String, data: [String: Any] = [:]) {
+    /// App-origin event of any type (gnss_fix / heading / heartbeat sampled
+    /// from the app's own sensors, or app_event): seq comes from the app
+    /// counter in the offset range (§4.2), no t_dev_ms. Callers tag these
+    /// with a "source" field so the backend can tell them apart from
+    /// device-origin events of the same type.
+    func recordAppOriginEvent(type: String, fields: [String: Any] = [:]) {
         let time = TelemetryService.rfc3339.string(from: Date())
         queue.async {
             self.appSeq += 1
-            var event: [String: Any] = [
-                "seq": self.appSeq,
-                "time": time,
-                "type": "app_event",
-                "name": name
-            ]
-            if !data.isEmpty {
-                event["data"] = data
-            }
+            var event = fields
+            event["seq"] = self.appSeq
+            event["time"] = time
+            event["type"] = type
             self.append(event)
         }
+    }
+
+    /// App-origin event (§4.3 app_event): seq comes from the app counter
+    /// in the offset range, no t_dev_ms.
+    func recordAppEvent(name: String, data: [String: Any] = [:]) {
+        var fields: [String: Any] = ["name": name]
+        if !data.isEmpty {
+            fields["data"] = data
+        }
+        recordAppOriginEvent(type: "app_event", fields: fields)
     }
 
     // MARK: - Queue-confined

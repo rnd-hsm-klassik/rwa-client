@@ -15,6 +15,10 @@ let schedulerRate: Double = 10
 
 var ubloxLon = Double("3.1415926536")
 var ubloxLat = Double("3.1415926536")
+// Freshness markers for telemetry source attribution (read at 1 Hz by
+// LiveTelemetrySource): when did the tracker last send GPS / heading data.
+var ubloxUpdatedAt: Date?
+var trackerHeadingUpdatedAt: Date?
 var azimuth = 0
 var elevation = 0
 var step = 0;
@@ -414,6 +418,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                // ubloxLat = Int(NSString(string:words[2].digits).intValue) * (1/10000000);
                 ubloxLat = Double(words[1])! * (1/10000000)
                 ubloxLon = Double(words[2])! * (1/10000000)
+                ubloxUpdatedAt = Date()
                // print(print("lon lat: \(ubloxLon) \(ubloxLat)"))
                // print(print("lon lat: \(hero.coordinates.longitude) \(hero.coordinates.latitude)"))
                 //london.coordinate = CLLocationCoordinate2D(latitude: ubloxLat!, longitude: ubloxLon!)
@@ -447,6 +452,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                 hero.azimuth = azimuth
                 hero.elevation = elevation
                 hero.stepCount = stepCount
+                trackerHeadingUpdatedAt = Date()
             }
         }
         else {
@@ -549,6 +555,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         let interval:TimeInterval = schedulerRate/1000
         rwagameloop.isRunning = true
         rwagameloop.startGame()
+        TelemetryService.shared?.recordAppEvent(name: "walk_started", data: ["soundwalk": currentGame])
         // Use the global pdGainVal (kept up to date by the Control Data tab's
         // volume slider) instead of this hidden tab's own slider, which is
         // stuck at its storyboard default and would clobber the user's volume.
@@ -567,6 +574,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     @objc func stop()
     {
         rwagameloop.isRunning = false
+        TelemetryService.shared?.recordAppEvent(name: "walk_stopped")
         timer?.invalidate()
         currentScene.text = "Current Scene"
         currentState.text = "Current State"
@@ -596,6 +604,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     {
         loadingGame.stopAnimating()
         connectHeadtracker()
+        TelemetryService.shared?.setSoundwalkId(currentGame)
     }
     
     func initGui()

@@ -54,6 +54,12 @@ struct DeviceHealthSnapshot {
     var imuCalibStatus: Int?
     var imuReportRateHz: Double?
 
+    // Live telemetry source attribution (LiveTelemetrySource): which sensor
+    // currently feeds position / heading ("rtk_tracker", "ios_gps",
+    // "osc_sim", "headtracker_rtk", "headtracker", "ios_motion"), nil = none.
+    var positionSource: String?
+    var headingSource: String?
+
     // Telemetry gateway state
     var sessionId: String?
     var soundwalkId: String?
@@ -120,6 +126,21 @@ final class DeviceHealth {
 
     func setSoundwalkId(_ id: String) {
         mutate { $0.soundwalkId = id }
+    }
+
+    /// Called at 1 Hz by LiveTelemetrySource; only mutates (and notifies)
+    /// when a source actually changed.
+    func setLiveSources(position: String?, heading: String?) {
+        lock.lock()
+        let changed = state.positionSource != position || state.headingSource != heading
+        if changed {
+            state.positionSource = position
+            state.headingSource = heading
+        }
+        lock.unlock()
+        if changed {
+            NotificationCenter.default.post(name: DeviceHealth.didUpdate, object: nil)
+        }
     }
 
     func setUploadStats(pending: Int, failures: Int, lastStatus: Int?) {

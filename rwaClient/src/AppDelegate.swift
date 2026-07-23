@@ -33,6 +33,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     var audioController:PdAudioController?
     var syntheticTelemetry: SyntheticTelemetrySource?
+    var liveTelemetry: LiveTelemetrySource?
     var currentSceneController: UIViewController?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool
@@ -43,9 +44,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             telemetry.start()
             telemetry.recordAppEvent(name: "app_launched")
             if telemetryConfig.syntheticSourceEnabled {
+                // Synthetic and live sources are mutually exclusive
                 let synthetic = SyntheticTelemetrySource(service: telemetry)
                 synthetic.start()
                 syntheticTelemetry = synthetic
+            }
+            else {
+                let live = LiveTelemetrySource(service: telemetry)
+                live.start()
+                liveTelemetry = live
             }
         }
         else {
