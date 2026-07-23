@@ -176,7 +176,7 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
     private func actionCell(title: String) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         cell.textLabel?.text = title
-        cell.textLabel?.textColor = .systemBlue
+        cell.textLabel?.textColor = .tintColor
         cell.textLabel?.textAlignment = .center
         return cell
     }

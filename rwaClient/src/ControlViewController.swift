@@ -238,8 +238,8 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
 
     private func style(_ button: UIButton, prominent: Bool = false) {
         button.titleLabel?.font = UIFont.preferredFont(forTextStyle: prominent ? .headline : .body)
-        button.backgroundColor = prominent ? .systemBlue : .secondarySystemGroupedBackground
-        button.setTitleColor(prominent ? .white : .systemBlue, for: UIControlState())
+        button.backgroundColor = prominent ? .tintColor : .secondarySystemGroupedBackground
+        button.setTitleColor(prominent ? .white : .tintColor, for: UIControlState())
         // Explicit .normal colours defeat the system's automatic dimming
         button.setTitleColor(.tertiaryLabel, for: .disabled)
         button.layer.cornerRadius = 10
@@ -328,7 +328,7 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
         }
         else {
             startStopButton.setTitle("Start", for: UIControlState())
-            startStopButton.backgroundColor = .systemBlue
+            startStopButton.backgroundColor = .tintColor
         }
     }
 
