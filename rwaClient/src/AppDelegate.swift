@@ -151,6 +151,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         hideCurrentSceneTab()
         installDiagnosticsTab()
+        installSettingsTab()
         applySystemTabIcons()
         return true
     }
@@ -164,7 +165,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             "Games": "list.bullet",
             "Control Data": "headphones",
             "Map": "map",
-            "Diagnostics": "waveform.path.ecg"
+            "Diagnostics": "waveform.path.ecg",
+            "Settings": "gearshape"
         ]
         for controller in tabBar.viewControllers ?? [] {
             guard let title = controller.tabBarItem.title,
@@ -199,6 +201,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let about = AboutViewController(style: .grouped)
         let nav = UINavigationController(rootViewController: about)
         nav.tabBarItem = UITabBarItem(title: "Diagnostics", image: nil, tag: 4)
+        var controllers = tabBar.viewControllers ?? []
+        controllers.append(nav)
+        tabBar.viewControllers = controllers
+    }
+
+    /// Appends the Settings tab, same pattern as the Diagnostics tab.
+    private func installSettingsTab() {
+        guard let tabBar = window?.rootViewController as? UITabBarController else { return }
+        let settings = SettingsViewController(style: .grouped)
+        let nav = UINavigationController(rootViewController: settings)
+        nav.tabBarItem = UITabBarItem(title: "Settings", image: nil, tag: 5)
         var controllers = tabBar.viewControllers ?? []
         controllers.append(nav)
         tabBar.viewControllers = controllers
