@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Make the Games and Map tabs follow light/dark appearance
+
+- Both storyboard scenes baked in literal white backgrounds (Games also on
+  its table view, plus 80% alpha and a near-black caption color). Static
+  colors do not adapt, so in dark mode the areas behind the navigation bar
+  and the tab bar stayed white while the rest of the app went dark — the
+  code-built Control, Diagnostics and Settings tabs were already correct.
+- Swapped for adaptive system colors in code (systemBackground /
+  secondaryLabel), matching the other tabs. Main.storyboard is left
+  untouched.
+
+Fix the Map tab's bottom edge sliding under the tab bar
+
+- The storyboard pinned the map to the deprecated top/bottomLayoutGuides
+  *and* to the superview's centerY simultaneously — mutually unsatisfiable,
+  so Auto Layout broke one at runtime and centred the map against the full
+  view (tab bar included), pushing its lower edge behind the tab bar. The
+  bottom constraint was also present twice, and Interface Builder had
+  already flagged the frame as misplaced.
+- The map is now anchored to the safe area in code (same approach as
+  `layoutStatusFields`), so it ends exactly where the tab bar begins and the
+  map's own attribution stays visible. Main.storyboard is left untouched.
+
 Replace the Control Data tab with an actions-only Control tab
 
 - The Control Data tab mixed three unrelated things: settings that the

@@ -153,10 +153,29 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         }
     }
     
+    /// The storyboard hardcodes literal white for this scene's view and
+    /// table (and 80% alpha on the table, which only ever muddied it against
+    /// that white). Static colors do not follow light/dark, so the area
+    /// behind the navigation bar and tab bar stayed white in dark mode.
+    /// Swapped for adaptive system colors in code — the storyboard is
+    /// legacy scaffolding we do not edit (see CLAUDE.md).
+    private func applyAdaptiveColors() {
+        view.backgroundColor = .systemBackground
+        gameTable.backgroundColor = .systemBackground
+        gameTable.alpha = 1.0
+        // The "Default Game" caption has a baked-in near-black text color
+        // and no outlet; it is the only label directly in this view.
+        for label in view.subviews.compactMap({ $0 as? UILabel }) {
+            label.textColor = .secondaryLabel
+        }
+    }
+
     override func viewDidLoad()
     {
         super.viewDidLoad()
-        
+
+        applyAdaptiveColors()
+
         NotificationCenter.default.addObserver(self, selector: #selector(self.nameOfFunction), name: NSNotification.Name(rawValue: "receivedGameList"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.updateGamesList), name: NSNotification.Name(rawValue: "receivedGame"), object: nil)
         

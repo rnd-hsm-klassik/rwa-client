@@ -234,6 +234,32 @@ class MapViewController: UIViewController, MKMapViewDelegate
         field.font = UIFont.preferredFont(forTextStyle: .subheadline)
     }
 
+    /// Lays out the map in code, replacing the storyboard's constraints.
+    /// Those were over-constrained: the map was pinned to the deprecated
+    /// top/bottomLayoutGuides *and* to the superview's centerY at the same
+    /// time, which cannot all hold. Auto Layout resolved the conflict by
+    /// breaking one of them, and centering against the full view (tab bar
+    /// included) pushed the map's bottom edge down behind the tab bar.
+    /// The storyboard also carried the bottom constraint twice, and its
+    /// 27pt gap above the tab bar served no purpose. Anchoring to the safe
+    /// area instead makes the map end exactly where the tab bar starts.
+    private func layoutMapView() {
+        let obsolete = view.constraints.filter {
+            $0.firstItem === mapView || $0.secondItem === mapView
+        }
+        NSLayoutConstraint.deactivate(obsolete)
+
+        let guide = view.safeAreaLayoutGuide
+        NSLayoutConstraint.activate([
+            mapView.topAnchor.constraint(equalTo: guide.topAnchor),
+            mapView.bottomAnchor.constraint(equalTo: guide.bottomAnchor),
+            // Full-bleed horizontally; the status pills above use the safe
+            // area, so nothing lands under a landscape notch.
+            mapView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            mapView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+        ])
+    }
+
     /// Lays out the two status fields in code, replacing the storyboard's
     /// constraints: those anchored the fields to the deprecated
     /// topLayoutGuide and — presumably by accident — made their width
@@ -264,6 +290,11 @@ class MapViewController: UIViewController, MKMapViewDelegate
         NotificationCenter.default.addObserver(self, selector: #selector(self.updateState), name: NSNotification.Name(rawValue: "Update State"), object: nil)
         super.viewDidLoad()
         mapView.delegate = self
+        // The storyboard bakes in literal white here, which stayed white in
+        // dark mode behind the status bar and tab bar. The map itself covers
+        // the safe area; this is what shows in the strips around it.
+        view.backgroundColor = .systemBackground
+        layoutMapView()
         styleStatusField(currentScene)
         styleStatusField(currentState)
         layoutStatusFields()
