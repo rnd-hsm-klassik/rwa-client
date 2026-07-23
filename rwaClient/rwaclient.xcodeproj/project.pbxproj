@@ -211,7 +211,7 @@
 		84BD684A2211B748005A22B5 /* vas_fir_binaural.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_fir_binaural.c; path = ../vas_library/source/vas_fir_binaural.c; sourceTree = "<group>"; };
 		84BD684B2211B749005A22B5 /* vas_mem.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_mem.c; path = ../vas_library/source/vas_mem.c; sourceTree = "<group>"; };
 		84BD684C2211B749005A22B5 /* vas_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_util.c; path = ../vas_library/source/vas_util.c; sourceTree = "<group>"; };
-		84C70E962212E48E005C49C3 /* freeverb~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "freeverb~.c"; path = "../pd-extra/pd/externals/freeverb~/freeverb~.c"; sourceTree = "<group>"; };
+		84C70E962212E48E005C49C3 /* freeverb~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "freeverb~.c"; path = "../pd-extra/freeverb~/freeverb~.c"; sourceTree = "<group>"; };
 		84C70E9B2212E6D9005C49C3 /* rwaplayer5_1channelbinaural_fabian.pd */ = {isa = PBXFileReference; lastKnownFileType = text; name = rwaplayer5_1channelbinaural_fabian.pd; path = "../pd-patches/rwaplayer5_1channelbinaural_fabian.pd"; sourceTree = "<group>"; };
 		84C70E9C2212E6D9005C49C3 /* rwaReferencePatch.pd */ = {isa = PBXFileReference; lastKnownFileType = text; name = rwaReferencePatch.pd; path = "../pd-patches/rwaReferencePatch.pd"; sourceTree = "<group>"; };
 		84C70E9D2212E6D9005C49C3 /* stereoout.pd */ = {isa = PBXFileReference; lastKnownFileType = text; name = stereoout.pd; path = "../pd-patches/stereoout.pd"; sourceTree = "<group>"; };

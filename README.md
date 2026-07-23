@@ -26,11 +26,20 @@ git -c url."https://github.com/".insteadOf="git@github.com:" \
 
 Notes:
 
-- If a deep pd-extra submodule (e.g. `wiringPi`, hosted on a dead server)
-  fails to fetch, it can be ignored — it is not part of the iOS build.
 - Existing clones with stale SSH submodule URLs in `.git/config` can be
   repaired with `git submodule sync --recursive`, then re-run the
   `submodule update` above.
+- Existing clones from before the `pd-extra/pd` submodule was removed (see [`pd-extra/freeverb~/PROVENANCE.md`](pd-extra/freeverb~/PROVENANCE.md)) keep a
+  stale, unregistered `pd-extra/pd` working tree. Delete it:
+  `rm -rf pd-extra/pd .git/modules/pd-extra`.
+
+Every submodule tree must clone cleanly with plain HTTPS and no credentials:
+Xcode Cloud resolves submodules recursively before any `ci_scripts/` hook runs,
+so there is no place to inject `insteadOf` rewrites or to skip a failing
+submodule, and one unreachable nested URL fails the whole build. If a
+dependency drags in dead `git://` submodules, fork it and strip them (as with
+`vas_library`), or vendor the files you actually need (as with
+`pd-extra/freeverb~`) - do not add a submodule that recurses into one.
 
 ### Dev environment setup
 
