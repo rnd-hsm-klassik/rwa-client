@@ -563,7 +563,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         rwagameloop.isRunning = true
         rwagameloop.startGame()
         TelemetryService.shared?.recordAppEvent(name: "walk_started", data: ["soundwalk": currentGame])
-        // Use the global pdGainVal (kept up to date by the Control Data tab's
+        // Use the global pdGainVal (kept up to date by the Control tab's
         // volume slider) instead of this hidden tab's own slider, which is
         // stuck at its storyboard default and would clobber the user's volume.
         PdBase.send(Float(pdGainVal), toReceiver: "rwamainvolume")

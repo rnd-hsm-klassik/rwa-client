@@ -339,6 +339,90 @@ extension UIViewController {
         oscClient.send(message)
         coreLocationController?.locationManager.stopUpdatingLocation()
     }
+
+    /// Points the OSC client/server at the configured rwaCreator and starts
+    /// listening. The receiver (F53OSCPacketDestination) is set separately by
+    /// whichever controller owns message handling — currently the Control tab.
+    func startOscListening() {
+        oscClient.host = rwaCreatorIP
+        oscClient.port = 8000
+        oscServer.startListening()
+    }
+
+    /// Registers or unregisters with rwaCreator, mirroring the old Control
+    /// Data tab's Register button. Flips the `registered` global; callers
+    /// refresh their own UI from it afterwards. Shared here so both the
+    /// Settings tab (the button's new home) and the Control tab's resume
+    /// logic go through one path.
+    func toggleCreatorRegistration() {
+        sendDummyOscMessage()
+        sendDummyOscMessage()
+
+        if !registered {
+            registered = true
+            if let adress = getWiFiAddress() {
+                let message = F53OSCMessage(addressPattern: "/register", arguments: ["Gandalf", adress])
+                print("register client")
+                oscClient.send(message)
+                startOscListening()
+                coreLocationController?.locationManager.stopUpdatingLocation()
+            }
+        } else {
+            oscServer.stopListening()
+            registered = false
+            coreLocationController?.locationManager.startUpdatingLocation()
+        }
+    }
+
+    /// Local IPv4 address (Wi-Fi first, cellular as fallback) — sent to
+    /// rwaCreator on /register so it knows where to reply.
+    func getWiFiAddress() -> String? {
+        var address: String?
+
+        // Get list of all interfaces on the local machine:
+        var ifaddr: UnsafeMutablePointer<ifaddrs>? = nil
+        if getifaddrs(&ifaddr) == 0 {
+
+            // For each interface ...
+            var ptr = ifaddr
+            while ptr != nil {
+                let interface = ptr?.pointee
+
+                // Check for IPv4 interface:
+                let addrFamily = interface?.ifa_addr.pointee.sa_family
+                if addrFamily == UInt8(AF_INET) {
+
+                    // Check interface name:
+                    let name = String(cString: (interface?.ifa_name)!)
+                    if name == "en0" {
+                        // Convert interface address to a human readable string:
+                        var addr = interface?.ifa_addr.pointee
+                        var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                        getnameinfo(&addr!, socklen_t((interface?.ifa_addr.pointee.sa_len)!),
+                                    &hostname, socklen_t(hostname.count),
+                                    nil, socklen_t(0), NI_NUMERICHOST)
+                        address = String(cString: hostname)
+                        print("MY NETWORK ADDRESS \(String(describing: address))")
+                    }
+                    if address == nil {
+                        if name == "pdp_ip0" {
+                            var addr = interface?.ifa_addr.pointee
+                            var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                            getnameinfo(&addr!, socklen_t((interface?.ifa_addr.pointee.sa_len)!),
+                                        &hostname, socklen_t(hostname.count),
+                                        nil, socklen_t(0), NI_NUMERICHOST)
+                            address = String(cString: hostname)
+                            print("MY NETWORK ADDRESS \(String(describing: address))")
+                        }
+                    }
+                }
+                ptr = ptr?.pointee.ifa_next
+            }
+            freeifaddrs(ifaddr)
+        }
+
+        return address
+    }
 }
 
 

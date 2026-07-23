@@ -17,6 +17,7 @@ var deviceId = ""
 // Position from the RTK headtracker instead of internal GPS (Settings tab)
 var useRtkGps = false
 var inverseElevation = true;
+// Session-only by design: always starts off, not persisted (Settings tab)
 var sendGPS2Creator = false;
 var oscClient = F53OSCClient.init()
 var oscServer = F53OSCServer.init()
@@ -141,6 +142,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         useRtkGps = defaults.string(forKey: defaultsKeys.gpsSource) == "rtk"
 
         hideCurrentSceneTab()
+        hideControlDataTab()
+        installControlTab()
         installDiagnosticsTab()
         installSettingsTab()
         applySystemTabIcons()
@@ -154,7 +157,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         guard let tabBar = window?.rootViewController as? UITabBarController else { return }
         let symbolsByTitle = [
             "Games": "list.bullet",
-            "Control Data": "headphones",
+            "Control": "headphones",
             "Map": "map",
             "Diagnostics": "waveform.path.ecg",
             "Settings": "gearshape"
@@ -183,6 +186,35 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         currentSceneVC.loadViewIfNeeded()
         currentSceneController = currentSceneVC
         tabBar.viewControllers = controllers.filter { $0 !== currentSceneVC }
+    }
+
+    /// Drops the storyboard's "Control Data" tab. Its settings moved to the
+    /// Settings tab, its read-only sensor dumps to Diagnostics, and its live
+    /// operator actions (plus the OSC receiver) to ControlViewController,
+    /// installed just below. Unlike hideCurrentSceneTab() nothing needs to be
+    /// kept alive here: ControlDataViewController owned no services beyond
+    /// the OSC delegate, which the new controller took over — so the object
+    /// is simply dropped and its view is never loaded. The storyboard scene
+    /// stays behind as unreachable legacy scaffolding (Main.storyboard is not
+    /// edited).
+    private func hideControlDataTab() {
+        guard let tabBar = window?.rootViewController as? UITabBarController,
+              let controllers = tabBar.viewControllers else { return }
+        tabBar.viewControllers = controllers.filter { $0.tabBarItem.title != "Control Data" }
+    }
+
+    /// Installs the operator Control tab, in code, like Diagnostics and
+    /// Settings. Inserted at index 1 - the slot the Control Data tab held -
+    /// because FirstViewController jumps to selectedIndex 1 after loading a
+    /// game and the operator expects the Start button there.
+    private func installControlTab() {
+        guard let tabBar = window?.rootViewController as? UITabBarController else { return }
+        let control = ControlViewController()
+        let nav = UINavigationController(rootViewController: control)
+        nav.tabBarItem = UITabBarItem(title: "Control", image: nil, tag: 1)
+        var controllers = tabBar.viewControllers ?? []
+        controllers.insert(nav, at: min(1, controllers.count))
+        tabBar.viewControllers = controllers
     }
 
     /// Appends the Diagnostics ("About") tab as a 5th tab on the storyboard's

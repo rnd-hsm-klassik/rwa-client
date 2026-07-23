@@ -4,14 +4,17 @@
 //
 //  Settings tab: a grouped table (same style as the Diagnostics tab) that
 //  consolidates the app's configuration. Values are stored in UserDefaults
-//  under the existing defaultsKeys and mirrored into the app globals, so
-//  the legacy Control Data tab keeps working until it is cleaned up.
+//  under the existing defaultsKeys and mirrored into the app globals, which
+//  is what the rest of the (globals-driven) app reads.
+//
+//  This is now the only place these settings live: the Control Data tab that
+//  used to duplicate them was replaced by the actions-only Control tab.
 //
 //  Sections:
 //    Identity      - device ID (telemetry), headtracker name
 //    Data sources  - GPS (internal / RTK headtracker), heading (internal / headtracker)
 //    Head tracking - inverse elevation, calibrate on start
-//    RWA Creator   - IP address
+//    RWA Creator   - IP address, register/unregister, forward GPS to Creator
 //    Soundwalk     - default game (drill-in picker)
 //
 
@@ -27,6 +30,7 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
         case headingSource = 11
         case inverseElevation = 20
         case calibrateOnStart = 21
+        case sendGPS2Creator = 22
     }
 
     private let sectionTitles = ["Identity", "Data sources", "Head tracking", "RWA Creator", "Soundwalk"]
@@ -56,10 +60,13 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
             if let override = TelemetryService.shared?.config.deviceId, !override.isEmpty {
                 return "Device ID is currently overridden by Telemetry.plist (\"\(override)\")."
             }
-            return "Identifies this headset in the backend. Falls back to the headtracker name when empty."
+            return "The Device ID identifies this device for analytics. The Headtracker name is needs to be set to the Bluetooth name of the Headtracker to connect to."
         }
         if section == 1 {
             return "With RTK selected, the app falls back to internal GPS while the tracker delivers no coordinates."
+        }
+        if section == 3 {
+            return "Toggle Register to listen for location data from RWA Creator. GPS forwarding sends this device's position to RWA Creator (while not registered)."
         }
         return nil
     }
@@ -69,7 +76,7 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
         case 0: return 2
         case 1: return 2
         case 2: return 2
-        case 3: return 1
+        case 3: return 3
         case 4: return 1
         default: return 0
         }
@@ -97,6 +104,10 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
             return textFieldCell(label: "IP address", value: rwaCreatorIP,
                                  placeholder: "192.168.0.1", tag: .creatorIP,
                                  keyboard: .decimalPad)
+        case (3, 1):
+            return actionCell(title: registered ? "Unregister" : "Register")
+        case (3, 2):
+            return switchCell(label: "Send GPS to Creator", isOn: sendGPS2Creator, tag: .sendGPS2Creator)
         case (4, 0):
             let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
             cell.textLabel?.text = "Default game"
@@ -111,6 +122,13 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+        if indexPath == IndexPath(row: 1, section: 3) {
+            // Live action, not a stored setting: announce/withdraw this device
+            // to rwaCreator. Only the cell's own title depends on the result,
+            // so just refresh that row.
+            toggleCreatorRegistration()
+            tableView.reloadRows(at: [indexPath], with: .none)
+        }
         if indexPath.section == 4 {
             navigationController?.pushViewController(DefaultGamePickerViewController(style: .grouped), animated: true)
         }
@@ -150,6 +168,16 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
         segmented.tag = tag.rawValue
         segmented.addTarget(self, action: #selector(segmentChanged(_:)), for: .valueChanged)
         cell.accessoryView = segmented
+        return cell
+    }
+
+    /// A tappable, button-styled row (centered tint-coloured title), for
+    /// actions rather than stored values — handled in didSelectRowAt.
+    private func actionCell(title: String) -> UITableViewCell {
+        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
+        cell.textLabel?.text = title
+        cell.textLabel?.textColor = .systemBlue
+        cell.textLabel?.textAlignment = .center
         return cell
     }
 
@@ -219,6 +247,9 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
         case .some(.calibrateOnStart):
             calibrateOnStart = control.isOn
             defaults.set(control.isOn ? "true" : "false", forKey: defaultsKeys.calibrateOnStart)
+        case .some(.sendGPS2Creator):
+            // Session-only by design: not persisted, off again on relaunch
+            sendGPS2Creator = control.isOn
         default:
             break
         }

@@ -15,6 +15,7 @@
 		7E7E1E1700000000000000AA /* AboutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0700000000000000AA /* AboutViewController.swift */; };
 		7E7E1E1800000000000000AA /* LiveTelemetrySource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0800000000000000AA /* LiveTelemetrySource.swift */; };
 		7E7E1E1900000000000000AA /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0900000000000000AA /* SettingsViewController.swift */; };
+		7E7E1E1A00000000000000AA /* ControlViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0A00000000000000AA /* ControlViewController.swift */; };
 		8411A75428BF687700205E32 /* bitwise.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75228BF687700205E32 /* bitwise.c */; };
 		8411A75528BF687700205E32 /* framing.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75328BF687700205E32 /* framing.c */; };
 		8411A77228BF69DB00205E32 /* block.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75828BF69DB00205E32 /* block.c */; };
@@ -91,7 +92,6 @@
 		84C70ED02213148A005C49C3 /* F53OSCMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = 84C70EC22213148A005C49C3 /* F53OSCMessage.m */; };
 		84D7F166217DDF1F0082843F /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84D7F165217DDF1F0082843F /* MapKit.framework */; };
 		84E8BC2028EF223900EF35DD /* Config.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 84E8BC1F28EF223900EF35DD /* Config.xcconfig */; };
-		84EDF460216CBD1300EBA052 /* ControlDataViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EDF45F216CBD1300EBA052 /* ControlDataViewController.swift */; };
 		84F48CEA1F24B14C00869BF2 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84F48CDB1F24B14C00869BF2 /* AppDelegate.swift */; };
 		84F48CEB1F24B14C00869BF2 /* CoreLocationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84F48CDC1F24B14C00869BF2 /* CoreLocationController.swift */; };
 		84F48CEC1F24B14C00869BF2 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84F48CDD1F24B14C00869BF2 /* Device.swift */; };
@@ -162,6 +162,7 @@
 		7E7E1E0700000000000000AA /* AboutViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AboutViewController.swift; path = src/AboutViewController.swift; sourceTree = "<group>"; };
 		7E7E1E0800000000000000AA /* LiveTelemetrySource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LiveTelemetrySource.swift; path = src/Telemetry/LiveTelemetrySource.swift; sourceTree = "<group>"; };
 		7E7E1E0900000000000000AA /* SettingsViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = SettingsViewController.swift; path = src/SettingsViewController.swift; sourceTree = "<group>"; };
+		7E7E1E0A00000000000000AA /* ControlViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ControlViewController.swift; path = src/ControlViewController.swift; sourceTree = "<group>"; };
 		8411A75228BF687700205E32 /* bitwise.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bitwise.c; path = ../../libogg/src/bitwise.c; sourceTree = "<group>"; };
 		8411A75328BF687700205E32 /* framing.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = framing.c; path = ../../libogg/src/framing.c; sourceTree = "<group>"; };
 		8411A75628BF68B900205E32 /* os_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = os_types.h; path = ../../libogg/include/ogg/os_types.h; sourceTree = "<group>"; };
@@ -242,7 +243,6 @@
 		84C70EC22213148A005C49C3 /* F53OSCMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = F53OSCMessage.m; path = ../F53OSC/F53OSCMessage.m; sourceTree = "<group>"; };
 		84D7F165217DDF1F0082843F /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
 		84E8BC1F28EF223900EF35DD /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
-		84EDF45F216CBD1300EBA052 /* ControlDataViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ControlDataViewController.swift; path = src/ControlDataViewController.swift; sourceTree = "<group>"; };
 		84F48CDB1F24B14C00869BF2 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = src/AppDelegate.swift; sourceTree = "<group>"; };
 		84F48CDC1F24B14C00869BF2 /* CoreLocationController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = CoreLocationController.swift; path = src/CoreLocationController.swift; sourceTree = "<group>"; };
 		84F48CDD1F24B14C00869BF2 /* Device.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Device.swift; path = src/Device.swift; sourceTree = "<group>"; };
@@ -443,10 +443,10 @@
 			children = (
 				84F48CDE1F24B14C00869BF2 /* FirstViewController.swift */,
 				84F48CE81F24B14C00869BF2 /* SecondViewController.swift */,
-				84EDF45F216CBD1300EBA052 /* ControlDataViewController.swift */,
 				8429C290215BB68700D2E5E0 /* MapViewController.swift */,
 				7E7E1E0700000000000000AA /* AboutViewController.swift */,
 				7E7E1E0900000000000000AA /* SettingsViewController.swift */,
+				7E7E1E0A00000000000000AA /* ControlViewController.swift */,
 			);
 			name = ViewController;
 			sourceTree = "<group>";
@@ -678,7 +678,6 @@
 				84BD684D2211B749005A22B5 /* vas_dynamicFirChannel.c in Sources */,
 				8411A77F28BF69DB00205E32 /* window.c in Sources */,
 				8411A77A28BF69DB00205E32 /* psy.c in Sources */,
-				84EDF460216CBD1300EBA052 /* ControlDataViewController.swift in Sources */,
 				8411A77E28BF69DB00205E32 /* codebook.c in Sources */,
 				8411A78028BF69DB00205E32 /* vorbisenc.c in Sources */,
 				8411A78728BF69DB00205E32 /* lpc.c in Sources */,
@@ -698,6 +697,7 @@
 				7E7E1E1500000000000000AA /* TelemetryStore.swift in Sources */,
 				7E7E1E1800000000000000AA /* LiveTelemetrySource.swift in Sources */,
 				7E7E1E1900000000000000AA /* SettingsViewController.swift in Sources */,
+				7E7E1E1A00000000000000AA /* ControlViewController.swift in Sources */,
 				7E7E1E1600000000000000AA /* DeviceHealth.swift in Sources */,
 				7E7E1E1700000000000000AA /* AboutViewController.swift in Sources */,
 				84C70ECA2213148A005C49C3 /* NSData+F53OSCBlob.m in Sources */,

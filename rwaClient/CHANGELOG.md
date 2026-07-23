@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Replace the Control Data tab with an actions-only Control tab
+
+- The Control Data tab mixed three unrelated things: settings that the
+  Settings tab already duplicated, live operator actions, and read-only
+  sensor dumps. It is split along those lines and retired.
+- New Control tab (`ControlViewController`, laid out in code and installed
+  programmatically like Diagnostics and Settings) keeps only what acts on
+  the running app: start/stop, connect headtracker, calibrate north, and
+  the output volume — plus a compact scene/state and azimuth readout so the
+  operator does not have to switch tabs mid-walk. It takes over the OSC
+  receiver duty (/step, /lon, /lat, /currentscene) from
+  ControlDataViewController.
+- The loaded RWA project's filename titles the status card ("No project
+  loaded" until one is picked).
+- The status card also shows the WGS84 coordinates driving the walk,
+  tagged "(RTK)" while the tracker's RTK fix is the active source, with a
+  dot that flashes green each time a fix arrives from the active source
+  (RTK timestamp, CoreLocation timestamp, or OSC coordinate change).
+- The duplicated settings (Creator IP, headtracker name, heading source,
+  inverse elevation, calibrate on start) are gone from the tab; Settings is
+  now their only home. "Send GPS to Creator" moved to Settings under RWA
+  Creator; it is deliberately session-only and starts off on every launch
+  (not persisted). rwaCreator register/unregister is also a
+  Settings row now (directly under the Creator IP); the register/OSC-listen
+  logic and `getWiFiAddress` moved to a shared `UIViewController` extension
+  (RwaUtilities) so the Settings button and the Control tab's resume path
+  share one implementation.
+- The read-only displays were dropped rather than migrated: azimuth,
+  elevation, steps and position are already in Diagnostics, and scene/state
+  are on the Map tab.
+- The volume slider now starts from the actual `pdGainVal` instead of a
+  hardcoded 0.5 that did not match it and jumped the volume on first touch.
+- The Control tab is installed at tab index 1, the slot Control Data held,
+  so FirstViewController's jump after loading a game still lands on the
+  Start button. The storyboard's Control Data scene is dropped at runtime
+  (like the Current Scene tab) and left behind as unreachable scaffolding;
+  Main.storyboard is not edited.
+
 Add live telemetry source: GPS/heading/heartbeat with source attribution
 
 - Sample the app's positioning state at 1 Hz into gnss_fix and heading
