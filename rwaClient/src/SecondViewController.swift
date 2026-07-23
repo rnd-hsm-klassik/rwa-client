@@ -419,6 +419,13 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                 ubloxLat = Double(words[1])! * (1/10000000)
                 ubloxLon = Double(words[2])! * (1/10000000)
                 ubloxUpdatedAt = Date()
+
+                // RTK positioning (Settings tab): tracker coordinates drive
+                // the walk. OSC-registered mode still overrides everything.
+                if(useRtkGps && !registered) {
+                    hero.coordinates = CLLocationCoordinate2D(latitude: ubloxLat!, longitude: ubloxLon!)
+                    hero.timeSinceLastGpsUpdate = 0.0
+                }
                // print(print("lon lat: \(ubloxLon) \(ubloxLat)"))
                // print(print("lon lat: \(hero.coordinates.longitude) \(hero.coordinates.latitude)"))
                 //london.coordinate = CLLocationCoordinate2D(latitude: ubloxLat!, longitude: ubloxLon!)

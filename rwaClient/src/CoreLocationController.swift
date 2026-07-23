@@ -49,6 +49,14 @@ class CoreLocationController:NSObject, CLLocationManagerDelegate{
     {
         if(!registered)
         {
+            // With RTK positioning selected and the tracker delivering,
+            // internal GPS stands by; it takes over automatically when the
+            // tracker goes quiet (fallback, see Settings tab).
+            if(useRtkGps) {
+                if let at = ubloxUpdatedAt, Date().timeIntervalSince(at) < LiveTelemetrySource.freshnessWindow {
+                    return
+                }
+            }
             print("Update Location")
             let location = locations.last! as CLLocation
             hero.location = location

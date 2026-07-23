@@ -14,6 +14,8 @@ var headtrackerID = ""
 var rwaCreatorIP = ""
 // Telemetry device identity (Settings tab); empty = fall back to headtrackerID
 var deviceId = ""
+// Position from the RTK headtracker instead of internal GPS (Settings tab)
+var useRtkGps = false
 var inverseElevation = true;
 var sendGPS2Creator = false;
 var oscClient = F53OSCClient.init()
@@ -27,6 +29,7 @@ struct defaultsKeys {
     static let defaultGame = ""
     static let calibrateOnStart = "false"
     static let deviceId = "deviceId"
+    static let gpsSource = "gpsSource"   // "internal" | "rtk"
 }
 
 @UIApplicationMain
@@ -144,6 +147,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
 
         deviceId = defaults.string(forKey: defaultsKeys.deviceId) ?? ""
+        useRtkGps = defaults.string(forKey: defaultsKeys.gpsSource) == "rtk"
 
         hideCurrentSceneTab()
         installDiagnosticsTab()

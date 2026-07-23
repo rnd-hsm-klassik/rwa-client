@@ -99,22 +99,9 @@ final class LiveTelemetrySource {
     private func currentFix() -> (String, [String: Any])? {
         let now = Date()
 
-        // RTK tracker coordinates win when fresh
-        if let updatedAt = ubloxUpdatedAt,
-           now.timeIntervalSince(updatedAt) < LiveTelemetrySource.freshnessWindow,
-           let lat = ubloxLat, let lon = ubloxLon {
-            if lastEmittedUbloxAt == updatedAt {
-                return nil
-            }
-            lastEmittedUbloxAt = updatedAt
-            // The current text protocol carries only lat/lon; accuracy,
-            // carrier solution etc. arrive with the CBOR feed later.
-            return ("rtk_tracker", [
-                "lat": lat,
-                "lon": lon,
-                "source": "rtk_tracker"
-            ])
-        }
+        // Mirrors the actual positioning priority: OSC-registered mode
+        // overrides everything; then the RTK tracker when selected in
+        // Settings and delivering; then internal GPS as fallback.
 
         // rwaCreator simulation drives hero.coordinates directly
         if registered {
@@ -129,6 +116,24 @@ final class LiveTelemetrySource {
                 "lat": lat,
                 "lon": lon,
                 "source": "osc_sim"
+            ])
+        }
+
+        // RTK tracker positioning: selected in Settings and delivering
+        if useRtkGps,
+           let updatedAt = ubloxUpdatedAt,
+           now.timeIntervalSince(updatedAt) < LiveTelemetrySource.freshnessWindow,
+           let lat = ubloxLat, let lon = ubloxLon {
+            if lastEmittedUbloxAt == updatedAt {
+                return nil
+            }
+            lastEmittedUbloxAt = updatedAt
+            // The current text protocol carries only lat/lon; accuracy,
+            // carrier solution etc. arrive with the CBOR feed later.
+            return ("rtk_tracker", [
+                "lat": lat,
+                "lon": lon,
+                "source": "rtk_tracker"
             ])
         }
 
