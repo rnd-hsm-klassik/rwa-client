@@ -59,7 +59,7 @@ Set them under App Store Connect > Xcode Cloud > Workflow > Environment.
 Secret variables must be re-entered for each workflow that needs them."
 
 # TELEMETRY_DEVICE_ID is optional, should be empty for real devices
-DEVICE_ID="${TELEMETRY_DEVICE_ID:""}"
+DEVICE_ID="${TELEMETRY_DEVICE_ID:-}"
 
 # --- rwaClient/.xcconfig ----------------------------------------------------
 XCCONFIG="$REPO_ROOT/rwaClient/.xcconfig"
