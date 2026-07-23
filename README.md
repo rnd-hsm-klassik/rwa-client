@@ -78,7 +78,6 @@ or in Xcode's Report navigator ▸ Cloud ▸ Manage Workflows:
 | `TELEMETRY_BASE_URL` | no | backend base URL, no trailing slash |
 | `TELEMETRY_DEVICE_ID` | no | optional device id, e.g. `hs-01`, omit for real devices |
 | `TELEMETRY_INGEST_TOKEN` | **yes** | bearer token for `/v1/batch` |
-| `TELEMETRY_SYNTHETIC_SOURCE` | no | optional, `true`/`false` (default `false`) |
 
 Notes:
 
@@ -131,8 +130,9 @@ xcrun simctl launch "iPhone 15" com.fhnw.rwa.player
 ```
 
 Note that BLE (rtk-rover connection) is not available in the simulator; the
-telemetry pipeline can be exercised with the synthetic source
-(`SyntheticSourceEnabled` in `Telemetry.plist`).
+telemetry pipeline can still be exercised via the internal-GPS path — grant
+location permission and feed a simulated location (`xcrun simctl location`),
+and the live source emits `gnss_fix` events with `source: "ios_gps"`.
 
 ## Deploying
 

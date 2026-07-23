@@ -18,6 +18,33 @@ Add live telemetry source: GPS/heading/heartbeat with source attribution
 - Set soundwalk_id on game load, emit walk_started/walk_stopped, and
   show the active position/heading sources in Diagnostics.
 
+Add Settings tab, RTK positioning and device identity
+
+- New Settings tab (grouped table, installed programmatically like
+  Diagnostics): device ID, headtracker name, GPS source, heading source,
+  inverse elevation, calibrate on start, RWA Creator IP, and a default-game
+  picker. Values live in the existing UserDefaults keys, so the legacy
+  Control Data tab keeps working while its controls migrate over.
+- GPS source "RTK tracker" now actually routes the headtracker's RTK
+  coordinates into the walk positioning (previously parsed but unused).
+  Internal GPS stands by and takes over automatically when the tracker
+  delivers no coordinates for 3 s; the switch is visible in Diagnostics
+  and in the telemetry "source" field.
+- Heading source selection (internal / headtracker) moves to Settings and
+  reconnects the tracker (or starts device motion) immediately on change.
+- Telemetry device_id is now resolved at upload time: Telemetry.plist
+  override (dev) → Settings "Device ID" → headtracker name. DeviceId in
+  Telemetry.plist is optional and should be omitted on real devices.
+
+Remove the synthetic telemetry source
+
+- Drop SyntheticTelemetrySource and the SyntheticSourceEnabled flag from
+  Telemetry.plist; the live source now always runs. The synthetic source
+  had served to validate the store→batch→upload→dedup pipeline before any
+  real producer existed; synthetic dashboard traffic is rwa-backend's
+  scripts/fake_data.py's job. Removing the flag also eliminates the risk
+  of shipping a device that silently reports fake data.
+
 ## [1.1.0] - 2026-07-23
 
 - Fix buffer overflow crash

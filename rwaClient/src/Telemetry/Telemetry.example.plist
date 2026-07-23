@@ -17,7 +17,5 @@
 	<string>https://TELEMETRY-BACKEND-HOST</string>
 	<key>IngestToken</key>
 	<string>INGEST_TOKEN_HERE</string>
-	<key>SyntheticSourceEnabled</key>
-	<false/>
 </dict>
 </plist>

@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		7E7E1E1100000000000000AA /* TelemetryConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0100000000000000AA /* TelemetryConfig.swift */; };
 		7E7E1E1200000000000000AA /* TelemetryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0200000000000000AA /* TelemetryService.swift */; };
-		7E7E1E1300000000000000AA /* SyntheticTelemetrySource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0300000000000000AA /* SyntheticTelemetrySource.swift */; };
 		7E7E1E1400000000000000AA /* Telemetry.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0400000000000000AA /* Telemetry.plist */; };
 		7E7E1E1500000000000000AA /* TelemetryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0500000000000000AA /* TelemetryStore.swift */; };
 		7E7E1E1600000000000000AA /* DeviceHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0600000000000000AA /* DeviceHealth.swift */; };
@@ -157,7 +156,6 @@
 /* Begin PBXFileReference section */
 		7E7E1E0100000000000000AA /* TelemetryConfig.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TelemetryConfig.swift; path = src/Telemetry/TelemetryConfig.swift; sourceTree = "<group>"; };
 		7E7E1E0200000000000000AA /* TelemetryService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TelemetryService.swift; path = src/Telemetry/TelemetryService.swift; sourceTree = "<group>"; };
-		7E7E1E0300000000000000AA /* SyntheticTelemetrySource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = SyntheticTelemetrySource.swift; path = src/Telemetry/SyntheticTelemetrySource.swift; sourceTree = "<group>"; };
 		7E7E1E0400000000000000AA /* Telemetry.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Telemetry.plist; path = src/Telemetry/Telemetry.plist; sourceTree = "<group>"; };
 		7E7E1E0500000000000000AA /* TelemetryStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TelemetryStore.swift; path = src/Telemetry/TelemetryStore.swift; sourceTree = "<group>"; };
 		7E7E1E0600000000000000AA /* DeviceHealth.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = DeviceHealth.swift; path = src/DeviceHealth.swift; sourceTree = "<group>"; };
@@ -291,7 +289,6 @@
 				7E7E1E0200000000000000AA /* TelemetryService.swift */,
 				7E7E1E0500000000000000AA /* TelemetryStore.swift */,
 				7E7E1E0800000000000000AA /* LiveTelemetrySource.swift */,
-				7E7E1E0300000000000000AA /* SyntheticTelemetrySource.swift */,
 				7E7E1E0400000000000000AA /* Telemetry.plist */,
 			);
 			name = Telemetry;
@@ -703,7 +700,6 @@
 				7E7E1E1900000000000000AA /* SettingsViewController.swift in Sources */,
 				7E7E1E1600000000000000AA /* DeviceHealth.swift in Sources */,
 				7E7E1E1700000000000000AA /* AboutViewController.swift in Sources */,
-				7E7E1E1300000000000000AA /* SyntheticTelemetrySource.swift in Sources */,
 				84C70ECA2213148A005C49C3 /* NSData+F53OSCBlob.m in Sources */,
 				84F48CF21F24B14C00869BF2 /* RwaImport.swift in Sources */,
 				8411A77528BF69DB00205E32 /* bitrate.c in Sources */,

@@ -38,7 +38,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
     var audioController:PdAudioController?
-    var syntheticTelemetry: SyntheticTelemetrySource?
     var liveTelemetry: LiveTelemetrySource?
     var currentSceneController: UIViewController?
 
@@ -49,17 +48,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             TelemetryService.shared = telemetry
             telemetry.start()
             telemetry.recordAppEvent(name: "app_launched")
-            if telemetryConfig.syntheticSourceEnabled {
-                // Synthetic and live sources are mutually exclusive
-                let synthetic = SyntheticTelemetrySource(service: telemetry)
-                synthetic.start()
-                syntheticTelemetry = synthetic
-            }
-            else {
-                let live = LiveTelemetrySource(service: telemetry)
-                live.start()
-                liveTelemetry = live
-            }
+            let live = LiveTelemetrySource(service: telemetry)
+            live.start()
+            liveTelemetry = live
         }
         else {
             print("Telemetry.plist missing or invalid - telemetry disabled")

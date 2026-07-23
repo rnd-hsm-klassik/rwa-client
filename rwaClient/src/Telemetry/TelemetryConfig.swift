@@ -15,7 +15,6 @@ struct TelemetryConfig {
     let deviceId: String?
     let baseURL: URL
     let ingestToken: String
-    let syntheticSourceEnabled: Bool
 
     static func loadFromBundle() -> TelemetryConfig? {
         guard let url = Bundle.main.url(forResource: "Telemetry", withExtension: "plist"),
@@ -29,10 +28,8 @@ struct TelemetryConfig {
         }
 
         let deviceId = (plist["DeviceId"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        let synthetic = plist["SyntheticSourceEnabled"] as? Bool ?? false
         return TelemetryConfig(deviceId: deviceId,
                                baseURL: baseURL,
-                               ingestToken: ingestToken,
-                               syntheticSourceEnabled: synthetic)
+                               ingestToken: ingestToken)
     }
 }
