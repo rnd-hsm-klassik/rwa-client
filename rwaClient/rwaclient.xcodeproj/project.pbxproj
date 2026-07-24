@@ -108,6 +108,10 @@
 		84F48D001F24B26C00869BF2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 84F48CFE1F24B26C00869BF2 /* Assets.xcassets */; };
 		84F48D061F24B2AB00869BF2 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 84F48D021F24B2AB00869BF2 /* LaunchScreen.storyboard */; };
 		84F48D071F24B2AB00869BF2 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 84F48D041F24B2AB00869BF2 /* Main.storyboard */; };
+		BEEF00000000000000000011 /* PdBaseRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF0000000000000000000C /* PdBaseRecorder.swift */; };
+		BEEF00000000000000000012 /* ScenarioRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF0000000000000000000D /* ScenarioRunner.swift */; };
+		BEEF00000000000000000013 /* EngineParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF0000000000000000000E /* EngineParityTests.swift */; };
+		BEEF00000000000000000014 /* smoke-background.scenario.json in Resources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000010 /* smoke-background.scenario.json */; };
 		E4232CB523D9C09D00E44DE3 /* rwa_binauralsimple~.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */; };
 		E4232CB723D9C12B00E44DE3 /* vas_firobject.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB623D9C12B00E44DE3 /* vas_firobject.c */; };
 		E4232CB923D9C16D00E44DE3 /* vas_fir_list.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */; };
@@ -150,6 +154,13 @@
 			proxyType = 2;
 			remoteGlobalIDString = 30C3D2FA1FAA1FCC00C67F08;
 			remoteInfo = "libpd-osx-multi";
+		};
+		BEEF00000000000000000009 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8436A2631C3156F400A4E328 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8436A26A1C3156F400A4E328;
+			remoteInfo = "rwa-client";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -261,6 +272,12 @@
 		84F48D031F24B2AB00869BF2 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = src/Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		84F48D051F24B2AB00869BF2 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = src/Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		84F99CAC1F6046500096B64B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/Info.plist; sourceTree = "<group>"; };
+		BEEF00000000000000000002 /* rwaclientTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = rwaclientTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BEEF0000000000000000000C /* PdBaseRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PdBaseRecorder.swift; sourceTree = "<group>"; };
+		BEEF0000000000000000000D /* ScenarioRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioRunner.swift; sourceTree = "<group>"; };
+		BEEF0000000000000000000E /* EngineParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineParityTests.swift; sourceTree = "<group>"; };
+		BEEF0000000000000000000F /* rwaclientTests-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "rwaclientTests-Bridging-Header.h"; sourceTree = "<group>"; };
+		BEEF00000000000000000010 /* smoke-background.scenario.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "smoke-background.scenario.json"; path = "scenarios/smoke-background.scenario.json"; sourceTree = "<group>"; };
 		E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "rwa_binauralsimple~.c"; path = "../vas_library/examples/PureData/rwa_binauralsimple~.c"; sourceTree = "<group>"; };
 		E4232CB623D9C12B00E44DE3 /* vas_firobject.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_firobject.c; path = ../vas_library/source/vas_firobject.c; sourceTree = "<group>"; };
 		E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_fir_list.c; path = ../vas_library/source/vas_fir_list.c; sourceTree = "<group>"; };
@@ -276,6 +293,13 @@
 				84BD68462211B636005A22B5 /* libpd-ios.a in Frameworks */,
 				842212321F939E23004BF9C9 /* Accelerate.framework in Frameworks */,
 				84D7F166217DDF1F0082843F /* MapKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BEEF00000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -332,6 +356,7 @@
 			isa = PBXGroup;
 			children = (
 				84E8BC1F28EF223900EF35DD /* Config.xcconfig */,
+				BEEF0000000000000000000B /* tests */,
 				8434F3DF28BF6AFB00B38E82 /* oggread~.c */,
 				8411A75128BF685700205E32 /* oggvorbis */,
 				84C70EB32212EF20005C49C3 /* PdBase_Extension.m */,
@@ -414,6 +439,7 @@
 			isa = PBXGroup;
 			children = (
 				8436A26B1C3156F400A4E328 /* rwa-client.app */,
+				BEEF00000000000000000002 /* rwaclientTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -451,6 +477,18 @@
 			name = ViewController;
 			sourceTree = "<group>";
 		};
+		BEEF0000000000000000000B /* tests */ = {
+			isa = PBXGroup;
+			children = (
+				BEEF0000000000000000000C /* PdBaseRecorder.swift */,
+				BEEF0000000000000000000D /* ScenarioRunner.swift */,
+				BEEF0000000000000000000E /* EngineParityTests.swift */,
+				BEEF0000000000000000000F /* rwaclientTests-Bridging-Header.h */,
+				BEEF00000000000000000010 /* smoke-background.scenario.json */,
+			);
+			path = tests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -476,6 +514,24 @@
 			productReference = 8436A26B1C3156F400A4E328 /* rwa-client.app */;
 			productType = "com.apple.product-type.application";
 		};
+		BEEF00000000000000000001 /* rwaclientTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BEEF00000000000000000006 /* Build configuration list for PBXNativeTarget "rwaclientTests" */;
+			buildPhases = (
+				BEEF00000000000000000003 /* Sources */,
+				BEEF00000000000000000004 /* Frameworks */,
+				BEEF00000000000000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BEEF0000000000000000000A /* PBXTargetDependency */,
+			);
+			name = rwaclientTests;
+			productName = rwaclientTests;
+			productReference = BEEF00000000000000000002 /* rwaclientTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -488,7 +544,6 @@
 				TargetAttributes = {
 					8436A26A1C3156F400A4E328 = {
 						CreatedOnToolsVersion = 7.2;
-						DevelopmentTeam = XPMUK2HY2X;
 						LastSwiftMigration = 0820;
 						ProvisioningStyle = Automatic;
 						SystemCapabilities = {
@@ -499,6 +554,11 @@
 								enabled = 1;
 							};
 						};
+					};
+					BEEF00000000000000000001 = {
+						CreatedOnToolsVersion = 16.2;
+						ProvisioningStyle = Automatic;
+						TestTargetID = 8436A26A1C3156F400A4E328;
 					};
 				};
 			};
@@ -525,6 +585,7 @@
 			projectRoot = "";
 			targets = (
 				8436A26A1C3156F400A4E328 /* rwa-client */,
+				BEEF00000000000000000001 /* rwaclientTests */,
 			);
 		};
 /* End PBXProject section */
@@ -585,6 +646,14 @@
 				84F48D001F24B26C00869BF2 /* Assets.xcassets in Resources */,
 				84F48D071F24B2AB00869BF2 /* Main.storyboard in Resources */,
 				7E7E1E1400000000000000AA /* Telemetry.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BEEF00000000000000000005 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BEEF00000000000000000014 /* smoke-background.scenario.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -711,6 +780,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BEEF00000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BEEF00000000000000000011 /* PdBaseRecorder.swift in Sources */,
+				BEEF00000000000000000012 /* ScenarioRunner.swift in Sources */,
+				BEEF00000000000000000013 /* EngineParityTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -718,6 +797,11 @@
 			isa = PBXTargetDependency;
 			name = "libpd-ios";
 			targetProxy = 84203DF028ED98090067F13F /* PBXContainerItemProxy */;
+		};
+		BEEF0000000000000000000A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8436A26A1C3156F400A4E328 /* rwa-client */;
+			targetProxy = BEEF00000000000000000009 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -923,6 +1007,77 @@
 			};
 			name = Release;
 		};
+		BEEF00000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 84E8BC1F28EF223900EF35DD /* Config.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GCC_PREPROCESSOR_DEFINITIONS = PUREDATA;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../libogg/include/ogg\"",
+					"\"$(SRCROOT)/../libogg/include\"",
+					"\"$(SRCROOT)/../vorbis/include\"/**",
+					"\"$(SRCROOT)/../vorbis/lib\"/**",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MARKETING_VERSION = 1.0;
+				OTHER_CFLAGS = (
+					"-DPD",
+					"-DHAVE_UNISTD_H",
+					"-DHAVE_ALLOCA_H",
+					"-DUSEAPI_DUMMY",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.fhnw.rwa.player.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "tests/rwaclientTests-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/rwa-client.app/rwa-client";
+				USER_HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../F53OSC-master\" \"$(SRCROOT)/libs\"/** \"$(SRCROOT)/../vas_library\"/** \"$(SRCROOT)/../libpd/pure-data/src\" \"$(SRCROOT)/../vas_library/examples/PureData/raw_binauralsimple~\" \"$(SRCROOT)/../F53OSC\" \"$(SRCROOT)/../libpd/libpd_wrapper\" \"$(SRCROOT)/../libpd/libpd_wrapper/util\" \"$(SRCROOT)/../libpd/objc\"";
+			};
+			name = Debug;
+		};
+		BEEF00000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 84E8BC1F28EF223900EF35DD /* Config.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GCC_PREPROCESSOR_DEFINITIONS = PUREDATA;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"\"$(SRCROOT)/../libogg/include/ogg\"",
+					"\"$(SRCROOT)/../libogg/include\"",
+					"\"$(SRCROOT)/../vorbis/include\"/**",
+					"\"$(SRCROOT)/../vorbis/lib\"/**",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MARKETING_VERSION = 1.0;
+				OTHER_CFLAGS = (
+					"-DPD",
+					"-DHAVE_UNISTD_H",
+					"-DHAVE_ALLOCA_H",
+					"-DUSEAPI_DUMMY",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.fhnw.rwa.player.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "tests/rwaclientTests-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/rwa-client.app/rwa-client";
+				USER_HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../F53OSC-master\" \"$(SRCROOT)/libs\"/** \"$(SRCROOT)/../vas_library\"/** \"$(SRCROOT)/../libpd/pure-data/src\" \"$(SRCROOT)/../vas_library/examples/PureData/raw_binauralsimple~\" \"$(SRCROOT)/../F53OSC\" \"$(SRCROOT)/../libpd/libpd_wrapper\" \"$(SRCROOT)/../libpd/libpd_wrapper/util\" \"$(SRCROOT)/../libpd/objc\"";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -940,6 +1095,15 @@
 			buildConfigurations = (
 				8436A2801C3156F400A4E328 /* Debug */,
 				8436A2811C3156F400A4E328 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BEEF00000000000000000006 /* Build configuration list for PBXNativeTarget "rwaclientTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BEEF00000000000000000007 /* Debug */,
+				BEEF00000000000000000008 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

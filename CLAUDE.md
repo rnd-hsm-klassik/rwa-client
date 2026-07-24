@@ -42,7 +42,9 @@ Eventually, the App should be named "RWA Player", with a repo slug `rwa-player`.
 - Language/UI: Swift, UIKit
 - Min iOS: 16.2
 - Build: open `rwaClient/rwaclient.xcodeproj` / `xcodebuild -scheme rwaclient build`
-- Tests: No tests, (start with `xcodebuild test -scheme rwaclient -destination 'platform=iOS Simulator,name=iPhone 15'`)
+- Tests: `xcodebuild test -scheme rwaclient -destination 'platform=iOS Simulator,name=iPhone 16'`
+  — engine parity/trace tests (`rwaclientTests` target, hosted in the app);
+  see `docs/ENGINE-PARITY-TESTS.md`
 - Local setup: copy `rwaClient/src/Telemetry/Telemetry.example.plist` to
   `Telemetry.plist` (same directory) and fill in device_id, backend URL and
   ingest token. `Telemetry.plist` is gitignored (contains the token); the build
