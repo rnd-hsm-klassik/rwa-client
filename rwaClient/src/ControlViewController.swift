@@ -69,7 +69,7 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        oscServer.port = 8000
+        oscServer.port = 8001
         oscServer.delegate = self
         oscClient.port = 8000
         timer = Timer.scheduledTimer(timeInterval: 0.25, target: self, selector: #selector(update),
