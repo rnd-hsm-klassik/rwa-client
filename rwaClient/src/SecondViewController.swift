@@ -135,7 +135,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                 // do something with data
                 // if the call fails, the catch block is executed
             } catch {
-                print(error.localizedDescription)
+                logger.error(error.localizedDescription)
             }
         }
     }
@@ -148,28 +148,28 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     
     func startScanning() {
         if centralManager.isScanning {
-            print("Central Manager is already scanning!!")
+            logger.info("BT: Central Manager is already scanning.")
             return;
         }
         
         if(!useHeadTracker) {
-            print("App is set to use device orientation!")
+            logger.info("BT: App is set to use device orientation.")
             return;
         }
         else {
             centralManager.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey:true])
-            print("Scanning Started!")
+            logger.info("BT: Scanning Started.")
         }
     }
     
     func disconnect() {
         guard let peripheral = self.peripheral else {
-            print("Peripheral object has not been created yet.")
+            logger.warning("BT: Peripheral object has not been created yet.")
             return
         }
         
         if peripheral.state != .connected {
-            print("Peripheral exists but is not connected.")
+            logger.warning("BT: Peripheral exists but is not connected.")
             self.peripheral = nil
             return
         }
@@ -210,7 +210,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     }
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        print("Central Manager State Updated: \(central.state)")
+        logger.info("BT: Central Manager State Updated: \(central.state)")
         
         // We showed more detailed handling of this in Zero-to-BLE Part 2, so please refer to that if you would like more information.
         // We will just handle it the easy way here: if Bluetooth is on, proceed...
@@ -270,7 +270,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     }
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-    print("Discovered \(String(describing: peripheral.name)) at \(RSSI)")
+        logger.debug("BT: Discovered \(String(describing: peripheral.name)) at \(RSSI)")
         if(peripheral.name == headtrackerID)
         {
             if self.peripheral != peripheral {
@@ -279,7 +279,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                 self.peripheral = peripheral
                 
                 // connect to the peripheral
-                print("Connecting to peripheral: \(peripheral)")
+                logger.info("BT: Connecting to peripheral: \(peripheral)")
                 centralManager?.connect(peripheral, options: nil)
             }
         }
@@ -287,10 +287,10 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
 
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        print("Peripheral Connected!!!")
+        logger.info("BT: Peripheral Connected!!!")
         
         centralManager.stopScan()
-        print("Scanning Stopped!")
+        logger.info("BT: Scanning Stopped!")
         bleConnectButton.setTitle("BLE Connected", for: UIControlState())
         bleConnectButton.isEnabled = false
         headTrackerConnected = true
@@ -307,18 +307,18 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         // IMPORTANT: Set the delegate property, otherwise we won't receive the discovery callbacks, like peripheral(_:didDiscoverServices)
         peripheral.delegate = self
        
-        print("Looking for Transfer Service...")  // This time, we will search for the transfer service UUID
+        logger.info("BT: Looking for Transfer Service...")  // This time, we will search for the transfer service UUID
         peripheral.discoverServices(nil)
     }
     
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        print("Failed to connect to \(peripheral) (\(String(describing: error?.localizedDescription)))")
+        logger.info("BT: Failed to connect to \(peripheral) (\(String(describing: error?.localizedDescription)))")
       //  connectionIndicatorView.layer.backgroundColor = UIColor.red.cgColor
         self.disconnect()
     }
     
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        print("Disconnected from Peripheral")
+        logger.info("BT: Disconnected from Peripheral")
         self.peripheral = nil
         rssiTimer?.invalidate()
         rssiTimer = nil
@@ -336,10 +336,10 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         
-        print("Discovered Services!!!")
+        logger.info("BT: Discovered Services!!!")
         
         if error != nil {
-            print("Error discovering services: \(String(describing: error?.localizedDescription))")
+            logger.error("BT: Error discovering services: \(String(describing: error?.localizedDescription))")
             disconnect()
             return
         }
@@ -347,7 +347,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         if let services = peripheral.services {
             
             for service in services {
-                print("Discovered service \(service)")
+                logger.info("BT: Discovered service \(service)")
                 
                 // If we found either the transfer service, discover the transfer characteristic
                 if (service.uuid == CBUUID(string: Device.TransferService)) {
@@ -360,7 +360,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         if error != nil {
-            print("Error discovering characteristics: \(String(describing: error?.localizedDescription))")
+            logger.error("BT: Error discovering characteristics: \(String(describing: error?.localizedDescription))")
             return
         }
         
@@ -369,7 +369,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                 
                 if characteristic.uuid == CBUUID(string: Device.TransferCharacteristic) {
                     // subscribe to dynamic changes
-                    print("Found RWA Headtracker")
+                    logger.info("BT: Found RWA Headtracker")
                     peripheral.setNotifyValue(true, for: characteristic)
                 }
             }
@@ -389,19 +389,19 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?)
     {
         if error != nil {
-            print("Error updating value for characteristic: \(characteristic) - \(String(describing: error?.localizedDescription))")
+            logger.error("BT: Error updating value for characteristic: \(characteristic) - \(String(describing: error?.localizedDescription))")
             return
         }
         
         // make sure we have a characteristic value
         guard let value = characteristic.value else {
-            print("Characteristic Value is nil on this go-round")
+            logger.info("BT: Characteristic Value is nil on this go-round")
             return
         }
         
         // make sure we have a characteristic value
         guard let nextChunk = String(data: value, encoding: String.Encoding.utf8) else {
-            print("Next chunk of data is nil.")
+            logger.debug("BT: Next chunk of data is nil.")
             return
         }
         
@@ -463,14 +463,14 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
             }
         }
         else {
-            print(characteristic.uuid);
+            logger.debug("BT: \(characteristic.uuid)");
         }
         
         // If we get the EOM tag, we fill the text view
         if (nextChunk == Device.EOM) {
             if let message = String(data: dataBuffer as Data, encoding: String.Encoding.utf8) {
                // textView.text = message
-                print("Final message: \(message)")
+                logger.debug("BT: Final message: \(message)")
                 
                 // truncate our buffer now that we received the EOM signal!
                 dataBuffer.length = 0
@@ -489,16 +489,16 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         // if there was an error then print it and bail out
         if error != nil {
-            print("Error changing notification state: \(String(describing: error?.localizedDescription))")
+            logger.error("BT: Error changing notification state: \(String(describing: error?.localizedDescription))")
             return
         }
         
         if characteristic.isNotifying {
             // notification started
-            print("Notification STARTED on characteristic: \(characteristic)")
+            logger.info("BT: Notification STARTED on characteristic: \(characteristic)")
         } else {
             // notification stopped
-            print("Notification STOPPED on characteristic: \(characteristic)")
+            logger.error("BT: Notification STOPPED on characteristic: \(characteristic)")
             self.centralManager.cancelPeripheralConnection(peripheral)
         }
     }
@@ -506,7 +506,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     @objc func unblockSteps()
     {
         blockSteps = false;
-        print("UNBLOCK")
+        logger.info("UNBLOCK")
     }
     
 
@@ -534,7 +534,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                         })
                         
                         blockSteps = true;
-                        print("STEP_1");
+                        logger.info("STEP_1");
                     }
                 }
                 else
@@ -550,7 +550,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                             self.unblockSteps()
                         })
                         blockSteps = true;
-                        print("STEP_2");
+                        logger.info("STEP_2");
                     }
                 }
             }
@@ -749,7 +749,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     {
         if(!headTrackerConnected) {
             connectHeadtracker()
-            print(headtrackerID)
+            logger.info("BT: Headtracker ID: \(headtrackerID)")
         }
         else
         {
@@ -763,7 +763,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         //print(pdGainSlider.value)
         pdGainVal = pdGainSlider.value * 5.0
         PdBase.send(Float(pdGainVal), toReceiver: "rwamainvolume")
-        print(pdGainVal);
+        logger.info("pdGainVal: \(pdGainVal)")
     }
 
     @IBAction func startStop(_ sender: UIButton)

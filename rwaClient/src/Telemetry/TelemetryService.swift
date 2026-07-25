@@ -39,6 +39,7 @@ class TelemetryService {
         return "\(short) (\(build))"
     }()
 
+    let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "RWA Player", category: "Telemetry Service")
     let config: TelemetryConfig
     let sessionId = UUID().uuidString
 
@@ -70,7 +71,7 @@ class TelemetryService {
                 self.store = TelemetryStore(directory: dir)
             }
             if self.store == nil {
-                os_log("telemetry: cannot open event store - events will be dropped", type: .error)
+                self.logger.error("telemetry: cannot open event store - events will be dropped")
             }
         }
 
@@ -164,7 +165,7 @@ class TelemetryService {
               let data = try? JSONSerialization.data(withJSONObject: event),
               let json = String(data: data, encoding: .utf8)
         else {
-            os_log("telemetry: dropping non-serializable event", type: .error)
+            self.logger.error("telemetry: dropping non-serializable event")
             return
         }
 
@@ -175,7 +176,7 @@ class TelemetryService {
                               eventJSON: json)
         if !ok && !storeFailureLogged {
             storeFailureLogged = true
-            os_log("telemetry: event store insert failed - dropping events", type: .error)
+            self.logger.error("telemetry: event store insert failed - dropping events")
         }
     }
 
@@ -214,7 +215,7 @@ class TelemetryService {
         ]
 
         guard let body = try? JSONSerialization.data(withJSONObject: envelope) else {
-            os_log("telemetry: cannot serialize batch, dropping %d events", type: .error, events.count)
+            self.logger.error("telemetry: cannot serialize batch, dropping \(events.count) events")
             store.deleteThrough(id: batch.lastId)
             return
         }
@@ -241,7 +242,7 @@ class TelemetryService {
                     self.nextUploadAllowedAt = Date.distantPast
                     let pending = store.pendingCount()
                     DeviceHealth.shared.setUploadStats(pending: pending, failures: 0, lastStatus: status)
-                    os_log("telemetry: uploaded %d events, %d still pending", type: .info, count, pending)
+                    self.logger.info("telemetry: uploaded \(count) events, \(pending) still pending")
                 } else {
                     self.consecutiveFailures += 1
                     let backoff = min(pow(2.0, Double(self.consecutiveFailures - 1)) * TelemetryService.uploadInterval,
@@ -250,8 +251,7 @@ class TelemetryService {
                     DeviceHealth.shared.setUploadStats(pending: store.pendingCount(),
                                                        failures: self.consecutiveFailures,
                                                        lastStatus: status)
-                    os_log("telemetry: upload failed (status %d, failures %d), backing off %.0fs",
-                           type: .error, status, self.consecutiveFailures, backoff)
+                    self.logger.error("telemetry: upload failed (status \(status), failures \(self.consecutiveFailures), backing off \(backoff)s")
                     if self.consecutiveFailures == 1 {
                         // Only on the transition into failure, so an offline
                         // period yields one event instead of one per retry.

@@ -1,6 +1,5 @@
 import Foundation
 import CoreLocation
-import os.log
 
 let RWA_MAXNUMBEROFPATCHERS = 30
 let RWA_MAXNUMBEROFSTEREOPATCHERS = 15;
@@ -39,6 +38,8 @@ class RwaGameLoop:NSObject, PdListener
     var stereoOut:UnsafeMutableRawPointer?
     var isRunning = false
     var assetFolder:String = String();
+    
+    let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "RWA Player", category: "Game Loop")
     
     override init()
     {
@@ -1554,11 +1555,7 @@ class RwaGameLoop:NSObject, PdListener
         {
             if(!hero.isActiveAsset(asset.uniqueId) && !asset.blocked && !asset.mute && !asset.blockedForever)
             {
-                if #available(iOS 10.0, *) {
-                    os_log("%@", type: .debug, "Start asset for state: \(String(describing: hero.currentState))")
-                } else {
-                    print("Start asset for state: \(String(describing: hero.currentState))")
-                }
+                self.logger.info("Add active asset for state '\(hero.currentState!.stateName)': \(asset.name)")
                 if(asset.playOnce) {
                     asset.blockedForever = true;
                 }

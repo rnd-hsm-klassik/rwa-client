@@ -7,6 +7,9 @@
 //
 
 import UIKit
+import OSLog
+
+let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "RWA Player", category: "Catch-All")
 
 var coreLocationController:CoreLocationController?
 var registered = false;
