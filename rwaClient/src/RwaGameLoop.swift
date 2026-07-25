@@ -4,7 +4,7 @@ import CoreLocation
 let RWA_MAXNUMBEROFPATCHERS = 30
 let RWA_MAXNUMBEROFSTEREOPATCHERS = 15;
 let RWA_MAXNUMBEROF5CHANNELPATCHERS = 4;
-let RWA_MAXNUMBEROFDYNAMICPATCHERS = 50
+let RWA_MAXNUMBEROFDYNAMICPATCHERS = 50 // currently not in use
 
 var sampleRate = 48.0
 
@@ -1550,19 +1550,22 @@ class RwaGameLoop:NSObject, PdListener
             return }
         if(hero.currentState?.assets.isEmpty)! {
             return }
-        
+
         for asset in (hero.currentState?.assets)!
         {
             if(!hero.isActiveAsset(asset.uniqueId) && !asset.blocked && !asset.mute && !asset.blockedForever)
             {
-                self.logger.info("Add active asset for state '\(hero.currentState!.stateName)': \(asset.name)")
+                let patcherTag = findFreePatcher(asset: asset)
+                sendInitValues2Pd(asset, Int(patcherTag))
+
                 if(asset.playOnce) {
                     asset.blockedForever = true;
                 }
-                      
-                let patcherTag = findFreePatcher(asset: asset)
-                sendInitValues2Pd(asset, Int(patcherTag))
+
                 hero.activeAssets[asset.uniqueId] = RwaEntity.AssetMapItem(asset, patcherTag)
+
+                self.logger.info("Add active asset for state '\(hero.currentState!.stateName)': \(asset.name)")
+
                 break
             }
         }
