@@ -27,7 +27,7 @@ class DownloadManager: NSObject, ObservableObject {
 
     func startDownload(url: URL) {
         let task = urlSession.downloadTask(with: url)
-        print(url.lastPathComponent)
+        logger.debug("\(url.lastPathComponent)")
         task.resume()
         tasks.append(task)
     }
@@ -47,7 +47,7 @@ extension DownloadManager: URLSessionDelegate, URLSessionDownloadDelegate {
     }
 
     fileprivate func downloadGamesList(_ location: URL) throws {
-        print("Got GamesList")
+        logger.debug("Got GamesList")
 
         let destinationUrl = URL(fileURLWithPath: documentsDirectory.relativePath + "/allfiles.txt")
         _ = FileManager.default.secureCopyItem(at: location, to: destinationUrl)
@@ -59,7 +59,7 @@ extension DownloadManager: URLSessionDelegate, URLSessionDownloadDelegate {
                 .filter { !$0.isEmpty }
             NotificationCenter.default.post(name: NSNotification.Name(rawValue: "receivedGameList"), object: nil)
         } catch {
-            print(error)
+            logger.error("Failed to download GamesList: \(error)")
         }
     }
 
@@ -82,14 +82,14 @@ extension DownloadManager: URLSessionDelegate, URLSessionDownloadDelegate {
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         guard let httpResponse = downloadTask.response as? HTTPURLResponse,
             (200...299).contains(httpResponse.statusCode) else {
-                print ("server error")
+                logger.error("Server error")
                 return
         }
 
         // Dispatch on the finished task's own URL; a shared "current file"
         // variable would be wrong with overlapping downloads.
         guard let fileName = downloadTask.originalRequest?.url?.lastPathComponent else {
-            print("download finished without a request URL")
+            logger.warning("download finished without a request URL")
             return
         }
 
@@ -101,15 +101,15 @@ extension DownloadManager: URLSessionDelegate, URLSessionDownloadDelegate {
                 try downloadGame(location, named: fileName)
             }
         } catch {
-            print ("file error: \(error)")
+            logger.error("Download error: \(error)")
         }
     }
 
     func urlSession(_: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
-            os_log("Download error: %@", type: .error, String(describing: error))
+            logger.info("Download error: \(String(describing: error))")
         } else {
-            os_log("Task finished: %@", type: .info, task)
+            logger.error("Task finished: \(String(describing: task))")
         }
     }
 }

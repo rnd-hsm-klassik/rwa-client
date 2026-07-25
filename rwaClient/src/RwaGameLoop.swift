@@ -56,7 +56,7 @@ class RwaGameLoop:NSObject, PdListener
        
         stereoOut = PdBase.openFile("stereoout.pd", path: Bundle.main.resourcePath)
         if stereoOut == nil {
-            print("Failed to open patch!")
+            self.logger.error("Failed to open patch!")
         }
         
         for _ in 0 ..< RWA_MAXNUMBEROFPATCHERS
@@ -177,7 +177,7 @@ class RwaGameLoop:NSObject, PdListener
                        // if(patch.patcherTag != nil)
                         
                         dynamicPatchers.append(patch)
-                        print("Init Patcher: \(patch.myAsset.name) \(dynamicPatchers.count)")
+                        self.logger.info("Init Patcher: \(patch.myAsset.name) \(self.dynamicPatchers.count)")
                         let tag:Int32 = PdBase.dollarZero(forFile: patch.patcherTag)
                         let receivedFromPd:String = "\(tag)-playfinished"
                         dispatcher?.add(self, forSource: receivedFromPd)
@@ -198,7 +198,7 @@ class RwaGameLoop:NSObject, PdListener
             let tag:Int32 = PdBase.dollarZero(forFile: dynamicPatchers[i].patcherTag)
             let receivedFromPd:String = "\(tag)-playfinished"
             dispatcher?.remove(self, forSource: receivedFromPd)
-            print("freepatcher");
+            self.logger.info("freepatcher");
             PdBase.closeFile(dynamicPatchers[i].patcherTag)
         }
         dynamicPatchers.removeAll();
@@ -930,7 +930,7 @@ class RwaGameLoop:NSObject, PdListener
                         unblockAssets(state: state)
                         hero.timeInCurrentState = 0
                         
-                        self.logger.info("Enter State '\(hero.currentState?.stateName)'")
+                        self.logger.info("Enter State '\(hero.currentState!.stateName)'")
                         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update State"), object: nil)
                         
                         break
@@ -1220,7 +1220,7 @@ class RwaGameLoop:NSObject, PdListener
             {
                 lastStep = stepCount
                 PdBase.sendBang(toReceiver: step2Pd)
-                print("STEP to Pd")
+                self.logger.info("STEP to Pd")
             }
         }
         else
@@ -1439,7 +1439,7 @@ class RwaGameLoop:NSObject, PdListener
         let path = fullAssetPath + "/" + asset.name
         PdBase.sendSymbol(path , toReceiver: pdReceiver)
         
-        self.logger.info("NEW ACTIVE ASSET: \(asset.name) sent to patcher id \(patcherTag), fadeOutAfter: \(asset.fadeOutAfter)")
+        self.logger.debug("Initialised asset: \(asset.name) sent to patcher id \(patcherTag), gain: \(asset.gain)")
     }
     
     func startBackgroundState()
@@ -1449,6 +1449,8 @@ class RwaGameLoop:NSObject, PdListener
         var patcherTag: Int32
         
         state = (hero.currentScene?.backgroundState)!
+        
+        self.logger.info("Starting Background State of \(hero.currentScene!.name)");
         
         if(state.stateName == "") {
             return }
@@ -1464,6 +1466,7 @@ class RwaGameLoop:NSObject, PdListener
             sendInitValues2Pd(asset, Int(patcherTag))
             let mapItem: RwaEntity.AssetMapItem = RwaEntity.AssetMapItem(asset, patcherTag)
             hero.backgroundAssets[asset.uniqueId] = mapItem
+            self.logger.info("Add Background Asset '\(asset.name)'")
         }
     }
     
@@ -1593,34 +1596,34 @@ class RwaGameLoop:NSObject, PdListener
         }
         
         if(parts.last == "back2ios") {
-            print("bang")
+            self.logger.debug("PD, bang")
         }
     }
     
     func receive(_ received: Float, fromSource source: String!) {
         
         if(source == "back2ios") {
-            print("back2ios: \(received)")
+            self.logger.debug("PD, from back2ios: \(received)")
         }
         
         if(source == "back2ios1") {
-            print("back2ios1: \(received)")
+            self.logger.debug("PD, from back2ios1: \(received)")
         }
         
         if(source == "back2ios2") {
-            print("back2ios2: \(received)")
+            self.logger.debug("PD, from back2ios2: \(received)")
         }
     }
     
     func receiveMessage(_ message: String!, withArguments arguments: [AnyObject]!, fromSource source: String!) {
         
         for i in 0 ..< arguments.count {
-            print("message: \(arguments[i])")
+            self.logger.debug("PD, message: \(String(describing: arguments[i]))")
         }
     }
     
     func receiveSymbol(_ symbol: String!, fromSource source: String!)
     {
-        print("symbol: \(symbol))")
+        self.logger.debug("PD, symbol: \(symbol ?? "<empty>"))")
     }
 }

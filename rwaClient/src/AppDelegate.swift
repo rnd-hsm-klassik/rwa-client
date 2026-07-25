@@ -57,7 +57,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             liveTelemetry = live
         }
         else {
-            print("Telemetry.plist missing or invalid - telemetry disabled")
+            logger.error("Telemetry.plist missing or invalid - telemetry disabled")
         }
 
         // Override point for customization after application launch.
@@ -131,14 +131,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             c.configureTicksPerBuffer(16)
             switch s{
             case .OK:
-                print("succes");
+                logger.info("Successfully configured audioController");
             default:
-                print("no succes");
+                logger.warning("audioController configuration unsuccessful");
             }
         }
         else
         {
-            print("Could not init audiocontroller")
+            logger.error("Could not init audioController")
         }
 
         deviceId = defaults.string(forKey: defaultsKeys.deviceId) ?? ""

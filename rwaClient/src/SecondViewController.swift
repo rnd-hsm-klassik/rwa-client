@@ -507,7 +507,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     @objc func unblockSteps()
     {
         blockSteps = false;
-        logger.info("UNBLOCK")
+        logger.info("Steps: unblock")
     }
     
 
@@ -530,12 +530,13 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                         stepCount+=1;
 //                        unblockStepTime = Timer.scheduledTimer(timeInterval: 0.45, target: self, selector: #selector(SecondViewController.unblockSteps), userInfo: nil, repeats: false)
                         
+                        // 450ms debounce
                         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(450), execute: {
                             self.unblockSteps()
                         })
                         
                         blockSteps = true;
-                        logger.info("STEP_1");
+                        logger.info("Steps: STEP_1");
                     }
                 }
                 else
@@ -547,11 +548,12 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                         step = 1;
 //                        unblockStepTime = Timer.scheduledTimer(timeInterval: 0.45, target: self, selector: #selector(SecondViewController.unblockSteps), userInfo: nil, repeats: false)
                         
+                        // 450ms debounce
                         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(450), execute: {
                             self.unblockSteps()
                         })
                         blockSteps = true;
-                        logger.info("STEP_2");
+                        logger.info("Steps: STEP_2");
                     }
                 }
             }

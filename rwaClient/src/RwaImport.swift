@@ -30,7 +30,7 @@ class RwaImport:NSObject, XMLParserDelegate
         scenes.removeAll()
        // let parts = name.components(separatedBy: ".")
        // let filename = parts.first!.decomposedStringWithCanonicalMapping
-        print(name)
+        logger.info("Importing \(name)")
         
       //  let rwaGamePath = Bundle.main.path(forResource: filename, ofType: "rwa")
         rwaGameFile = URL(fileURLWithPath: name)
@@ -97,7 +97,7 @@ class RwaImport:NSObject, XMLParserDelegate
             let lat:Double = Double(string)!;
             currentCorner.latitude = lat
             areaPtr?.exitOffsetCorners!.append(currentCorner)
-            print("Read Exit Offset Corner");
+            logger.debug("Read Exit Offset Corner");
             
         }
     }
@@ -129,7 +129,7 @@ class RwaImport:NSObject, XMLParserDelegate
         if(elementName == "scene")
         {
             let newScene = RwaScene(name:"")
-            print("Element's name is \(elementName)")
+            logger.debug("Element's name is \(elementName)")
             let sceneName = attributeDict.removeValue(forKey: "name")
             let lat = attributeDict.removeValue(forKey: "lat")!
             let lon = attributeDict.removeValue(forKey: "lon")!

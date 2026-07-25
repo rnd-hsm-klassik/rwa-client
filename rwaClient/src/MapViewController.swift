@@ -198,7 +198,7 @@ class MapViewController: UIViewController, MKMapViewDelegate
             drawScene(scene)
         }
         mapView.setNeedsDisplay();
-        print("REDRAW MAP")
+        logger.debug("REDRAW MAP")
     }
     
     @objc func updateScene() {

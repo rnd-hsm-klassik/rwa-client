@@ -385,7 +385,7 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
             if let _ = message.arguments.first as? Int {
                 hero.stepCount = hero.stepCount + 1
                 stepCount = stepCount + 1
-                print("Received Step")
+                logger.debug("Received Step")
             }
         }
 
@@ -406,7 +406,7 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
         if message.addressPattern == "/currentscene"
         {
             if var currentScene = message.arguments.first as? String {
-                print(currentScene)
+                logger.debug("\(currentScene)")
 
                 let nextScene:RwaScene = hero.getScene(sceneName: currentScene)
 
@@ -422,7 +422,7 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
                     rwagameloop.startBackgroundState()
                     sceneChanged = true
                     currentScene = nextScene.name;
-                    print("New Scene: \(String(describing: currentScene))")
+                    logger.debug("New Scene: \(String(describing: currentScene))")
                 }
             }
         }

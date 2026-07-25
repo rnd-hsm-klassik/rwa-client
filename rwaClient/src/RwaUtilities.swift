@@ -230,7 +230,7 @@ extension FileManager {
             }
         }
         catch {
-            print("Cannot create Folder item at \(myDir.relativePath): \(error)")
+            logger.error("Cannot create Folder item at \(myDir.relativePath): \(error)")
         }
     }
     
@@ -241,13 +241,13 @@ extension FileManager {
 
 
                     try FileManager.default.removeItem(at: srcURL)
-                    print("File exists, removing it!")
+                logger.debug("File exists, removing it!")
          
             }
             
     
         } catch (let error) {
-            print("Cannot move item to \(srcURL)  \(error)")
+            logger.error("Cannot remove item \(srcURL): \(error)")
 
         }
         
@@ -262,17 +262,17 @@ extension FileManager {
                 
                 if(srcModDate > dstModDate) {
                     try FileManager.default.removeItem(at: dstURL)
-                    print("Found newer version, removed old")
+                    logger.info("Found newer version, removed old")
                 }
                 else {
-                    print("File exists, no update necessary")
+                    logger.info("File exists, no update necessary (\(dstURL))")
                     return false
                 }
             }
             
             try FileManager.default.copyItem(at: srcURL, to: dstURL)
         } catch (let error) {
-            print("Cannot copy item at \(srcURL) to \(dstURL): \(error)")
+            logger.error("Cannot copy item at \(srcURL) to \(dstURL): \(error)")
             return false
         }
         return true
@@ -362,7 +362,7 @@ extension UIViewController {
             registered = true
             if let adress = getWiFiAddress() {
                 let message = F53OSCMessage(addressPattern: "/register", arguments: ["Gandalf", adress])
-                print("register client")
+                logger.debug("OSC: register client")
                 oscClient.send(message)
                 startOscListening()
                 coreLocationController?.locationManager.stopUpdatingLocation()
@@ -402,7 +402,6 @@ extension UIViewController {
                                     &hostname, socklen_t(hostname.count),
                                     nil, socklen_t(0), NI_NUMERICHOST)
                         address = String(cString: hostname)
-                        print("MY NETWORK ADDRESS \(String(describing: address))")
                     }
                     if address == nil {
                         if name == "pdp_ip0" {
@@ -412,9 +411,9 @@ extension UIViewController {
                                         &hostname, socklen_t(hostname.count),
                                         nil, socklen_t(0), NI_NUMERICHOST)
                             address = String(cString: hostname)
-                            print("MY NETWORK ADDRESS \(String(describing: address))")
                         }
                     }
+                    logger.debug("My network address: \(String(describing: address)) (interface \(name))")
                 }
                 ptr = ptr?.pointee.ifa_next
             }

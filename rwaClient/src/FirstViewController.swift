@@ -32,10 +32,10 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
             let fileURLs = try FileManager.default.contentsOfDirectory(at: documentsDirectory, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
             for fileURL in fileURLs {
                 try FileManager.default.removeItem(at: fileURL)
-                print("remove " + fileURL.lastPathComponent )
+                logger.debug("removing \(fileURL.lastPathComponent)")
             }
         } catch  {
-            print(error)
+            logger.error("Failed to empty the documents directory: \(error)")
         }
     }
     
@@ -47,7 +47,7 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         {
             let destURL = documentsURL.appendingPathComponent("assets")
             FileManager.createDirectory(myDir: destURL)
-            print(destURL.relativePath)
+            logger.debug("created directory: \(destURL.relativePath)")
         }
     }
     
@@ -118,21 +118,21 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
     }
     
     // Wired to the "Fetch Games" bar button on the Games tab; the Creator IP
-    // (rwaCreatorIP) is set on the Control Data tab.
+    // (rwaCreatorIP) is set on the Settings tab.
     @IBAction func fetchGames(_ sender: Any)
     {
         let alert = UIAlertController(title: "Fetch Games", message: "This will delete existing games on the device, are you sure?", preferredStyle: .alert)
 
         alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Default action"), style: .default, handler: { _ in
             self.emptyDocumentsDirectory();
-            print("Received update Games")
+            logger.info("Received update Games")
             self.games.clear()
             let remoteURL = URL(string: "http://"+rwaCreatorIP+":8088/allfiles.txt")!
             downloadManager.startDownload(url: remoteURL)
         }))
         
         alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Abort"), style: .default, handler: { _ in
-            print("Aborted")
+            logger.info("Aborted")
         }))
 
         self.present(alert, animated: true, completion: nil)
@@ -189,9 +189,9 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         hero.coordinates.longitude = 7.5594406;
         
         if defaultGame != "" {
-            print(games.rwaGames[0].path)
-            print(games.rwaGames[0].name)
-            print(defaultGame)
+            logger.debug("First game: \(self.games.rwaGames[0].name), \(self.games.rwaGames[0].path)")
+            logger.debug("Default game: \(defaultGame)")
+
             let dir = (defaultGame as NSString).deletingLastPathComponent
             fullAssetPath = dir + "/" + "assets"
             loadGameAndInitDynamicPatchers(game: defaultGame)
@@ -223,7 +223,7 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         let defaults = UserDefaults.standard
         if(sender.isOn) {
             defaultGame = sender.layer.name!
-            print(defaultGame)
+            logger.debug("setting new default game: \(defaultGame)")
             defaults.set(defaultGame, forKey: defaultsKeys.defaultGame)
         }
         else {
@@ -278,8 +278,8 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         
         fullGamePath =  (cell?.detailTextLabel?.text)! + "/" + currentGame
 
-        print(fullGamePath)
-        print(fullAssetPath)
+        logger.info("loading game: \(fullGamePath)")
+        logger.info("loading assets folder: \(fullAssetPath)")
       
         loadGameAndInitDynamicPatchers(game: fullGamePath)
         

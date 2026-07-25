@@ -22,25 +22,24 @@ class CoreLocationController:NSObject, CLLocationManagerDelegate{
     }
     
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        print("didChangeAuthorizationStatus")
         
         switch status {
         case .notDetermined:
-            print(".NotDetermined")
+            logger.debug("CLAuthorizationStatus: .NotDetermined")
             locationManager.requestWhenInUseAuthorization()
             break
             
         case .authorizedAlways:
-            print(".Authorized")
+            logger.debug("CLAuthorizationStatus: .Authorized")
             self.locationManager.startUpdatingLocation()
             break
             
         case .denied:
-            print(".Denied")
+            logger.error("CLAuthorizationStatus: .Denied")
             break
             
         default:
-            print("Unhandled authorization status")
+            logger.error("CLAuthorizationStatus: Unhandled authorization status")
             break
         }
     }
@@ -57,7 +56,6 @@ class CoreLocationController:NSObject, CLLocationManagerDelegate{
                     return
                 }
             }
-            print("Update Location")
             let location = locations.last! as CLLocation
             hero.location = location
             hero.coordinates = location.coordinate
@@ -65,9 +63,7 @@ class CoreLocationController:NSObject, CLLocationManagerDelegate{
             
             if(sendGPS2Creator)
             {
-                print("Send to Creator")
-                print (hero.coordinates.longitude)
-                print (hero.coordinates.latitude)
+                logger.debug("Sending to coordinates to Creator: (\(hero.coordinates.longitude), \(hero.coordinates.latitude)")
                 let message = F53OSCMessage(addressPattern: "/position", arguments: [Float32(hero.coordinates.longitude), Float32(hero.coordinates.latitude)])
                 oscClient.send(message)
             }
