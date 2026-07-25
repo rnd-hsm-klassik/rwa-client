@@ -211,14 +211,14 @@ extension FileManager {
         // let aWeekAgo = calendar.date(byAdding: .day, value: -7, to: Date())!
         do {
             let resources = try fileUrl.resourceValues(forKeys: [.contentModificationDateKey])
-            let modificationDate = resources.contentModificationDate!
-            return modificationDate
+            if let modificationDate = resources.contentModificationDate {
+                return modificationDate
+            }
+        } catch {
+            logger.error("Failed to fetch modification date for \(fileUrl.path): \(error)")
         }
-        
-        catch {
-            print(error)
-        }
-        return Date(timeIntervalSince1970: Foundation.TimeInterval(0))
+        // fallback: return Jan 1, 1970 if file doesn't exist or date couldn't be read
+        return Date(timeIntervalSince1970: 0)
     }
     
     static public func createDirectory(myDir: URL)
@@ -234,7 +234,7 @@ extension FileManager {
         }
     }
     
-    open func removeIfExists(srcURL: URL)
+    public func removeIfExists(srcURL: URL)
     {
         do {
             if FileManager.default.fileExists(atPath: srcURL.path) {
@@ -253,7 +253,7 @@ extension FileManager {
         
     }
 
-    open func secureCopyItem(at srcURL: URL, to dstURL: URL) -> Bool
+    public func secureCopyItem(at srcURL: URL, to dstURL: URL) -> Bool
     {
         do {
             if FileManager.default.fileExists(atPath: dstURL.path) {
