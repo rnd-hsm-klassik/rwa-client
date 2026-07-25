@@ -850,6 +850,7 @@ class RwaGameLoop:NSObject, PdListener
         hero.timeInCurrentState += schedulerRate/1000
         hero.timeInCurrentScene += schedulerRate/1000
         
+        // why is this necessary?
         if (fmod(hero.timeInCurrentState, 1) >= 0.01) {
             return;
         }
@@ -1531,6 +1532,7 @@ class RwaGameLoop:NSObject, PdListener
         }
     }
     
+    // SecondViewController.timer (10ms) -> SecondViewController.countUp() RwaGameLoop.updateGameState() -> RwaGameLoop.processAssets()
     func updateGameState()
     {
         sendData2ActiveAssets()

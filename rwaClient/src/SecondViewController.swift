@@ -11,6 +11,7 @@ import CoreBluetooth
 import MapKit
 import CoreMotion
 
+// 10ms
 let schedulerRate: Double = 10
 
 var ubloxLon = Double("3.1415926536")
