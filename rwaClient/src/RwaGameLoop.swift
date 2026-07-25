@@ -682,11 +682,7 @@ class RwaGameLoop:NSObject, PdListener
                let send2pd = "\(patcherTag)-end"
                PdBase.sendBang(toReceiver: send2pd)
                 
-                if #available(iOS 10.0, *) {
-                    os_log("%@", type: .debug, "Send End to Background Asset: \(entityAsset.value.asset.name) with patchertag: \(patcherTag)")
-                } else {
-                    print("Send End to Background Asset: \(entityAsset.value.asset.name) with patchertag: \(patcherTag)")
-                }
+                self.logger.info("Send End to Background Asset: \(entityAsset.value.asset.name) with patchertag: \(patcherTag)")
             }
         }
     }
@@ -701,11 +697,7 @@ class RwaGameLoop:NSObject, PdListener
                 let send2pd = "\(patcherTag)-end"
                 PdBase.sendBang(toReceiver: send2pd)
                 
-                if #available(iOS 10.0, *) {
-                    os_log("%@", type: .debug, "Send End to Active Asset: \(entityAsset.value.asset.name) with patchertag: \(patcherTag)")
-                } else {
-                    print("Send End to Active Asset: \(entityAsset.value.asset.name) with patchertag: \(patcherTag)")
-                }
+                self.logger.info("Send End to Active Asset: \(entityAsset.value.asset.name) with patchertag: \(patcherTag)")
             }
         }
         
@@ -834,11 +826,7 @@ class RwaGameLoop:NSObject, PdListener
                     {
                         setScene(scene: scene)
                         
-                        if #available(iOS 10.0, *) {
-                            os_log("%@", type: .debug, "Enter Scene with new location: \(String(describing: scene.name))")
-                        } else {
-                            print("Enter Scene with new location: \(String(describing: scene.name))")
-                        }
+                        self.logger.info("Enter Scene with new location: \(String(describing: scene.name))")
                     
                         return;
                     }
@@ -865,14 +853,10 @@ class RwaGameLoop:NSObject, PdListener
         if (fmod(hero.timeInCurrentState, 1) >= 0.01) {
             return;
         }
-            
-       /* else {
-            if #available(iOS 10.0, *) {
-                os_log("%@", type: .debug, "Time in current state: \(Int(hero.timeInCurrentState))")
-            } else {
-                print("Time in current state: \(Int(hero.timeInCurrentState))")
-            }
-        }*/
+        else {
+            logger.debug("Time in current state: \(Int(hero.timeInCurrentState))")
+        }
+        
         if(hero.currentState != nil)
         {
             if(hero.timeInCurrentState < (hero.currentState?.minStayTime)!) {
@@ -915,7 +899,7 @@ class RwaGameLoop:NSObject, PdListener
                                 break;
                             }
                             else {
-                                print("found required state")
+                                self.logger.info("found required state")
                             }
                         }
                     }
@@ -945,11 +929,7 @@ class RwaGameLoop:NSObject, PdListener
                         unblockAssets(state: state)
                         hero.timeInCurrentState = 0
                         
-                        if #available(iOS 10.0, *) {
-                            os_log("%@", type: .debug, "Enter State: \(String(describing: hero.currentState?.stateName))")
-                        } else {
-                            print("Enter State: \(String(describing: hero.currentState?.stateName))")
-                        }
+                        self.logger.info("Enter State '\(hero.currentState?.stateName)'")
                         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update State"), object: nil)
                         
                         break
@@ -996,11 +976,7 @@ class RwaGameLoop:NSObject, PdListener
                 {
                     exitState = true
                     
-                    if #available(iOS 10.0, *) {
-                        os_log("%@", type: .debug, "Leave after Assets Finish")
-                    } else {
-                        print("Leave after Assets Finish")
-                    }
+                    self.logger.info("Leave after Assets Finish")
                 }
             }
             
@@ -1049,11 +1025,7 @@ class RwaGameLoop:NSObject, PdListener
                 let nextScene:RwaScene = hero.getScene(sceneName: newScene)
                 setScene(scene: nextScene)
                 
-                if #available(iOS 10.0, *) {
-                    os_log("%@", type: .debug, "Enter Scene after timeout")
-                } else {
-                    print("Enter Scene after timeout")
-                }
+                self.logger.info("Enter Scene after timeout")
             }
             
             else if(state.nextScene != "")
@@ -1061,11 +1033,7 @@ class RwaGameLoop:NSObject, PdListener
                 let nextScene:RwaScene = hero.getScene(sceneName: state.nextScene)
                 setScene(scene: nextScene)
                 
-                if #available(iOS 10.0, *) {
-                    os_log("%@", type: .debug, "Enter Scene")
-                } else {
-                    print("Enter Scene")
-                }
+                self.logger.info("Enter Scene '\(nextScene.name)'")
             }
               
             else if(state.nextState != "")
@@ -1082,11 +1050,7 @@ class RwaGameLoop:NSObject, PdListener
                     hero.currentState = hero.currentScene?.states[0]
                     hero.timeInCurrentState = 0
                     
-                    if #available(iOS 10.0, *) {
-                        os_log("%@", type: .debug, "Enter Fallbackstate")
-                    } else {
-                        print("Enter Fallbackstate")
-                    }
+                    self.logger.info("Enter Fallbackstate")
                 }
             }
         }
@@ -1474,11 +1438,7 @@ class RwaGameLoop:NSObject, PdListener
         let path = fullAssetPath + "/" + asset.name
         PdBase.sendSymbol(path , toReceiver: pdReceiver)
         
-        if #available(iOS 10.0, *) {
-            os_log("%@", type: .debug, "NEW ACTIVE ASSET: \(asset.name) send to receiver \(pdReceiver) crossfadeafter: \(asset.fadeOutAfter)")
-        } else {
-            print("NEW ACTIVE ASSET: \(asset.name) send to receiver \(pdReceiver) crossfadeafter: \(asset.fadeOutAfter)")
-        }
+        self.logger.info("NEW ACTIVE ASSET: \(asset.name) sent to patcher id \(patcherTag), fadeOutAfter: \(asset.fadeOutAfter)")
     }
     
     func startBackgroundState()
@@ -1608,11 +1568,7 @@ class RwaGameLoop:NSObject, PdListener
                     PdBase.send(Double(0.0), toReceiver: gain2Pd)
                     hero.removeActiveAsset(Int32(patcherTag))
                     
-                    if #available(iOS 10.0, *) {
-                        os_log("%@", type: .debug, "Release patcher from asset \(mapItem.value.asset.name)")
-                    } else {
-                        print("Release patcher from asset \(patcherTag) \(mapItem.value.asset.name) ")
-                    }
+                    self.logger.info("Release patcher \(patcherTag) of asset \(mapItem.value.asset.name)")
                     
                     releasePatcherFromItem(mapItem.value)
                 }
@@ -1626,11 +1582,7 @@ class RwaGameLoop:NSObject, PdListener
                     PdBase.send(Double(0.0), toReceiver: gain2Pd)
                     hero.removeBackgroundAsset(Int32(patcherTag))
                     
-                    if #available(iOS 10.0, *) {
-                        os_log("%@", type: .debug, "Release patcher from asset \(mapItem.value.asset.name)")
-                    } else {
-                        print("Release patcher from asset \(patcherTag) \(mapItem.value.asset.name) ")
-                    }
+                    self.logger.info("Release patcher \(patcherTag) of background-asset \(mapItem.value.asset.name)")
                     
                     releasePatcherFromItem(mapItem.value)
                     

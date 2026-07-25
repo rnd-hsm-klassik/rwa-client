@@ -135,7 +135,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                 // do something with data
                 // if the call fails, the catch block is executed
             } catch {
-                logger.error(error.localizedDescription)
+                logger.error("setInputGain failed: \(error.localizedDescription)")
             }
         }
     }
@@ -210,7 +210,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     }
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        logger.info("BT: Central Manager State Updated: \(central.state)")
+        logger.info("BT: Central Manager State Updated: \(String(describing: central.state))")
         
         // We showed more detailed handling of this in Zero-to-BLE Part 2, so please refer to that if you would like more information.
         // We will just handle it the easy way here: if Bluetooth is on, proceed...
