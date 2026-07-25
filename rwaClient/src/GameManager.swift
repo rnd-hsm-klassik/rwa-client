@@ -23,12 +23,6 @@ class GameManager: NSObject
     var gamesPath:String = Bundle.main.resourcePath!
     var destUrl:URL = Bundle.main.resourceURL!;
     
-    func addGame(_ name:String, path:String)
-    {
-        rwaGames.append(rwagame(name:name, path:path))
-        print("APPEND GAME, COUNT IS \(rwaGames.count)")
-    }
-    
     func clear()
     {
         rwaGames = [rwagame]()
@@ -38,7 +32,7 @@ class GameManager: NSObject
     {
         clear() // rebuild from disk; callers may invoke this repeatedly
         let fileManager = FileManager.default
-        let docuURLS = try! FileManager.default.contentsOfDirectory(at: destUrl, includingPropertiesForKeys: nil)
+        _ = try! FileManager.default.contentsOfDirectory(at: destUrl, includingPropertiesForKeys: nil)
         let documentsDirectory = FileManager.default.urls(for:.documentDirectory, in: .userDomainMask)[0]
         
         let enumerator:FileManager.DirectoryEnumerator = fileManager.enumerator(atPath: documentsDirectory.relativePath)!
@@ -46,9 +40,11 @@ class GameManager: NSObject
         {
             if element.hasSuffix("rwa")
             {
-                print(element)
-                addGame(element, path: documentsDirectory.relativePath)
+                rwaGames.append(rwagame(name:element, path:documentsDirectory.relativePath))
+                logger.debug("Append game '\(element)'")
             }
         }
+        let nGames = rwaGames.count
+        logger.debug("Added \(nGames) games")
     }
 }
