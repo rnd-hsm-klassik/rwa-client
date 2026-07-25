@@ -41,7 +41,7 @@ struct defaultsKeys {
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-    var audioController:PdAudioController?
+    var audioController: PdAudioController?
     var liveTelemetry: LiveTelemetrySource?
     var currentSceneController: UIViewController?
 
@@ -60,11 +60,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             logger.error("Telemetry.plist missing or invalid - telemetry disabled")
         }
 
-        // Override point for customization after application launch.
         audioController = PdAudioController()
         coreLocationController = CoreLocationController()
         coreLocationController?.locationManager.stopUpdatingLocation()
         
+        // Override point for customization after application launch.
+
         let defaults = UserDefaults.standard
         
         if let dg = defaults.string(forKey: defaultsKeys.defaultGame) {
@@ -123,23 +124,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         else {
             calibrateOnStart = false;
         }
-       
-        if let c = audioController
-        {
-            let sr = sampleRate * 1000
-            let s = c.configurePlayback(withSampleRate: Int32(sr), inputChannels: 1, outputChannels: 2, inputEnabled: true).toPdAudioControlStatus()
-            c.configureTicksPerBuffer(16)
-            switch s{
-            case .OK:
-                logger.info("Successfully configured audioController");
-            default:
-                logger.warning("audioController configuration unsuccessful");
-            }
-        }
-        else
-        {
-            logger.error("Could not init audioController")
-        }
+
+        configureAudio(audioController!)
 
         deviceId = defaults.string(forKey: defaultsKeys.deviceId) ?? ""
         useRtkGps = defaults.string(forKey: defaultsKeys.gpsSource) == "rtk"
@@ -151,6 +137,47 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         installSettingsTab()
         applySystemTabIcons()
         return true
+    }
+
+    /// Configures the libpd audio session
+    /// Note: PdAudioPropertyChanged is not a failure: it means the
+    /// session ran with adjusted properties (sample rate, buffer size),
+    /// typical for Bluetooth devices, only PdAudioError is fatal.
+    ///
+    /// Bluetooth:
+    /// - Without audio input, the audio route is "Playback", should
+    ///   always work (stereo, full sample rate).
+    /// - When using audio input, the route becomes "PlayAndRecord",
+    ///   this would put AirPods on HFP instead (mono, 16/24 kHz, mic open)
+    ///   but RWA Player requires 48kHz. This doesn't work.
+    private func configureAudio(_ controller: PdAudioController) {
+        let requestedRate = Int32(sampleRate * 1000)
+        let status = controller.configurePlayback(withSampleRate: requestedRate,
+                                                  inputChannels: 1,
+                                                  outputChannels: 2,
+                                                  inputEnabled: false).controlStatus
+        let ticksStatus = controller.configureTicksPerBuffer(16).controlStatus
+
+        let session = AVAudioSession.sharedInstance()
+        let route = session.currentRoute.outputs
+            .map { "\($0.portName) [\($0.portType)]" }
+            .joined(separator: ", ")
+        let state = "requested \(requestedRate) Hz, session \(session.sampleRate) Hz, "
+            + "out \(controller.outputChannels) ch (session \(session.outputNumberOfChannels)), "
+            + "ticks/buffer \(controller.ticksPerBuffer), route: \(route.isEmpty ? "none" : route)"
+
+        switch status {
+        case .ok:
+            logger.info("audioController configured: \(state)")
+        case .propertyChanged:
+            // libpd logs the specific adjustment via AU_LOG.
+            logger.info("audioController configured with adjusted properties: \(state)")
+        case .error:
+            logger.error("audioController configuration FAILED: \(state)")
+        }
+        if ticksStatus != .ok {
+            logger.error("configureTicksPerBuffer(16) returned \(String(describing: ticksStatus)); effective \(controller.ticksPerBuffer)")
+        }
     }
 
     /// Swaps the storyboard's placeholder tab icons for SF Symbols that match
@@ -274,19 +301,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 //MARK: - CONVERT ENUM FOR SWIFT
 
 extension PdAudioStatus {
-    enum PdAudioControlStatus {
-        case OK
-        case Error
-        case PropertyChanged
+    enum ControlStatus {
+        case ok               // PdAudioOK: as requested
+        case error            // PdAudioError: unrecoverable
+        case propertyChanged  // PdAudioPropertyChanged: works, with adjusted properties
     }
-    func toPdAudioControlStatus() -> PdAudioControlStatus {
+
+    var controlStatus: ControlStatus {
         switch self.rawValue {
-        case 0: //
-            return .OK
-        case -1: //
-            return .Error
-        default: //
-            return .PropertyChanged
+        case PdAudioOK.rawValue:
+            return .ok
+        case PdAudioError.rawValue:
+            return .error
+        default:
+            return .propertyChanged
         }
     }
 }
