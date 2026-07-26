@@ -1358,8 +1358,7 @@ class RwaGameLoop:NSObject, PdListener
         
         if(asset.moveFromStartPosition)
         {
-            asset.currentPosition.latitude = asset.startPosition.latitude
-            asset.currentPosition.longitude = asset.startPosition.longitude
+            asset.currentPosition = asset.startPosition
             asset.reachedEndPosition = false
         }
         else

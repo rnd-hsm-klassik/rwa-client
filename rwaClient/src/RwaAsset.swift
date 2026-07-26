@@ -159,9 +159,9 @@ class RwaAsset:NSObject
     var timeOut:Int32 = -1  // timeOut in ms
     var fullPath:String = ""
     var name:String = ""
-    var coordinates:CLLocationCoordinate2D = CLLocationCoordinate2D()
-    var currentPosition:CLLocationCoordinate2D = CLLocationCoordinate2D()
-    var startPosition:CLLocationCoordinate2D = CLLocationCoordinate2D()
+    var coordinates = CLLocationCoordinate2D()
+    var currentPosition = CLLocationCoordinate2D()
+    var startPosition = CLLocationCoordinate2D()
     var movementSpeed: Float = 0
     var waitTimeBeforeMovement : Float = 0
     var elevation:Float32 = 0
