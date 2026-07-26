@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Engine parity:
 
-- sendInitValues2Pd: reorder the sequence of pd messages and add assetlon, assetlat, samplerate
+- sendInitValues2Pd: reorder the sequence of pd messages and add assetlon,
+  assetlat, samplerate.
+- (major) Allow background assets to update when there are no active assets
+  (sendData2ActiveAssets). this now works properly in RWA Player, as at
+  game-start, FALLBACK state is active. This is not yet the case in RWA Creator,
+  which still needs to be fixed.
 
 ## [1.2.0] - 2026-07-24
 

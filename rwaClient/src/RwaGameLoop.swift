@@ -1332,24 +1332,26 @@ class RwaGameLoop:NSObject, PdListener
     
     func sendData2ActiveAssets()
     {
+        // at the beginning of a game, this evaluates to FALLBACK state
         if(hero.currentState == nil) {
             return
         }
         
-        if(hero.activeAssets.isEmpty) {
-            return
+        if(!hero.activeAssets.isEmpty) {
+            for mapItem in hero.activeAssets
+            {
+                sendData2Asset(mapItem: mapItem.value);
+            }
+            step = 0;
         }
         
-        for mapItem in hero.backgroundAssets
-        {
-            sendData2Asset(mapItem: mapItem.value);
+        if(!hero.backgroundAssets.isEmpty) {
+            for mapItem in hero.backgroundAssets
+            {
+                sendData2Asset(mapItem: mapItem.value);
+            }
+            step = 0;
         }
-        
-        for mapItem in hero.activeAssets
-        {
-            sendData2Asset(mapItem: mapItem.value);
-        }
-        step = 0;
     }
     
     func sendInitValues2Pd(_ asset:RwaAsset, _ patcherTag: Int)
