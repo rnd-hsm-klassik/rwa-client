@@ -129,8 +129,8 @@ class RwaImport:NSObject, XMLParserDelegate
         if(elementName == "scene")
         {
             let newScene = RwaScene(name:"")
-            logger.debug("Element's name is \(elementName)")
             let sceneName = attributeDict.removeValue(forKey: "name")
+            logger.debug("Importing scene '\(sceneName ?? "<no name>")'")
             let lat = attributeDict.removeValue(forKey: "lat")!
             let lon = attributeDict.removeValue(forKey: "lon")!
             let level = attributeDict.removeValue(forKey: "level")!

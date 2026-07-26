@@ -855,7 +855,7 @@ class RwaGameLoop:NSObject, PdListener
             return;
         }
         else {
-            logger.debug("Time in current state: \(Int(hero.timeInCurrentState))")
+            logger.notice("Time in current state: \(Int(hero.timeInCurrentState))")
         }
         
         if(hero.currentState != nil)

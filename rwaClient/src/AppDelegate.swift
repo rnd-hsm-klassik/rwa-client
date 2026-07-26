@@ -176,7 +176,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             logger.error("audioController configuration FAILED: \(state)")
         }
         if ticksStatus != .ok {
-            logger.error("configureTicksPerBuffer(16) returned \(String(describing: ticksStatus)); effective \(controller.ticksPerBuffer)")
+            logger.error("configureTicksPerBuffer(16) returned \(ticksStatus.rawValue); effective \(controller.ticksPerBuffer)")
         }
     }
 
@@ -301,7 +301,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 //MARK: - CONVERT ENUM FOR SWIFT
 
 extension PdAudioStatus {
-    enum ControlStatus {
+    enum ControlStatus: String {
         case ok               // PdAudioOK: as requested
         case error            // PdAudioError: unrecoverable
         case propertyChanged  // PdAudioPropertyChanged: works, with adjusted properties
