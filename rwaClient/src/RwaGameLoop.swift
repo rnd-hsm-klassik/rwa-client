@@ -1447,7 +1447,7 @@ class RwaGameLoop:NSObject, PdListener
         var gain2Pd: String
         var patcherTag: Int32
         
-        state = (hero.currentScene?.backgroundState)!
+        state = hero.currentScene!.backgroundState
         
         self.logger.info("Starting Background State of \(hero.currentScene!.name)");
         
