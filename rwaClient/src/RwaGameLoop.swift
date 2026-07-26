@@ -6,6 +6,8 @@ let RWA_MAXNUMBEROFSTEREOPATCHERS = 15;
 let RWA_MAXNUMBEROF5CHANNELPATCHERS = 4;
 let RWA_MAXNUMBEROFDYNAMICPATCHERS = 50 // currently not in use
 
+// defined as samples/ms
+// careful: RWA Creator defines it as samples/s (48000)
 var sampleRate = 48.0
 
 var activeLoop = 0
@@ -1313,13 +1315,19 @@ class RwaGameLoop:NSObject, PdListener
             asset.currentRotateAngleOffset += asset.rotateOffsetPerTick
         }
         
+        // playhead tracking
         if(asset.updatePlayheadPosition)
         {
-            asset.playheadPositionWithoutOffset += Double(schedulerRate)
+            // playheadPositionWithoutOffset is tracked in ms
+            asset.playheadPositionWithoutOffset += Double(schedulerRate) // 10 ms
             if(asset.playheadPositionWithoutOffset >= Double(asset.offset)) {
-                asset.playheadPosition += Double(schedulerRate)  * sampleRate
+                asset.playheadPosition += Double(schedulerRate)  * sampleRate // 10 * 48 = 480 samples per scheduler tick
             }
             
+            // if asset reached fadeOutAfter:
+            // - loop: reset playheadPosition
+            // - oneshot: stop tracking playheadPosition
+            // (playheadPosition is tracked in samples)
             if(asset.playheadPosition >= asset.fadeOutAfter * sampleRate)
             {
                 asset.playheadPosition = 0;

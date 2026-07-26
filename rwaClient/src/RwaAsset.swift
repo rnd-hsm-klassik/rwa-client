@@ -94,10 +94,10 @@ class RwaAsset:NSObject
     var dampingFunction: Int = 1
     var id:Int32 = -1
     var uniqueId: UUID = UUID();
-    var fadeOutTime:Int32 = 0
-    var fadeInTime:Int32 = 0
-    var loopWaitTime:Int32 = 0
-    var offset:Int32 = 0
+    var fadeOutTime: Int32 = 0 // ms
+    var fadeInTime: Int32 = 0 // ms
+    var loopWaitTime: Int32 = 0 // ms
+    var offset: Int32 = 0 // ms
     
     var mute:Bool = false
     var headtrackerRelative2Source:Bool = false
@@ -137,10 +137,12 @@ class RwaAsset:NSObject
     var dampingMax: Double = 1
     var smoothDistance: Double = 10
     var minDistance: Double = -1
-    var playheadPosition: Double = 0;
-    var playheadPositionWithoutOffset: Double = 0;
+
+    // playhead tracking
+    var playheadPosition: Double = 0; // samples
+    var playheadPositionWithoutOffset: Double = 0; // ms
     var updatePlayheadPosition:Bool = true;
-    
+
     var channelCoordinates: [CLLocationCoordinate2D] = []
     var channelDistance = [Float](repeating: 0.0, count: 64)
     var channelBearing = [Float](repeating: 0.0, count: 64)
