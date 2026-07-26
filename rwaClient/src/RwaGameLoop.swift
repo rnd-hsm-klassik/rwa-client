@@ -1388,9 +1388,17 @@ class RwaGameLoop:NSObject, PdListener
         asset.movingDistancePerTick = Double(asset.movementSpeed) * Double(schedulerRate)/1000.0
         asset.rotateOffsetPerTick = Float(Double(asset.rotateFrequency) * 360.0 * Double(schedulerRate)/1000.0)
         asset.currentRotateAngleOffset = 0
-        
-        pdReceiver = "\(patcherTag)-playheadposition"
-        PdBase.send((Double(asset.playheadPosition)), toReceiver: pdReceiver)
+
+        // shouldn't this be asset.currentPosition? so that moving assets start  in the right place? (see RWA Creator comments)
+        pdReceiver = "\(patcherTag)-assetlon"
+        PdBase.send(Double(asset.coordinates.longitude), toReceiver: pdReceiver)
+
+        pdReceiver = "\(patcherTag)-assetlat"
+        PdBase.send(Double(asset.coordinates.latitude), toReceiver: pdReceiver)
+
+        // .ogg player needs samplerate
+        pdReceiver = "\(patcherTag)-samplerate"
+        PdBase.send((Double(sampleRate * 1000)), toReceiver: pdReceiver)
         
         pdReceiver = "\(patcherTag)-dampingfunction"
         PdBase.send((Double(asset.dampingFunction)), toReceiver: pdReceiver)
@@ -1416,6 +1424,7 @@ class RwaGameLoop:NSObject, PdListener
         pdReceiver = "\(patcherTag)-loop"
         PdBase.send(boolean2Double(asset.loop), toReceiver: pdReceiver)
         
+        // now also added this in RWA Creator
         pdReceiver = "\(patcherTag)-gain"
         PdBase.send(Double(asset.gain), toReceiver: pdReceiver)
         
@@ -1428,11 +1437,14 @@ class RwaGameLoop:NSObject, PdListener
         pdReceiver = "\(patcherTag)-crossfadetime"
         PdBase.send(Double(asset.crossfadeTime), toReceiver: pdReceiver)
         
-        pdReceiver = "\(patcherTag)-firstcrossfade"
-        PdBase.send(Double(firstCrossfadeAfter), toReceiver: pdReceiver)
-        
         pdReceiver = "\(patcherTag)-crossfadeafter"
         PdBase.send(Double(asset.fadeOutAfter), toReceiver: pdReceiver)
+        
+        pdReceiver = "\(patcherTag)-firstcrossfade"
+        PdBase.send(Double(firstCrossfadeAfter), toReceiver: pdReceiver)
+
+        pdReceiver = "\(patcherTag)-playheadposition"
+        PdBase.send((Double(asset.playheadPosition)), toReceiver: pdReceiver)
         
         pdReceiver = "\(patcherTag)-play"
         let path = fullAssetPath + "/" + asset.name
