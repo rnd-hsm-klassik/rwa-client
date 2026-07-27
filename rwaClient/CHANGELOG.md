@@ -34,6 +34,11 @@ Engine parity:
   and leaves the hero without a current state, instead of crashing on
   `states[0]`.
 
+Entry conditions:
+
+- Reduced hard-coded enter offset for circular and rectangular scenes and states
+  from 6 m to 2 m.
+
 ## [1.2.0] - 2026-07-24
 
 ### Added

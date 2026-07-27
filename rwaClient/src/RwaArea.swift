@@ -21,7 +21,7 @@ class RwaArea:RwaLocation {
     
     var areaType: Int = 0
     
-    var enterOffset: Double = -6
+    var enterOffset: Double = -2
     var exitOffset: Double = 0
     var radius:Double = 0
     var width: Double = 0
