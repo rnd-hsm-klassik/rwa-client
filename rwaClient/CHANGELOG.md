@@ -38,6 +38,9 @@ Entry conditions:
 
 - Reduced hard-coded enter offset for circular and rectangular scenes and states
   from 6 m to 2 m.
+- Fix missing import for scene boundaries: `radius`, `width`, `height`. this
+  enables RWA Player to enter circular and rectangular scenes at all (beyond the
+  default scene). Also `exitOffset` (hysteresis) is now imported.
 
 ## [1.2.0] - 2026-07-24
 

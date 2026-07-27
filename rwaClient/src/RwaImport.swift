@@ -145,6 +145,11 @@ class RwaImport:NSObject, XMLParserDelegate
             newScene.coordinates.latitude = Double(lat)!
             newScene.coordinates.longitude = Double(lon)!
             newScene.minStayTime = Double(minStayTime)!
+
+            newScene.radius = Double(attributeDict.removeValue(forKey: "radius")!)!
+            newScene.width = Double(attributeDict.removeValue(forKey: "width")!)!
+            newScene.height = Double(attributeDict.removeValue(forKey: "height")!)!
+            newScene.exitOffset = Double(attributeDict.removeValue(forKey: "exitoffset")!)!
             
             scenes.append(newScene)
             scenePtr = newScene;
@@ -245,6 +250,9 @@ class RwaImport:NSObject, XMLParserDelegate
             let height = attributeDict.removeValue(forKey: "height")!
             statePtr?.height = Double(height)!
             
+            // RWA Creator does not export an enterOffset, and has no GUI for it,
+            // only commented-out calls to not implemented functions setEnterOffset()
+            // instead, the Player has an enterOffset hardcoded in RwaArea.enterOffset!
 //            let enterOffset = attributeDict.removeValue(forKey: "enteroffset")!
 //            statePtr?.enterOffset = Double(enterOffset)!
             
