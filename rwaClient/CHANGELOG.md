@@ -7,10 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-27
+
+### Added
+
+- Use modern loggers and separate log messages for triage in debugger
+- Added infrastructure/tests for engine parity investigations (see [../docs/engine-parity-tests.md](../docs/engine-parity-tests.md) for details).
+
+### Changed
+
+- Improve/refactor audioController setup to allow bluetooth headphones
+- Set the OSC listener port of RWA Player to 8001.
+- Internal cleanups: refactored FileManager extension (error handling, access
+  modifiers), compacted GameManager, streamlined position assignment.
+
+### Fixed
+
 Engine parity:
 
-- `sendInitValues2Pd`: reorder the sequence of pd messages and add assetlon,
-  assetlat, samplerate.
+- `sendInitValues2Pd`: Reorder the sequence of pd messages and add assetlon,
+  assetlat, samplerate, same as in RWA Creator.
+- `processAssets()`: Asset activation now follows order of execution in RWA Creator.
 - **major**: Allow background assets to update when there are no active assets
   (`sendData2ActiveAssets`). this now works properly in RWA Player, as at
   game-start, FALLBACK state is active.
