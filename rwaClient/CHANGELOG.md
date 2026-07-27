@@ -9,12 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Engine parity:
 
-- sendInitValues2Pd: reorder the sequence of pd messages and add assetlon,
+- `sendInitValues2Pd`: reorder the sequence of pd messages and add assetlon,
   assetlat, samplerate.
-- (major) Allow background assets to update when there are no active assets
-  (sendData2ActiveAssets). this now works properly in RWA Player, as at
-  game-start, FALLBACK state is active. This is not yet the case in RWA Creator,
-  which still needs to be fixed.
+- **major**: Allow background assets to update when there are no active assets
+  (`sendData2ActiveAssets`). this now works properly in RWA Player, as at
+  game-start, FALLBACK state is active.
+- `RwaGameLoop.setScene` implementation synchronised with RWA Creator.
+- **major**: Behavior change: active assets of the previous state
+  are no longer unconditionally ended on every scene transition, they are
+  only ended when the new scene activates a fallback state that contains
+  assets. Entering a scene with fallback disabled, or with a silent
+  (asset-less) fallback, lets running assets play out until a new state is
+  triggered. Existing games that rely on cutting audio at scene
+  boundaries will sound different.
+- The fallback decision is now based on the *new* scene's `fallbackDisabled`
+  flag.
+- `timeInCurrentState` is reset only when a fallback state is actually
+  entered (no-op difference, aligned with the Creator's structure).
+- The re-entry latch (`blockUntilRadiusHasBeenLeft`) is now released on the
+  state the hero actually occupied, before the scene switch. Previously a
+  state left during a scene change could stay latched and never re-trigger,
+  since the per-tick geographic unblock only scans the current scene.
+- Entering a scene with fallback enabled but no states now logs a warning
+  and leaves the hero without a current state, instead of crashing on
+  `states[0]`.
 
 ## [1.2.0] - 2026-07-24
 

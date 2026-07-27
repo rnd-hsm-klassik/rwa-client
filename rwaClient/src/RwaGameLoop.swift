@@ -789,23 +789,42 @@ class RwaGameLoop:NSObject, PdListener
     
     func setScene(scene: RwaScene)
     {
+        self.logger.info("Enter new scene: \(scene.name)")
+
+        // let bg assets of current scene fade out
         sendEnd2BackgroundAssets()
-        sendEnd2ActiveAssets()
-        
+
+        // release the old state's re-entry latch: the per-tick geographic unblock only
+        // scans the current scene, so it would stay latched forever after leaving here
+        if let currentState = hero.currentState {
+            currentState.blockUntilRadiusHasBeenLeft = false
+            self.logger.info("Unblocking state \(currentState.stateName)")
+        }
+
+        // switch to the new/first scene
         hero.currentScene = scene
-        currentScene = scene.name;
-        
-        if hero.currentState != nil {
-            hero.currentState?.blockUntilRadiusHasBeenLeft = false;}
-        if !hero.currentScene!.fallbackDisabled {
-            hero.currentState = hero.currentScene?.states[0] }
-        else {
+        hero.timeInCurrentScene = 0
+        currentScene = scene.name // global var, for display in view?
+
+        // activate fallback
+        // if fallback of new scene can be activated, notify active assets of previous state/scene to end
+        // (otherwise, active assets stay active until a new state is triggered)
+        if !scene.fallbackDisabled {
+            if scene.states.isEmpty {
+                logger.warning("Scene \(scene.name) has fallback enabled but no states; hero has no current state until a new state is triggered.")
+                hero.currentState = nil
+            } else {
+                let fallback = scene.states[0]
+                if !fallback.assets.isEmpty {
+                    sendEnd2ActiveAssets()
+                }
+                hero.currentState = fallback
+                hero.timeInCurrentState = 0
+            }
+        } else {
             hero.currentState = nil
         }
-        
-        hero.timeInCurrentState = 0
-        hero.timeInCurrentScene = 0
-        
+
         startBackgroundState()
         sceneChanged = true
         stateChanged = true
@@ -820,16 +839,14 @@ class RwaGameLoop:NSObject, PdListener
         {
             if(scene.level == hero.currentScene?.level)
             {
-                //print("Found equal level Scene: \(String(describing: scene.name))")
+                self.logger.info("Found equal level Scene: \(String(describing: scene.name))")
                 if(scene != hero.currentScene)
                 {
-                   // print("Found different equal level Scene: \(String(describing: scene.name))")
+                    self.logger.info("Found different equal level Scene: \(String(describing: scene.name))")
                     if(entityIsWithinArea(scene, RWAAREAOFFSETTYPE_ENTER))
                     {
                         setScene(scene: scene)
-                        
                         self.logger.info("Enter Scene with new location: \(String(describing: scene.name))")
-                    
                         return;
                     }
                 }
@@ -1521,11 +1538,7 @@ class RwaGameLoop:NSObject, PdListener
         
         if(!scenes.isEmpty)
         {
-            hero.currentScene? = scenes[0]
-            hero.currentState = hero.currentScene?.states[0]
-            sceneChanged = true
-            stateChanged = true
-            startBackgroundState()
+            setScene(scene: scenes[0])
         }
     }
     
