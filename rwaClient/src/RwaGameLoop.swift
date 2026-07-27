@@ -749,7 +749,7 @@ class RwaGameLoop:NSObject, PdListener
         {
             distance = calculateDistance(hero.coordinates, p2: area.coordinates)
             radiusInKm = Double(area.radius/1000)
-            if(distance < radiusInKm + areaOffsetInKm)
+            if(distance <= radiusInKm + areaOffsetInKm)
             {
                 //print("Within Circle Area")
                 return true
@@ -839,10 +839,8 @@ class RwaGameLoop:NSObject, PdListener
         {
             if(scene.level == hero.currentScene?.level)
             {
-                self.logger.info("Found equal level Scene: \(String(describing: scene.name))")
                 if(scene != hero.currentScene)
                 {
-                    self.logger.info("Found different equal level Scene: \(String(describing: scene.name))")
                     if(entityIsWithinArea(scene, RWAAREAOFFSETTYPE_ENTER))
                     {
                         setScene(scene: scene)
