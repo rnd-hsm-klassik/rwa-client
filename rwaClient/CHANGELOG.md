@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-07-29
+
 ### Added
 
 Decode device telemetry from BLE (PROJECT-PLAN §5)
@@ -14,23 +16,31 @@ Decode device telemetry from BLE (PROJECT-PLAN §5)
 Receive path for the rtk-rover CBOR telemetry feed: subscribe to the
 telemetry GATT service (713D0100/0101), reassemble the TX byte stream by
 length prefix, decode frames with the §5.3 integer key table, and hand
-events to TelemetryService.recordDeviceEvent — from here they flow into
+events to `TelemetryService.recordDeviceEvent`, from here they flow into
 the existing SQLite store, uploader, and Diagnostics tab. Heartbeats now
-feed updateFwVersion(), so the device firmware version reaches the batch
+feed `updateFwVersion()`, so the device firmware version reaches the batch
 envelope.
 
-- TelemetryKeys.swift: §5.3/§5.4 contract mirror of the firmware's
-  telemetry_keys.h (same key numbers, type ids, CTRL command ids)
-- DeviceTelemetryDecoder.swift: frame reassembly (frames may span or
+- `TelemetryKeys.swift`: §5.3/§5.4 contract mirror of the firmware's
+  `telemetry_keys.h` (same key numbers, type ids, CTRL command ids)
+- `DeviceTelemetryDecoder.swift`: frame reassembly (frames may span or
   share notifications; desync flushes the buffer, recovers on
   reconnect), minimal RFC 8949 subset decoder, int-key -> field-name
   mapping (unknown types dropped, unknown keys ignored per the additive
   rule), receiver singleton
-- SecondViewController: discover/subscribe telemetry TX, route its
+- `SecondViewController`: discover/subscribe telemetry TX, route its
   binary payloads before the UTF-8 text guard, reset the stream on
   disconnect
 - Tests: byte-exact fixtures mirroring the firmware AUnit encoder tests,
   so both ends of the contract pin the same bytes (9 tests)
+
+### Changed
+
+- Restrict GNSS fix updates to device-origin sources to prevent display
+  inconsistencies.
+- Increase freshness window for RTK coordinates to 9 seconds, relaxing
+  the cutoff when experiencing NTRIP connection problems.
+- Allow Map to display both RTK and internal location.
 
 ## [1.3.0] - 2026-07-27
 
