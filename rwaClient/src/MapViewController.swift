@@ -13,6 +13,13 @@ import MapKit
 //var annotation = AttractionAnnotation(coordinate: CLLocationCoordinate2D(latitude: 0, longitude: 0),title: "UBLOX",subtitle: "", type: AttractionType.misc)
 //var london = MKPointAnnotation()
 
+/// The position actually driving the walk (hero.coordinates): RTK tracker
+/// when active, internal GPS otherwise. Deliberately shown *alongside* the
+/// system blue dot, which is always pure CoreLocation and cannot be fed RTK
+/// data — the gap between marker and dot is the live RTK-vs-internal-GPS
+/// divergence, visible on site.
+class HeroAnnotation: MKPointAnnotation {}
+
 extension MapViewController {
     
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
@@ -47,6 +54,17 @@ extension MapViewController {
                 return nil
             }
             
+        if annotation is HeroAnnotation {
+            let identifier = "hero"
+            let view = (mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView)
+                ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+            view.annotation = annotation
+            view.glyphImage = UIImage(systemName: "figure.walk")
+            view.markerTintColor = LiveTelemetrySource.rtkTrackerActive() ? .systemGreen : .systemOrange
+            view.displayPriority = .required
+            return view
+        }
+
         guard annotation is MKPointAnnotation else { return nil }
 
             let identifier = "Annotation"
@@ -188,6 +206,23 @@ class MapViewController: UIViewController, MKMapViewDelegate
     @IBOutlet var mapView: MKMapView!
     @IBOutlet var currentScene: UITextField!
     @IBOutlet var currentState: UITextField!
+
+    private let heroAnnotation = HeroAnnotation()
+    private var heroMarkerTimer: Timer?
+
+    /// Follow hero.coordinates at 1 Hz and re-tint on source changes. Also
+    /// re-adds the marker after redraw(), which clears all annotations.
+    @objc private func updateHeroMarker() {
+        let rtkActive = LiveTelemetrySource.rtkTrackerActive()
+        heroAnnotation.coordinate = hero.coordinates
+        heroAnnotation.title = rtkActive ? "RTK" : (registered ? "OSC" : "GPS")
+        if !mapView.annotations.contains(where: { $0 === heroAnnotation }) {
+            mapView.addAnnotation(heroAnnotation)
+        }
+        if let view = mapView.view(for: heroAnnotation) as? MKMarkerAnnotationView {
+            view.markerTintColor = rtkActive ? .systemGreen : .systemOrange
+        }
+    }
     
     @objc func redraw() {
         let overlays = mapView.overlays
@@ -309,6 +344,11 @@ class MapViewController: UIViewController, MKMapViewDelegate
         mapView.showsUserLocation = true;
         mapView.showAnnotations(mapView.annotations, animated: true)
         updateScene()
+
+        updateHeroMarker()
+        heroMarkerTimer = Timer.scheduledTimer(timeInterval: 1.0, target: self,
+                                               selector: #selector(updateHeroMarker),
+                                               userInfo: nil, repeats: true)
     }
     
     func drawRwaArea(area: RwaArea) {
