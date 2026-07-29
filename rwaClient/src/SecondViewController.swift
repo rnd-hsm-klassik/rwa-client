@@ -321,6 +321,9 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         logger.info("BT: Disconnected from Peripheral")
         self.peripheral = nil
+        // A partially received telemetry frame must not be glued to bytes
+        // from the next connection (the device also restarts its stream).
+        DeviceTelemetryReceiver.shared.connectionReset()
         rssiTimer?.invalidate()
         rssiTimer = nil
         DeviceHealth.shared.setBLEConnected(false)
@@ -355,6 +358,12 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                     let transferCharacteristicUUID = CBUUID.init(string: Device.TransferCharacteristic)
                     peripheral.discoverCharacteristics([transferCharacteristicUUID], for: service)
                 }
+
+                // Telemetry service (PROJECT-PLAN.md §5.1): CBOR event feed
+                if (service.uuid == CBUUID(string: Device.TelemetryService)) {
+                    let telemetryTxUUID = CBUUID(string: Device.TelemetryTxCharacteristic)
+                    peripheral.discoverCharacteristics([telemetryTxUUID], for: service)
+                }
             }
         }
     }
@@ -371,6 +380,11 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                 if characteristic.uuid == CBUUID(string: Device.TransferCharacteristic) {
                     // subscribe to dynamic changes
                     logger.info("BT: Found RWA Headtracker")
+                    peripheral.setNotifyValue(true, for: characteristic)
+                }
+
+                if characteristic.uuid == CBUUID(string: Device.TelemetryTxCharacteristic) {
+                    logger.info("BT: Found telemetry TX, subscribing")
                     peripheral.setNotifyValue(true, for: characteristic)
                 }
             }
@@ -399,7 +413,14 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
             logger.info("BT: Characteristic Value is nil on this go-round")
             return
         }
-        
+
+        // Telemetry frames are binary CBOR (PROJECT-PLAN.md §5) — handle
+        // them before the UTF-8 text decode below.
+        if characteristic.uuid == CBUUID(string: Device.TelemetryTxCharacteristic) {
+            DeviceTelemetryReceiver.shared.ingest(value)
+            return
+        }
+
         // make sure we have a characteristic value
         guard let nextChunk = String(data: value, encoding: String.Encoding.utf8) else {
             logger.debug("BT: Next chunk of data is nil.")

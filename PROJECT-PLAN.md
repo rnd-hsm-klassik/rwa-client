@@ -1,10 +1,15 @@
 # rwa Telemetry & Fleet Infrastructure — Project Plan
 
-> Shared context document for the `rtk-rover`, `rwa-client`, and `rwa-backend` repositories.
+> Shared context document for the `rtk-rover`, `rwa-player`, and `rwa-backend` repositories.
 > Lives in Claude project knowledge and in the root of each repo. Update it when architectural
 > decisions change — it is the single source of truth for the cross-repo contract.
 
 Status: v1 draft — 2026-06-10
+Status: v2 draft — 2026-06-29
+
+This is currently tracked in the `rtk-rover` repository, to document the implementation process.
+Once done, move it back into the directory containing all project repos (or symlink it), so other repos can reference to it as well.
+
 Deployment target: ~10 headsets, one permanent installation, 2-month run.
 
 ---
@@ -18,14 +23,16 @@ app and acts as the gateway between the headset and our backend.
 | Component | Repo | Role |
 | --- | --- | --- |
 | rtk-rover | `rtk-rover` | ESP32 firmware: RTK GNSS + head tracking, streamed over BLE |
-| rwa-client | `rwa-client` | iOS app: binaural soundwalk playback, BLE central, telemetry gateway |
+| rwa-player | `rwa-player` | iOS app (previously called rwa-client): binaural soundwalk playback, BLE central, telemetry gateway |
 | rwa-backend | `rwa-backend` | docker-compose stack on AWS EC2: ingest, storage, dashboards |
+
+Note on naming rwa-player: The app/repo previously was called rwa-client. There is ongoing efford to change that to rwa-player. Repo-name and in-app strings is done, directories inside the project still carry rwaClient, dangerous to rename this with a XCode project relying on them...
 
 ### Hardware (per headset)
 
 - Adafruit Feather ESP32 Huzzah (FreeRTOS runtime)
-- SparkFun GPS-RTK-SMA Breakout ZED-F9P (Qwiic/I²C) — RTK GNSS
-- SparkFun BNO080 Breakout (I²C) — head-tracking IMU
+- SparkFun GPS-RTK-SMA Breakout ZED-F9P (Qwiic/I²C): RTK GNSS
+- SparkFun BNO080 Breakout (I²C): head-tracking IMU
 
 ### Connectivity
 
@@ -59,7 +66,7 @@ All telemetry flows **device → BLE → app → HTTPS → backend**. The ESP32 
 to the backend directly.
 
 - refnet (NTRIP) ⇢ [WiFi via iPhone hotspot] ⇢ ESP32 (rtk-rover)
-- ESP32 (rtk-rover) ⇢ [BLE] ⇢ iPhone app (rwa-client) ⇢ [HTTPS] ⇢ backend (rwa-backend)
+- ESP32 (rtk-rover) ⇢ [BLE] ⇢ iPhone app (rwa-player) ⇢ [HTTPS] ⇢ backend (rwa-backend)
 
 ![rtk_rover_telemetry_architecture](./rtk_rover_telemetry_architecture.svg)
 
@@ -139,6 +146,7 @@ This is the dead-zone dataset; do not thin it out.
 | `wifi_rssi` | hotspot link quality (dBm) |
 | `ntrip_connected` | bool |
 | `fw_version` | redundant with envelope, but lets the backend detect mismatches |
+| `dropped_frames` | cumulative count of telemetry frames dropped on-device (ring-buffer overflow) |
 
 **`ntrip_status`** — on state change: `state` ("connected" / "disconnected" / "reconnecting"),
 `reconnects` (counter), `bytes_rx` (cumulative).
@@ -165,16 +173,96 @@ e.g. `i2c_timeout_bno080`), `msg` (free text, ≤ 200 chars).
 - One additional GATT service ("telemetry"): TX characteristic (notify) + CTRL
   characteristic (write).
 - Frames: `[u8 proto_version][u16 length][CBOR payload]`, CBOR map mirroring §4 fields
-  with short integer keys (mapping table lives in `rtk-rover` and `rwa-client`).
-- Firmware side: ring buffer (~8 KB) drained by a dedicated low-priority FreeRTOS task.
+  with short integer keys (mapping table below; mirrored as `telemetry_keys.h` in
+  `rtk-rover` and `TelemetryKeys.swift` in `rwa-player`).
+- Firmware side: ring buffer (4 KB — 8 KB exceeded the ESP32 heap budget next to
+  BLE + WiFi) drained by a dedicated low-priority FreeRTOS task.
   **Drop-oldest** on overflow; never block sensor or BLE tasks. Increment a dropped-frames
   counter reported in `heartbeat`.
 - CTRL characteristic accepts runtime commands: set log verbosity, trigger a status dump.
   (Later: firmware OTA chunk transfer — keep the command space versioned.)
 
+### 5.1 GATT UUIDs
+
+Same vendor family as the existing tracker service (`713D0000-…`), new service:
+
+| | UUID |
+| --- | --- |
+| Telemetry service | `713D0100-503E-4C75-BA94-3148F18D941E` |
+| TX (notify) | `713D0101-503E-4C75-BA94-3148F18D941E` |
+| CTRL (write) | `713D0102-503E-4C75-BA94-3148F18D941E` |
+
+### 5.2 Framing details
+
+- `proto_version` = `1`. The app drops frames with an unknown proto version (count, log).
+- `length` = byte length of the CBOR payload only, **little-endian** u16.
+- The TX characteristic is a **byte stream**: one notification may carry several
+  concatenated frames, and a frame may span notifications. The app reassembles using
+  the length prefix. (In practice the device packs whole frames ≤ MTU−3.)
+- Text fields are UTF-8. On the BLE leg `error.msg` is capped at 120 bytes (the §4.3
+  200-char limit applies to the JSON leg).
+
+### 5.3 CBOR key table (v1)
+
+`type` is a uint enum on the BLE leg; the app maps it back to the §4.3 string names
+for JSON. The app drops unknown type ids (count, log).
+
+| `type` value | event |
+| --- | --- |
+| 1 | `gnss_fix` |
+| 2 | `heartbeat` |
+| 3 | `ntrip_status` |
+| 4 | `imu_status` |
+| 5 | `error` |
+
+Common keys (every event): `0` = `type` (uint), `1` = `seq` (uint), `2` = `t_dev_ms` (uint).
+
+Type-specific keys start at 10 (`type` disambiguates, so numbers repeat across types):
+
+| event | key | field | CBOR type |
+| --- | --- | --- | --- |
+| `gnss_fix` | 10 | `lat` | double |
+| | 11 | `lon` | double |
+| | 12 | `height_m` | float |
+| | 13 | `fix_type` | uint |
+| | 14 | `carr_soln` | uint |
+| | 15 | `h_acc_mm` | uint |
+| | 16 | `v_acc_mm` | uint |
+| | 17 | `num_sv` | uint |
+| | 18 | `pdop` | float |
+| | 19 | `corr_age_ms` | uint |
+| `heartbeat` | 10 | `uptime_ms` | uint |
+| | 11 | `free_heap` | uint |
+| | 12 | `wifi_rssi` | int (negative dBm) |
+| | 13 | `ntrip_connected` | bool |
+| | 14 | `fw_version` | text |
+| | 15 | `dropped_frames` | uint |
+| `ntrip_status` | 10 | `state` | uint: 0 = disconnected, 1 = connected, 2 = reconnecting |
+| | 11 | `reconnects` | uint |
+| | 12 | `bytes_rx` | uint |
+| `imu_status` | 10 | `calib_status` | uint |
+| | 11 | `report_rate_hz` | float |
+| | 12 | `resets` | uint |
+| `error` | 10 | `severity` | uint |
+| | 11 | `code` | text (≤ 32 B) |
+| | 12 | `msg` | text (≤ 120 B) |
+
+Additive evolution: new fields get new keys (never reuse a retired number within a
+type); new event types get the next free `type` value. Both sides ignore unknown keys.
+
+### 5.4 CTRL commands (app → device)
+
+Write `[u8 cmd][args…]` to the CTRL characteristic. Unknown commands are ignored
+(forward compatibility; the command space is versioned by `proto_version`).
+
+| cmd | args | effect |
+| --- | --- | --- |
+| `0x01` set_verbosity | u8 level | minimum `error.severity` the device emits (default 1 = everything) |
+| `0x02` status_dump | — | device immediately emits a heartbeat (plus `ntrip_status` / `imu_status` once those emitters land) |
+
 ---
 
-## 6. App responsibilities (rwa-client)
+## 6. App responsibilities (rwa-player)
 
 1. Decode BLE frames, stamp `time` + envelope context, append to SQLite (`pending_events`).
 2. Emit its own `app_event`s into the same store.
@@ -231,7 +319,7 @@ Operations: nightly `pg_dump` to S3 (host cron + `scripts/backup.sh`), disk-usag
 
 1. Event schema v1 (§4) — this document.
 2. Backend stack up; build dashboards against `scripts/fake_data.py` synthetic traffic.
-3. rwa-client: SQLite buffer + uploader, tested with canned events.
+3. rwa-player: SQLite buffer + uploader, tested with canned events.
 4. rtk-rover: telemetry GATT service + trace task; watch real events land in Grafana.
 5. OTA partition table ships with the first trace-task firmware build.
 
@@ -244,3 +332,5 @@ Operations: nightly `pg_dump` to S3 (host cron + `scripts/backup.sh`), disk-usag
 | 2026-06 | TimescaleDB over plain Postgres | free in compose; time-bucketing, compression |
 | 2026-06 | Dedup key `(device_id, session_id, seq)` w/ split seq ranges | idempotent uploads with retries |
 | 2026-06 | Static bearer token auth for ingest | 10 trusted devices we own; revisit if fleet grows |
+| 2026-07 | rename rwa-client to rwa-player | More descriptive app name, clear distinction between creator and backend |
+| 2026-07 | BLE key table v1 pinned (§5.1–5.3): UUIDs, LE u16 length, byte-stream TX, int `type` enum | unblocks firmware + app implementation in parallel |

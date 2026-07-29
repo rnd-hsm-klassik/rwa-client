@@ -16,6 +16,11 @@ struct Device {
     static let TRACKERSERVICETX = "713D0002-503E-4C75-BA94-3148F18D941E"
     static let TRACKERSERVICERX = "713D0003-503E-4C75-BA94-3148F18D941E"
     static let TRACKERRAWDATA = "713D0004-503E-4C75-BA94-3148F18D941E"
+
+    // Telemetry GATT service (PROJECT-PLAN.md §5.1) — cross-repo contract
+    static let TelemetryService = "713D0100-503E-4C75-BA94-3148F18D941E"
+    static let TelemetryTxCharacteristic = "713D0101-503E-4C75-BA94-3148F18D941E"
+    static let TelemetryCtrlCharacteristic = "713D0102-503E-4C75-BA94-3148F18D941E"
     
     // Tags
     static let EOM = "{{{EOM}}}"

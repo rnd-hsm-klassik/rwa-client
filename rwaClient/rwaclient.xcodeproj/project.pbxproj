@@ -16,6 +16,9 @@
 		7E7E1E1800000000000000AA /* LiveTelemetrySource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0800000000000000AA /* LiveTelemetrySource.swift */; };
 		7E7E1E1900000000000000AA /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0900000000000000AA /* SettingsViewController.swift */; };
 		7E7E1E1A00000000000000AA /* ControlViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0A00000000000000AA /* ControlViewController.swift */; };
+		7E7E1E1B00000000000000AA /* TelemetryKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0B00000000000000AA /* TelemetryKeys.swift */; };
+		7E7E1E1C00000000000000AA /* DeviceTelemetryDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0C00000000000000AA /* DeviceTelemetryDecoder.swift */; };
+		BEEF00000000000000000016 /* DeviceTelemetryDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */; };
 		8411A75428BF687700205E32 /* bitwise.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75228BF687700205E32 /* bitwise.c */; };
 		8411A75528BF687700205E32 /* framing.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75328BF687700205E32 /* framing.c */; };
 		8411A77228BF69DB00205E32 /* block.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75828BF69DB00205E32 /* block.c */; };
@@ -174,6 +177,9 @@
 		7E7E1E0800000000000000AA /* LiveTelemetrySource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LiveTelemetrySource.swift; path = src/Telemetry/LiveTelemetrySource.swift; sourceTree = "<group>"; };
 		7E7E1E0900000000000000AA /* SettingsViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = SettingsViewController.swift; path = src/SettingsViewController.swift; sourceTree = "<group>"; };
 		7E7E1E0A00000000000000AA /* ControlViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ControlViewController.swift; path = src/ControlViewController.swift; sourceTree = "<group>"; };
+		7E7E1E0B00000000000000AA /* TelemetryKeys.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TelemetryKeys.swift; path = src/Telemetry/TelemetryKeys.swift; sourceTree = "<group>"; };
+		7E7E1E0C00000000000000AA /* DeviceTelemetryDecoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = DeviceTelemetryDecoder.swift; path = src/Telemetry/DeviceTelemetryDecoder.swift; sourceTree = "<group>"; };
+		BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceTelemetryDecoderTests.swift; sourceTree = "<group>"; };
 		8411A75228BF687700205E32 /* bitwise.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bitwise.c; path = ../../libogg/src/bitwise.c; sourceTree = "<group>"; };
 		8411A75328BF687700205E32 /* framing.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = framing.c; path = ../../libogg/src/framing.c; sourceTree = "<group>"; };
 		8411A75628BF68B900205E32 /* os_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = os_types.h; path = ../../libogg/include/ogg/os_types.h; sourceTree = "<group>"; };
@@ -313,6 +319,8 @@
 				7E7E1E0200000000000000AA /* TelemetryService.swift */,
 				7E7E1E0500000000000000AA /* TelemetryStore.swift */,
 				7E7E1E0800000000000000AA /* LiveTelemetrySource.swift */,
+				7E7E1E0B00000000000000AA /* TelemetryKeys.swift */,
+				7E7E1E0C00000000000000AA /* DeviceTelemetryDecoder.swift */,
 				7E7E1E0400000000000000AA /* Telemetry.plist */,
 			);
 			name = Telemetry;
@@ -483,6 +491,7 @@
 				BEEF0000000000000000000C /* PdBaseRecorder.swift */,
 				BEEF0000000000000000000D /* ScenarioRunner.swift */,
 				BEEF0000000000000000000E /* EngineParityTests.swift */,
+				BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */,
 				BEEF0000000000000000000F /* rwaclientTests-Bridging-Header.h */,
 				BEEF00000000000000000010 /* smoke-background.scenario.json */,
 			);
@@ -769,6 +778,8 @@
 				7E7E1E1A00000000000000AA /* ControlViewController.swift in Sources */,
 				7E7E1E1600000000000000AA /* DeviceHealth.swift in Sources */,
 				7E7E1E1700000000000000AA /* AboutViewController.swift in Sources */,
+				7E7E1E1B00000000000000AA /* TelemetryKeys.swift in Sources */,
+				7E7E1E1C00000000000000AA /* DeviceTelemetryDecoder.swift in Sources */,
 				84C70ECA2213148A005C49C3 /* NSData+F53OSCBlob.m in Sources */,
 				84F48CF21F24B14C00869BF2 /* RwaImport.swift in Sources */,
 				8411A77528BF69DB00205E32 /* bitrate.c in Sources */,
@@ -787,6 +798,7 @@
 				BEEF00000000000000000011 /* PdBaseRecorder.swift in Sources */,
 				BEEF00000000000000000012 /* ScenarioRunner.swift in Sources */,
 				BEEF00000000000000000013 /* EngineParityTests.swift in Sources */,
+				BEEF00000000000000000016 /* DeviceTelemetryDecoderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
