@@ -169,6 +169,13 @@ final class DeviceHealth {
                 if let v = DeviceHealth.int(event["batt_mv"]) { $0.batteryMv = v }
             }
         case "gnss_fix":
+            // Only device-origin fixes own these fields. App-origin samples
+            // carry a "source" tag (ios_gps / rtk_tracker / osc_sim,
+            // LiveTelemetrySource) and describe a *different* position -
+            // letting them write here made the fix display flap between the
+            // RTK fix and internal GPS. Which source drives the walk is the
+            // positionSource row's job (setLiveSources), not this one's.
+            guard event["source"] == nil else { return }
             mutate {
                 $0.lastFixAt = Date()
                 if let v = DeviceHealth.double(event["lat"]) { $0.lat = v }
