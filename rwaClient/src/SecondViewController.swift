@@ -354,9 +354,13 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                 logger.info("BT: Discovered service \(service)")
                 
                 // If we found either the transfer service, discover the transfer characteristic
+                // plus the raw RTK position characteristic (713D0004) — the firmware sends
+                // high-precision position there, not as "l" frames on the headtracker char.
                 if (service.uuid == CBUUID(string: Device.TransferService)) {
-                    let transferCharacteristicUUID = CBUUID.init(string: Device.TransferCharacteristic)
-                    peripheral.discoverCharacteristics([transferCharacteristicUUID], for: service)
+                    peripheral.discoverCharacteristics([
+                        CBUUID(string: Device.TransferCharacteristic),
+                        CBUUID(string: Device.TRACKERRAWDATA)
+                    ], for: service)
                 }
 
                 // Telemetry service (PROJECT-PLAN.md §5.1): CBOR event feed
@@ -380,6 +384,11 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                 if characteristic.uuid == CBUUID(string: Device.TransferCharacteristic) {
                     // subscribe to dynamic changes
                     logger.info("BT: Found RWA Headtracker")
+                    peripheral.setNotifyValue(true, for: characteristic)
+                }
+
+                if characteristic.uuid == CBUUID(string: Device.TRACKERRAWDATA) {
+                    logger.info("BT: Found RTK raw position, subscribing")
                     peripheral.setNotifyValue(true, for: characteristic)
                 }
 
@@ -418,6 +427,29 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         // them before the UTF-8 text decode below.
         if characteristic.uuid == CBUUID(string: Device.TelemetryTxCharacteristic) {
             DeviceTelemetryReceiver.shared.ingest(value)
+            return
+        }
+
+        // Raw RTK position (713D0004, up to 10 Hz): the feed RTK positioning
+        // runs on. Freshness of ubloxUpdatedAt is what keeps CoreLocation in
+        // standby (CoreLocationController) and tags the source "(RTK)".
+        if characteristic.uuid == CBUUID(string: Device.TRACKERRAWDATA) {
+            guard let text = String(data: value, encoding: .utf8),
+                  let position = Device.parseRawTrackerPosition(text) else {
+                logger.debug("BT: malformed raw RTK position frame")
+                return
+            }
+            ubloxLat = position.lat
+            ubloxLon = position.lon
+            ubloxUpdatedAt = Date()
+
+            // RTK positioning (Settings tab): tracker coordinates drive
+            // the walk. OSC-registered mode still overrides everything.
+            if(useRtkGps && !registered) {
+                hero.coordinates = CLLocationCoordinate2D(latitude: position.lat,
+                                                          longitude: position.lon)
+                hero.timeSinceLastGpsUpdate = 0.0
+            }
             return
         }
 

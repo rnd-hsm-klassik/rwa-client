@@ -18,7 +18,6 @@
 		7E7E1E1A00000000000000AA /* ControlViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0A00000000000000AA /* ControlViewController.swift */; };
 		7E7E1E1B00000000000000AA /* TelemetryKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0B00000000000000AA /* TelemetryKeys.swift */; };
 		7E7E1E1C00000000000000AA /* DeviceTelemetryDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0C00000000000000AA /* DeviceTelemetryDecoder.swift */; };
-		BEEF00000000000000000016 /* DeviceTelemetryDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */; };
 		8411A75428BF687700205E32 /* bitwise.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75228BF687700205E32 /* bitwise.c */; };
 		8411A75528BF687700205E32 /* framing.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75328BF687700205E32 /* framing.c */; };
 		8411A77228BF69DB00205E32 /* block.c in Sources */ = {isa = PBXBuildFile; fileRef = 8411A75828BF69DB00205E32 /* block.c */; };
@@ -115,6 +114,7 @@
 		BEEF00000000000000000012 /* ScenarioRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF0000000000000000000D /* ScenarioRunner.swift */; };
 		BEEF00000000000000000013 /* EngineParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF0000000000000000000E /* EngineParityTests.swift */; };
 		BEEF00000000000000000014 /* smoke-background.scenario.json in Resources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000010 /* smoke-background.scenario.json */; };
+		BEEF00000000000000000016 /* DeviceTelemetryDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */; };
 		E4232CB523D9C09D00E44DE3 /* rwa_binauralsimple~.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */; };
 		E4232CB723D9C12B00E44DE3 /* vas_firobject.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB623D9C12B00E44DE3 /* vas_firobject.c */; };
 		E4232CB923D9C16D00E44DE3 /* vas_fir_list.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */; };
@@ -179,7 +179,6 @@
 		7E7E1E0A00000000000000AA /* ControlViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ControlViewController.swift; path = src/ControlViewController.swift; sourceTree = "<group>"; };
 		7E7E1E0B00000000000000AA /* TelemetryKeys.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TelemetryKeys.swift; path = src/Telemetry/TelemetryKeys.swift; sourceTree = "<group>"; };
 		7E7E1E0C00000000000000AA /* DeviceTelemetryDecoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = DeviceTelemetryDecoder.swift; path = src/Telemetry/DeviceTelemetryDecoder.swift; sourceTree = "<group>"; };
-		BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceTelemetryDecoderTests.swift; sourceTree = "<group>"; };
 		8411A75228BF687700205E32 /* bitwise.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bitwise.c; path = ../../libogg/src/bitwise.c; sourceTree = "<group>"; };
 		8411A75328BF687700205E32 /* framing.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = framing.c; path = ../../libogg/src/framing.c; sourceTree = "<group>"; };
 		8411A75628BF68B900205E32 /* os_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = os_types.h; path = ../../libogg/include/ogg/os_types.h; sourceTree = "<group>"; };
@@ -284,6 +283,7 @@
 		BEEF0000000000000000000E /* EngineParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineParityTests.swift; sourceTree = "<group>"; };
 		BEEF0000000000000000000F /* rwaclientTests-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "rwaclientTests-Bridging-Header.h"; sourceTree = "<group>"; };
 		BEEF00000000000000000010 /* smoke-background.scenario.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "smoke-background.scenario.json"; path = "scenarios/smoke-background.scenario.json"; sourceTree = "<group>"; };
+		BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceTelemetryDecoderTests.swift; sourceTree = "<group>"; };
 		E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "rwa_binauralsimple~.c"; path = "../vas_library/examples/PureData/rwa_binauralsimple~.c"; sourceTree = "<group>"; };
 		E4232CB623D9C12B00E44DE3 /* vas_firobject.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_firobject.c; path = ../vas_library/source/vas_firobject.c; sourceTree = "<group>"; };
 		E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_fir_list.c; path = ../vas_library/source/vas_fir_list.c; sourceTree = "<group>"; };

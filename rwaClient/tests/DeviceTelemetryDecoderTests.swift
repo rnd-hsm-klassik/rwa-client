@@ -119,3 +119,21 @@ final class DeviceTelemetryDecoderTests: XCTestCase {
         XCTAssertNil(DeviceTelemetryDecoder.event(fromFramePayload: Data(payload)))
     }
 }
+
+/// The raw RTK position frames on TRACKERRAWDATA (713D0004):
+/// "lat latHp lon lonHp", UBX 1e-7 degrees + 1e-9 high-res part.
+final class TrackerPositionParserTests: XCTestCase {
+
+    func testParsesHighPrecisionPosition() throws {
+        let position = try XCTUnwrap(Device.parseRawTrackerPosition("473847362 45 85417210 -12"))
+        XCTAssertEqual(position.lat, 47.3847362 + 45e-9, accuracy: 1e-12)
+        XCTAssertEqual(position.lon, 8.5417210 - 12e-9, accuracy: 1e-12)
+    }
+
+    func testRejectsMalformedFrames() {
+        XCTAssertNil(Device.parseRawTrackerPosition("l 47.3 8.5"))          // legacy format
+        XCTAssertNil(Device.parseRawTrackerPosition("473847362 45 85417210"))  // 3 words
+        XCTAssertNil(Device.parseRawTrackerPosition("abc def ghi jkl"))
+        XCTAssertNil(Device.parseRawTrackerPosition(""))
+    }
+}

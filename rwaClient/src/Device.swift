@@ -26,7 +26,21 @@ struct Device {
     static let EOM = "{{{EOM}}}"
     
     // We have a 20-byte limit for data transfer
-    static let notifyMTU = 20    
+    static let notifyMTU = 20
     static let centralRestoreIdentifier = "io.cloudcity.BLEConnect.CentralManager"
     static let peripheralRestoreIdentifier = "io.cloudcity.BLEConnect.PeripheralManager"
+
+    /// Parse the tracker's raw position frame (TRACKERRAWDATA, 713D0004):
+    /// "lat latHp lon lonHp" — UBX high-precision integers, 1e-7 degrees
+    /// plus a 1e-9-degree high-res part. Returns degrees, or nil on any
+    /// malformed frame (never trap on radio data).
+    static func parseRawTrackerPosition(_ text: String) -> (lat: Double, lon: Double)? {
+        let words = text.split(separator: " ")
+        guard words.count == 4,
+              let lat = Double(words[0]), let latHp = Double(words[1]),
+              let lon = Double(words[2]), let lonHp = Double(words[3])
+        else { return nil }
+        return (lat: lat * 1e-7 + latHp * 1e-9,
+                lon: lon * 1e-7 + lonHp * 1e-9)
+    }
 }
