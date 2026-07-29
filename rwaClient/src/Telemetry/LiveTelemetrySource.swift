@@ -26,7 +26,18 @@ final class LiveTelemetrySource {
     static let sampleInterval: TimeInterval = 1.0
     static let heartbeatEveryTicks: UInt64 = 15
     /// How recent tracker data must be to count as the active source.
-    static let freshnessWindow: TimeInterval = 3.0
+    static let freshnessWindow: TimeInterval = 8.0
+
+    /// True while the tracker's RTK coordinates are the active positioning
+    /// source: selected in Settings, delivering within the freshness window,
+    /// and not overridden by OSC registration. Single definition of the
+    /// priority that CoreLocationController / ControlViewController / the
+    /// map marker all follow.
+    static func rtkTrackerActive() -> Bool {
+        guard useRtkGps, !registered else { return false }
+        guard let at = ubloxUpdatedAt else { return false }
+        return Date().timeIntervalSince(at) < freshnessWindow
+    }
 
     private let service: TelemetryService
     private let queue = DispatchQueue(label: "ch.rwa.telemetry.live", qos: .utility)
@@ -73,9 +84,9 @@ final class LiveTelemetrySource {
         if let (source, fields) = currentFix() {
             lastPositionSource = source
             service.recordAppOriginEvent(type: "gnss_fix", fields: fields)
-            var forDiagnostics = fields
-            forDiagnostics["type"] = "gnss_fix"
-            DeviceHealth.shared.ingestDeviceEvent(forDiagnostics)
+            // Not mirrored into DeviceHealth: the fix fields there belong to
+            // device-origin fixes only (they rejected sourced events anyway);
+            // this sampler's contribution to Diagnostics is setLiveSources.
         }
 
         if let (source, fields) = currentHeading() {
