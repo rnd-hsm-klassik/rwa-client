@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Games no longer have to ship the FABIAN HRTF set. `[rwa_binauralsimple~ 256
+  fabian_dir256.txt]` in a game's own Pd patcher resolved its IR file only from
+  the game folder, so the 38 MB `fabian_dir256.txt` had to be copied into every
+  game that used a dynamic patcher — even though the app bundle already contains
+  it. `RwaGameLoop.init` now adds `Bundle.main.resourcePath` to Pd's search path,
+  and `vas_library` (`vas_pdmaxobject_read`) resolves IRs via `open_via_path`
+  (absolute path → patch directory → search path) instead of always prefixing the
+  canvas directory. Games that carry their own copy are unaffected — the game
+  folder is still searched first. Mirrored from the same change in RWA Creator;
+  both apps compile the same `vas_library` sources.
+
 ## [1.3.2] - 2026-07-30
 
 ### Added

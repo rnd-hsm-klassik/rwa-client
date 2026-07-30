@@ -48,6 +48,16 @@ class RwaGameLoop:NSObject, PdListener
         stereoOut = nil
         dispatcher = PdDispatcher()
         PdBase.setDelegate(dispatcher)
+
+        // Put the bundled Pd resources on Pd's search path. The FABIAN HRTF set
+        // (fabian_dir256.txt, 38 MB) sits there next to the playback patches, so those
+        // find it by being in the same directory - a game's own Pd patcher, opened from
+        // the game folder, does not. With the resources on the search path,
+        // [rwa_binauralsimple~ 256 fabian_dir256.txt] resolves from any patch and the
+        // file no longer has to be shipped inside every game.
+        if let resourcePath = Bundle.main.resourcePath {
+            PdBase.add(toSearchPath: resourcePath)
+        }
         //rwa_binauralrir_tilde_setup();
         rwa_binauralsimple_tilde_setup();
         //rwa_reverb_tilde_setup();
