@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-07-30
+
+### Added
+
+- Decode the heartbeat's battery voltage (`batt_mv`, §5.3 key 16), added
+  in rtk-rover 0.44.0. The field was already on the wire and silently
+  ignored by the additive-evolution rule; it now reaches the SQLite store,
+  the upload batches, and the Diagnostics tab.
+
+### Changed
+
+- Diagnostics "Battery" row shows the real pack voltage (e.g. `3.90 V
+  (3900 mV)`) instead of the "pending firmware" placeholder. No percentage
+  is shown: the firmware ships no discharge curve, and a linear mV -> %
+  mapping would be invented precision.
+- `DeviceHealth` drops the speculative `batt_pct` field (never existed on
+  the wire) and treats `batt_mv == 0` as "device could not read the pack",
+  keeping the last known voltage rather than displaying a flat battery.
+
 ## [1.3.1] - 2026-07-29
 
 ### Added
