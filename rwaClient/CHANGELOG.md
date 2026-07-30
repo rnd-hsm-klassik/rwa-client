@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Settings: the RWA Creator "IP address" field can now be dismissed, so the
+  entered value is stored. The field now uses `.numbersAndPunctuation`
+  (a real return key, and a locale-independent `.` instead of the decimal
+  pad's locale separator).
+
 ## [1.3.3] - 2026-07-30
 
 ### Fixed

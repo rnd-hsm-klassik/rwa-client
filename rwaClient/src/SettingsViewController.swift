@@ -103,7 +103,7 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
         case (3, 0):
             return textFieldCell(label: "IP address", value: rwaCreatorIP,
                                  placeholder: "192.168.0.1", tag: .creatorIP,
-                                 keyboard: .decimalPad)
+                                 keyboard: .numbersAndPunctuation)
         case (3, 1):
             return actionCell(title: registered ? "Unregister" : "Register")
         case (3, 2):
