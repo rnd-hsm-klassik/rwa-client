@@ -32,9 +32,9 @@ struct DeviceHealthSnapshot {
     var wifiRssi: Int?            // ESP32 -> hotspot link quality (dBm)
     var ntripConnected: Bool?
     var fwVersion: String?
-    // Battery: not yet in the firmware/heartbeat schema (cross-repo change
-    // pending). Kept here so the UI lights up automatically once it lands.
-    var batteryPct: Int?
+    // LiPo pack voltage from the heartbeat (fw ≥ 0.44.0); nil until the first
+    // heartbeat, and while the device reports 0 (= unknown). The firmware
+    // ships no discharge curve, so this stays a raw voltage.
     var batteryMv: Int?
 
     // GNSS fix quality (PROJECT-PLAN.md §4.3 "gnss_fix")
@@ -164,9 +164,9 @@ final class DeviceHealth {
                 if let v = DeviceHealth.int(event["wifi_rssi"]) { $0.wifiRssi = v }
                 if let v = event["ntrip_connected"] as? Bool { $0.ntripConnected = v }
                 if let v = event["fw_version"] as? String { $0.fwVersion = v }
-                // Battery is optional/forward-looking (see snapshot notes).
-                if let v = DeviceHealth.int(event["batt_pct"]) { $0.batteryPct = v }
-                if let v = DeviceHealth.int(event["batt_mv"]) { $0.batteryMv = v }
+                // 0 mV means the device could not read the pack: keep the
+                // last known voltage rather than showing a flat battery.
+                if let v = DeviceHealth.int(event["batt_mv"]), v > 0 { $0.batteryMv = v }
             }
         case "gnss_fix":
             // Only device-origin fixes own these fields. App-origin samples

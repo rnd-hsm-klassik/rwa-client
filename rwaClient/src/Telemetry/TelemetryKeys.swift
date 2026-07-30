@@ -47,6 +47,7 @@ enum TelemetryKeys {
         typeHeartbeat: [
             10: "uptime_ms", 11: "free_heap", 12: "wifi_rssi",
             13: "ntrip_connected", 14: "fw_version", 15: "dropped_frames",
+            16: "batt_mv",
         ],
         typeNtripStatus: [
             10: "state", 11: "reconnects", 12: "bytes_rx",

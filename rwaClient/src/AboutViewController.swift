@@ -65,7 +65,7 @@ class AboutViewController: UITableViewController {
 
         // Device health
         out.append(Section(title: "Head-tracker device", rows: [
-            Row(label: "Battery", value: Self.battery(pct: h.batteryPct, mv: h.batteryMv)), // PLACEHOLDER UNTIL FIRMWARE-SIDE ALIGNED AND UPDATED
+            Row(label: "Battery", value: Self.battery(mv: h.batteryMv)),
             Row(label: "Firmware", value: h.fwVersion ?? "—"),
             Row(label: "Uptime", value: Self.uptime(h.uptimeMs))
         ]))
@@ -150,13 +150,11 @@ class AboutViewController: UITableViewController {
         return v ? on : off
     }
 
-    private static func battery(pct: Int?, mv: Int?) -> String {
-        if let p = pct {
-            if let mv = mv { return "\(p)% (\(mv) mV)" }
-            return "\(p)%"
-        }
-        if let mv = mv { return "\(mv) mV" }
-        return "— (pending firmware)"
+    /// Raw pack voltage: the firmware sends no percentage and a LiPo curve
+    /// would only be guesswork here (single cell: ~4200 full, ~3300 empty).
+    private static func battery(mv: Int?) -> String {
+        guard let mv = mv else { return "—" }
+        return String(format: "%.2f V", Double(mv) / 1000.0) + " (\(mv) mV)"
     }
 
     private static func uptime(_ ms: UInt32?) -> String {

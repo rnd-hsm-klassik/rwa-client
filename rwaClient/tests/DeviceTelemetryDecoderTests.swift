@@ -19,15 +19,17 @@ final class DeviceTelemetryDecoderTests: XCTestCase {
         return Data([proto, UInt8(payload.count & 0xFF), UInt8(payload.count >> 8)] + payload)
     }
 
-    /// {0: 2 (heartbeat), 1: 65, 2: 1000, 12: -60, 13: true, 14: "0.44.0+abc"}
+    /// {0: 2 (heartbeat), 1: 65, 2: 1000, 12: -60, 13: true,
+    ///  14: "0.44.0+abc", 16: 3900}
     private let heartbeatPayload: [UInt8] = [
-        0xA6,                    // map, 6 pairs
+        0xA7,                    // map, 7 pairs
         0x00, 0x02,              // 0: type = heartbeat
         0x01, 0x18, 0x41,        // 1: seq = 65
         0x02, 0x19, 0x03, 0xE8,  // 2: t_dev_ms = 1000
         0x0C, 0x38, 0x3B,        // 12: wifi_rssi = -60
         0x0D, 0xF5,              // 13: ntrip_connected = true
         0x0E, 0x6A] + Array("0.44.0+abc".utf8)  // 14: fw_version
+        + [0x10, 0x19, 0x0F, 0x3C]  // 16: batt_mv = 3900
 
     func testHeartbeatDecodes() throws {
         var stream = TelemetryFrameStream()
@@ -41,6 +43,7 @@ final class DeviceTelemetryDecoderTests: XCTestCase {
         XCTAssertEqual(event["wifi_rssi"] as? Int64, -60)
         XCTAssertEqual(event["ntrip_connected"] as? Bool, true)
         XCTAssertEqual(event["fw_version"] as? String, "0.44.0+abc")
+        XCTAssertEqual(event["batt_mv"] as? UInt64, 3900)
     }
 
     func testGnssFixFloatsDecode() throws {
