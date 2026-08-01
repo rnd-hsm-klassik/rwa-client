@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entered value is stored. The field now uses `.numbersAndPunctuation`
   (a real return key, and a locale-independent `.` instead of the decimal
   pad's locale separator).
+- Fix missing audio input (regression of changes to the audioController setup
+  to allow bluetooth headphones).
 
 ## [1.3.3] - 2026-07-30
 

@@ -145,26 +145,33 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     /// typical for Bluetooth devices, only PdAudioError is fatal.
     ///
     /// Bluetooth:
-    /// - Without audio input, the audio route is "Playback", should
-    ///   always work (stereo, full sample rate).
-    /// - When using audio input, the route becomes "PlayAndRecord",
-    ///   this would put AirPods on HFP instead (mono, 16/24 kHz, mic open)
-    ///   but RWA Player requires 48kHz. This doesn't work.
+    /// - Input stays enabled (patches use adc~), but only over A2DP:
+    ///   allowBluetoothA2DP keeps Bluetooth output on stereo/48 kHz while
+    ///   input comes from the built-in mic.
+    /// - Never set allowBluetooth (HFP): it overrides A2DP and would drop
+    ///   AirPods to mono 16/24 kHz, which RWA Player can't use.
     private func configureAudio(_ controller: PdAudioController) {
         let requestedRate = Int32(sampleRate * 1000)
+        controller.allowBluetoothA2DP = true
         let status = controller.configurePlayback(withSampleRate: requestedRate,
                                                   inputChannels: 1,
                                                   outputChannels: 2,
-                                                  inputEnabled: false).controlStatus
+                                                  inputEnabled: true).controlStatus
         let ticksStatus = controller.configureTicksPerBuffer(16).controlStatus
 
         let session = AVAudioSession.sharedInstance()
         let route = session.currentRoute.outputs
             .map { "\($0.portName) [\($0.portType)]" }
             .joined(separator: ", ")
+        let inputRoute = session.currentRoute.inputs
+            .map { "\($0.portName) [\($0.portType)]" }
+            .joined(separator: ", ")
         let state = "requested \(requestedRate) Hz, session \(session.sampleRate) Hz, "
             + "out \(controller.outputChannels) ch (session \(session.outputNumberOfChannels)), "
-            + "ticks/buffer \(controller.ticksPerBuffer), route: \(route.isEmpty ? "none" : route)"
+            + "in \(controller.inputChannels) ch (session \(session.inputNumberOfChannels)), "
+            + "ticks/buffer \(controller.ticksPerBuffer), "
+            + "route: \(route.isEmpty ? "none" : route), "
+            + "input: \(inputRoute.isEmpty ? "none" : inputRoute)"
 
         switch status {
         case .ok:
