@@ -76,11 +76,22 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     var blockSteps = false;
     var queue: OperationQueue = OperationQueue();
     
+    var motionErrorLogged = false
+
     func startQueuedUpdates() {
        if motion.isDeviceMotionAvailable {
+          logger.info("Motion: starting device-motion updates (internal heading)")
+          motionErrorLogged = false
           self.motion.deviceMotionUpdateInterval = 1.0 / 100.0
           self.motion.showsDeviceMovementDisplay = true
           self.motion.startDeviceMotionUpdates(using: .xTrueNorthZVertical, to: self.queue, withHandler: { (data, error) in
+             // xTrueNorthZVertical needs the magnetometer and location; when
+             // either is unavailable the handler fires with an error and no
+             // data — without this log the internal heading dies silently.
+             if let error = error, !self.motionErrorLogged {
+                self.motionErrorLogged = true
+                logger.error("Motion: device-motion error: \(error.localizedDescription)")
+             }
              // Make sure the data is valid before accessing it.
              if let validData = data {
                 // Get the attitude relative to the magnetic north reference frame.
@@ -102,11 +113,22 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                  
                  hero.azimuth = azi
                  hero.elevation = ele
+                 // The engine's non-headtracker-relative Pd path
+                 // (RwaGameLoop.sendData2Asset) sends the raw azimuth/
+                 // elevation globals, which only the BLE parser filled —
+                 // internal heading never reached those receivers. Mirror
+                 // the tracker path. (ele already has inverseElevation
+                 // applied, matching the parser.)
+                 azimuth = azi
+                 elevation = ele
              }
           })
            headTrackerConnected = true
            updateButtons()
            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
+       }
+       else {
+           logger.error("Motion: device motion unavailable - internal heading disabled")
        }
         
         if (motion.isAccelerometerAvailable) {
@@ -485,12 +507,16 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                 //london.coordinate = CLLocationCoordinate2D(latitude: ubloxLat!, longitude: ubloxLon!)
                 
             }
-            else
+            // Heading frames only count while the headtracker is the heading
+            // source: with Internal selected a tracker connected for RTK
+            // positioning would otherwise overwrite the CoreMotion heading
+            // (and double-count steps) on every frame.
+            else if(useHeadTracker)
             {
                 var azimuthTmp = words[0]
                 let elevationTmp = words[1]
                 let linAccTmp = words[2]
-                
+
                 azimuthTmp = azimuthTmp.digits
                 
                 azimuthOrg = Int(NSString(string: azimuthTmp).intValue)

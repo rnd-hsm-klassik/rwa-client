@@ -28,8 +28,14 @@ var oscServer = F53OSCServer.init()
 struct defaultsKeys {
     static let headtrackerId = "rwaht01"
     static let rwaCreatorIP = "192.168.178.53"
-    static let inverseElevation = "true";
-    static let useHeadtracker = "true";
+    static let inverseElevation = "inverseElevation";
+    static let useHeadtracker = "useHeadtracker";
+    // Both settings above were historically stored under the one literal
+    // key "true", so writing either setting clobbered the other — after a
+    // relaunch the heading source silently flipped back to the headtracker
+    // and internal (device-orientation) heading went dead. Kept only for
+    // the one-time migration in didFinishLaunching.
+    static let legacySharedHeadingKey = "true"
     static let defaultGame = ""
     static let calibrateOnStart = "false"
     static let deviceId = "deviceId"
@@ -67,7 +73,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Override point for customization after application launch.
 
         let defaults = UserDefaults.standard
-        
+
+        // One-time migration off the shared legacy key (see defaultsKeys):
+        // seed both distinct keys with its last-written value — the same
+        // value both reads would have produced before the split.
+        if let legacy = defaults.string(forKey: defaultsKeys.legacySharedHeadingKey) {
+            if defaults.string(forKey: defaultsKeys.inverseElevation) == nil {
+                defaults.set(legacy, forKey: defaultsKeys.inverseElevation)
+            }
+            if defaults.string(forKey: defaultsKeys.useHeadtracker) == nil {
+                defaults.set(legacy, forKey: defaultsKeys.useHeadtracker)
+            }
+            defaults.removeObject(forKey: defaultsKeys.legacySharedHeadingKey)
+        }
+
         if let dg = defaults.string(forKey: defaultsKeys.defaultGame) {
             defaultGame = dg
         }

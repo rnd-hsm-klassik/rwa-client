@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Internal (device-orientation) heading no longer dies after a relaunch
+  (WP-1). The "Inverse elevation" and "Heading source" settings were both
+  persisted under the same literal UserDefaults key `"true"`, so writing
+  either setting clobbered the other: after setting Heading = Internal and
+  touching Inverse elevation, the next launch silently flipped the heading
+  source back to the headtracker and CoreMotion never started — turning the
+  phone had no effect, audibly or in the Control readout. The two settings
+  now use distinct keys (`inverseElevation`, `useHeadtracker`) with a
+  one-time migration that seeds both from the legacy shared key.
+- With Heading = Internal, heading/step frames from a connected headtracker
+  (kept connected for RTK positioning) no longer overwrite the CoreMotion
+  heading and no longer double-count steps. Position (`l`) frames are
+  unaffected — RTK positioning keeps working. Player-only change: heading
+  source selection does not exist in the Creator engine, no parity impact.
+- The internal-heading path now logs when device-motion updates start, when
+  device motion is unavailable, and the first handler error
+  (`xTrueNorthZVertical` needs the magnetometer and location) — previously
+  it failed silently.
+- Internal heading now reaches Pd on the non-headtracker-relative asset
+  path. `RwaGameLoop.sendData2Asset` sends the raw `azimuth`/`elevation`
+  globals to the `<tag>-azimuth1`/`<tag>-elevation1` receivers, but only
+  the BLE tracker parser ever wrote those globals — with Heading =
+  Internal, CoreMotion updated `hero.azimuth`/`hero.elevation` (readout,
+  bearing calculation) while Pd kept getting the last tracker value or 0.
+  The CoreMotion handler now fills the globals too, mirroring the tracker
+  path. Player-only input plumbing; the values sent to Pd match what the
+  Creator engine sends from its own heading source — no parity impact.
+
 - Settings: the RWA Creator "IP address" field can now be dismissed, so the
   entered value is stored. The field now uses `.numbersAndPunctuation`
   (a real return key, and a locale-independent `.` instead of the decimal
