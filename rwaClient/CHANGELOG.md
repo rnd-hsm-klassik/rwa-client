@@ -50,6 +50,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   path. Player-only input plumbing; the values sent to Pd match what the
   Creator engine sends from its own heading source — no parity impact.
 
+- Loading a game no longer freezes the UI and no longer races app launch
+  (WP-2). The default game now auto-loads on the first
+  `didBecomeActive` instead of inside `viewDidLoad`, so view setup and
+  audio-session activation finish first; the `.rwa` XML parse runs on a
+  background queue (libpd patcher work stays on the main thread, the only
+  thread that issues Pd calls); a running game is stopped before a new one
+  loads (the 10 ms tick must not read `scenes` mid-parse); a spinner shows
+  over the games list during the load and the jump to the Control tab
+  happens after the load completes instead of before it starts.
+- The Control tab's connect button now shows "Connecting…" while the BLE
+  central is scanning for the tracker (new volatile `headTrackerConnecting`
+  state set by the scan/connect callbacks), so an absent or switched-off
+  tracker is visible as such instead of looking idle.
 - Settings: the RWA Creator "IP address" field can now be dismissed, so the
   entered value is stored. The field now uses `.numbersAndPunctuation`
   (a real return key, and a locale-independent `.` instead of the decimal

@@ -34,6 +34,9 @@ var pdGainVal:Float = 2.0
 var stepThresh = 0.6
 var useHeadTracker = true
 var headTrackerConnected = false
+// True while the central is scanning/connecting (BLE mode only) — drives
+// the Control tab's "Connecting…" button state. Volatile, never persisted.
+var headTrackerConnecting = false
 var linAccel:Float = 0;
 var linAccelAverage:Float = 0;
 var linAccelMovingAverage =  [Float](repeating: 0.0, count: 100)
@@ -182,6 +185,8 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         else {
             centralManager.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey:true])
             logger.info("BT: Scanning Started.")
+            headTrackerConnecting = true
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
         }
     }
     
@@ -239,6 +244,8 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         // We will just handle it the easy way here: if Bluetooth is on, proceed...
         if central.state != .poweredOn {
             self.peripheral = nil
+            headTrackerConnecting = false
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
             return
         }
         
@@ -317,6 +324,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         bleConnectButton.setTitle("BLE Connected", for: UIControlState())
         bleConnectButton.isEnabled = false
         headTrackerConnected = true
+        headTrackerConnecting = false
         DeviceHealth.shared.setBLEConnected(true)
         rssiTimer?.invalidate()
         rssiTimer = Timer.scheduledTimer(timeInterval: 2.0, target: self,
@@ -822,6 +830,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
             centralManager = CBCentralManager(delegate: self, queue: nil)
         }
         else {
+            headTrackerConnecting = false
             disconnect()
             startQueuedUpdates();
         }

@@ -340,6 +340,11 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
             else {
                 connectButton.setTitle("Using Device Orientation", for: UIControlState()) }
         }
+        else if(headTrackerConnecting) {
+            // Scanning keeps running until the tracker appears, so this state
+            // is honest about an absent/off tracker: it stays "Connecting…".
+            connectButton.setTitle("Connecting…", for: UIControlState())
+        }
         else {
             connectButton.setTitle("Connect Headtracker", for: UIControlState())
         }

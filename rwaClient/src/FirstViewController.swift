@@ -25,6 +25,11 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
 
     var rwaimport:RwaImport = RwaImport()
     var games:GameManager = GameManager()
+    let loadingSpinner = UIActivityIndicatorView(activityIndicatorStyle: .whiteLarge)
+    // The default game loads once per app run, deferred to the first
+    // didBecomeActive so launch (view setup, audio-session activation)
+    // finishes before the heavy load/connect automation starts.
+    var didAutoLoadDefaultGame = false
     
     func emptyDocumentsDirectory()
     {
@@ -138,18 +143,35 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         self.present(alert, animated: true, completion: nil)
     }
     
-    func loadGameAndInitDynamicPatchers(game: String) {
-        let group = DispatchGroup()
-        group.enter()
-        
+    /// Loads a game without blocking the UI: a running game is stopped
+    /// first (the 10 ms tick must not read `scenes` mid-parse), the XML
+    /// parse runs on a background queue (pure Foundation), and the Pd
+    /// patcher work stays on the main thread — libpd calls are only ever
+    /// issued from there. The spinner over the games list animates during
+    /// the parse; `completion` runs on main after "Game Loaded" is posted.
+    func loadGameAndInitDynamicPatchers(game: String, completion: (() -> Void)? = nil) {
+        loadingSpinner.startAnimating()
+        gameTable.isUserInteractionEnabled = false
+
+        // Hop through the runloop once so the spinner actually renders:
+        // merely touching `rwagameloop` below materializes the lazy global,
+        // which opens the ~170 static patchers synchronously on first use.
         DispatchQueue.main.async {
-            self.rwaimport.readRwa(game)
-            rwagameloop.initDynamicPatchers()
-            group.leave()
-        }
-        
-        group.notify(queue: .main) {
-            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Game Loaded"), object: nil)
+            if rwagameloop.isRunning {
+                NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Stop Game"), object: nil)
+            }
+
+            DispatchQueue.global(qos: .userInitiated).async {
+                self.rwaimport.readRwa(game)
+
+                DispatchQueue.main.async {
+                    rwagameloop.initDynamicPatchers()
+                    self.loadingSpinner.stopAnimating()
+                    self.gameTable.isUserInteractionEnabled = true
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Game Loaded"), object: nil)
+                    completion?()
+                }
+            }
         }
     }
     
@@ -187,42 +209,56 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         
         hero.coordinates.latitude = 47.5546492;
         hero.coordinates.longitude = 7.5594406;
-        
-        if defaultGame != "" {
-            logger.debug("Default game: \(defaultGame)")
 
-            // Stored Documents-relative; resolve against the *current*
-            // container. Legacy installs stored the absolute path, whose
-            // container UUID changes on every app update — strip it down to
-            // the relative part and migrate the stored value.
-            var relativeGame = defaultGame
-            if relativeGame.hasPrefix("/"),
-               let range = relativeGame.range(of: "/Documents/") {
-                relativeGame = String(relativeGame[range.upperBound...])
-            }
-            let documentsPath = FileManager.default.urls(for: .documentDirectory,
-                                                         in: .userDomainMask)[0].relativePath
-            let gamePath = documentsPath + "/" + relativeGame
+        loadingSpinner.hidesWhenStopped = true
+        loadingSpinner.color = .label
+        loadingSpinner.center = view.center
+        loadingSpinner.autoresizingMask = [.flexibleTopMargin, .flexibleBottomMargin,
+                                           .flexibleLeftMargin, .flexibleRightMargin]
+        view.addSubview(loadingSpinner)
 
-            if FileManager.default.fileExists(atPath: gamePath) {
-                if relativeGame != defaultGame {
-                    defaultGame = relativeGame
-                    UserDefaults.standard.set(relativeGame, forKey: defaultsKeys.defaultGame)
-                    logger.info("Migrated default game to Documents-relative path: \(relativeGame)")
-                }
-                let dir = (gamePath as NSString).deletingLastPathComponent
-                fullAssetPath = dir + "/" + "assets"
-                loadGameAndInitDynamicPatchers(game: gamePath)
-                currentGame = gamePath
-                if let tabBarController = self.tabBarController {
-                    tabBarController.selectedIndex = 1
-                }
+        NotificationCenter.default.addObserver(self, selector: #selector(self.autoLoadDefaultGame),
+                                               name: NSNotification.Name.UIApplicationDidBecomeActive,
+                                               object: nil)
+    }
+
+    @objc func autoLoadDefaultGame() {
+        if didAutoLoadDefaultGame || defaultGame == "" {
+            return
+        }
+        didAutoLoadDefaultGame = true
+        logger.debug("Default game: \(defaultGame)")
+
+        // Stored Documents-relative; resolve against the *current*
+        // container. Legacy installs stored the absolute path, whose
+        // container UUID changes on every app update — strip it down to
+        // the relative part and migrate the stored value.
+        var relativeGame = defaultGame
+        if relativeGame.hasPrefix("/"),
+           let range = relativeGame.range(of: "/Documents/") {
+            relativeGame = String(relativeGame[range.upperBound...])
+        }
+        let documentsPath = FileManager.default.urls(for: .documentDirectory,
+                                                     in: .userDomainMask)[0].relativePath
+        let gamePath = documentsPath + "/" + relativeGame
+
+        if FileManager.default.fileExists(atPath: gamePath) {
+            if relativeGame != defaultGame {
+                defaultGame = relativeGame
+                UserDefaults.standard.set(relativeGame, forKey: defaultsKeys.defaultGame)
+                logger.info("Migrated default game to Documents-relative path: \(relativeGame)")
             }
-            else {
-                // Stay on the Games list instead of showing a phantom title
-                // over an empty scene list ("Start does nothing").
-                logger.error("Default game not found, skipping auto-load: \(gamePath)")
+            let dir = (gamePath as NSString).deletingLastPathComponent
+            fullAssetPath = dir + "/" + "assets"
+            currentGame = gamePath
+            loadGameAndInitDynamicPatchers(game: gamePath) { [weak self] in
+                self?.tabBarController?.selectedIndex = 1
             }
+        }
+        else {
+            // Stay on the Games list instead of showing a phantom title
+            // over an empty scene list ("Start does nothing").
+            logger.error("Default game not found, skipping auto-load: \(gamePath)")
         }
     }
     
@@ -307,11 +343,10 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
 
         logger.info("loading game: \(fullGamePath)")
         logger.info("loading assets folder: \(fullAssetPath)")
-      
-        loadGameAndInitDynamicPatchers(game: fullGamePath)
-        
-        if(tabBarController != nil) {
-            tabBarController?.selectedIndex = 1 }
+
+        loadGameAndInitDynamicPatchers(game: fullGamePath) { [weak self] in
+            self?.tabBarController?.selectedIndex = 1
+        }
     }
 }
 
