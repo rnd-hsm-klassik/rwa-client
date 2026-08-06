@@ -35,9 +35,16 @@ class RwaImport:NSObject, XMLParserDelegate
       //  let rwaGamePath = Bundle.main.path(forResource: filename, ofType: "rwa")
         rwaGameFile = URL(fileURLWithPath: name)
         xmlParser = XMLParser(contentsOf: rwaGameFile!)
-        xmlParser!.delegate = self
-        xmlParser!.parse()
-        
+        guard let parser = xmlParser else {
+            logger.error("Import FAILED, file missing or unreadable: \(name)")
+            return
+        }
+        parser.delegate = self
+        if !parser.parse() {
+            // scenes may be empty or partial now; the game will not start.
+            logger.error("Import FAILED for \(name): \(parser.parserError?.localizedDescription ?? "unknown parser error")")
+        }
+
         hero.loadGameScript()
     }
     

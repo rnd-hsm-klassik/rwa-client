@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The default game loads again after an app update (WP-2). The "default
+  game" switch stored the game's **absolute** path, which embeds the app
+  container UUID — and iOS assigns a new container on every update or
+  reinstall. On the next launch the stored path pointed into the old,
+  deleted container: the XML import failed silently, `scenes` stayed
+  empty, and the Control tab showed the game title but Start did nothing
+  (Scene/State "—", no sound). The setting is now stored
+  Documents-relative and resolved against the current container at launch;
+  legacy absolute values are migrated in place. When the file is genuinely
+  missing the app now stays on the Games list and logs an error instead of
+  showing a phantom title, and `RwaImport.readRwa` logs import failures
+  (missing file, parser error) instead of ignoring them.
+
 - Internal (device-orientation) heading no longer dies after a relaunch
   (WP-1). The "Inverse elevation" and "Heading source" settings were both
   persisted under the same literal UserDefaults key `"true"`, so writing

@@ -189,15 +189,39 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         hero.coordinates.longitude = 7.5594406;
         
         if defaultGame != "" {
-            logger.debug("First game: \(self.games.rwaGames[0].name), \(self.games.rwaGames[0].path)")
             logger.debug("Default game: \(defaultGame)")
 
-            let dir = (defaultGame as NSString).deletingLastPathComponent
-            fullAssetPath = dir + "/" + "assets"
-            loadGameAndInitDynamicPatchers(game: defaultGame)
-            currentGame = defaultGame
-            if let tabBarController = self.tabBarController {
-                tabBarController.selectedIndex = 1
+            // Stored Documents-relative; resolve against the *current*
+            // container. Legacy installs stored the absolute path, whose
+            // container UUID changes on every app update — strip it down to
+            // the relative part and migrate the stored value.
+            var relativeGame = defaultGame
+            if relativeGame.hasPrefix("/"),
+               let range = relativeGame.range(of: "/Documents/") {
+                relativeGame = String(relativeGame[range.upperBound...])
+            }
+            let documentsPath = FileManager.default.urls(for: .documentDirectory,
+                                                         in: .userDomainMask)[0].relativePath
+            let gamePath = documentsPath + "/" + relativeGame
+
+            if FileManager.default.fileExists(atPath: gamePath) {
+                if relativeGame != defaultGame {
+                    defaultGame = relativeGame
+                    UserDefaults.standard.set(relativeGame, forKey: defaultsKeys.defaultGame)
+                    logger.info("Migrated default game to Documents-relative path: \(relativeGame)")
+                }
+                let dir = (gamePath as NSString).deletingLastPathComponent
+                fullAssetPath = dir + "/" + "assets"
+                loadGameAndInitDynamicPatchers(game: gamePath)
+                currentGame = gamePath
+                if let tabBarController = self.tabBarController {
+                    tabBarController.selectedIndex = 1
+                }
+            }
+            else {
+                // Stay on the Games list instead of showing a phantom title
+                // over an empty scene list ("Start does nothing").
+                logger.error("Default game not found, skipping auto-load: \(gamePath)")
             }
         }
     }
@@ -248,8 +272,11 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         cell.textLabel!.text = games.rwaGames[indexPath.row].name
         cell.detailTextLabel!.text = games.rwaGames[indexPath.row].path
         switchView.tag = indexPath.row // for detect which row switch Changed
-        switchView.layer.name =  cell.detailTextLabel!.text! + "/" + cell.textLabel!.text!
-        
+        // Documents-relative (e.g. "howest/howest.rwa"): the absolute
+        // Documents path contains the app container UUID, which changes on
+        // every update/reinstall and silently invalidated stored defaults.
+        switchView.layer.name = games.rwaGames[indexPath.row].name
+
         if(defaultGame == switchView.layer.name) {
             switchView.setOn(true, animated: true)
         }
