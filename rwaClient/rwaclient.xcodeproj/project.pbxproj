@@ -114,6 +114,7 @@
 		BEEF00000000000000000012 /* ScenarioRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF0000000000000000000D /* ScenarioRunner.swift */; };
 		BEEF00000000000000000013 /* EngineParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF0000000000000000000E /* EngineParityTests.swift */; };
 		BEEF00000000000000000014 /* smoke-background.scenario.json in Resources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000010 /* smoke-background.scenario.json */; };
+		BEEF00000000000000000018 /* pdmodes.scenario.json in Resources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000017 /* pdmodes.scenario.json */; };
 		BEEF00000000000000000016 /* DeviceTelemetryDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */; };
 		E4232CB523D9C09D00E44DE3 /* rwa_binauralsimple~.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */; };
 		E4232CB723D9C12B00E44DE3 /* vas_firobject.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB623D9C12B00E44DE3 /* vas_firobject.c */; };
@@ -283,6 +284,7 @@
 		BEEF0000000000000000000E /* EngineParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineParityTests.swift; sourceTree = "<group>"; };
 		BEEF0000000000000000000F /* rwaclientTests-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "rwaclientTests-Bridging-Header.h"; sourceTree = "<group>"; };
 		BEEF00000000000000000010 /* smoke-background.scenario.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "smoke-background.scenario.json"; path = "scenarios/smoke-background.scenario.json"; sourceTree = "<group>"; };
+		BEEF00000000000000000017 /* pdmodes.scenario.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "pdmodes.scenario.json"; path = "scenarios/pdmodes.scenario.json"; sourceTree = "<group>"; };
 		BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceTelemetryDecoderTests.swift; sourceTree = "<group>"; };
 		E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "rwa_binauralsimple~.c"; path = "../vas_library/examples/PureData/rwa_binauralsimple~.c"; sourceTree = "<group>"; };
 		E4232CB623D9C12B00E44DE3 /* vas_firobject.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_firobject.c; path = ../vas_library/source/vas_firobject.c; sourceTree = "<group>"; };
@@ -494,6 +496,7 @@
 				BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */,
 				BEEF0000000000000000000F /* rwaclientTests-Bridging-Header.h */,
 				BEEF00000000000000000010 /* smoke-background.scenario.json */,
+				BEEF00000000000000000017 /* pdmodes.scenario.json */,
 			);
 			path = tests;
 			sourceTree = "<group>";
@@ -663,6 +666,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BEEF00000000000000000014 /* smoke-background.scenario.json in Resources */,
+				BEEF00000000000000000018 /* pdmodes.scenario.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

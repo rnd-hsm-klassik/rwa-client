@@ -96,6 +96,77 @@ final class EngineParityTests: XCTestCase {
         XCTAssertLessThanOrEqual(maxTick, 1000, "event beyond scenario duration")
     }
 
+    /// Playback-mode-dependent spatial data for Pd-patch assets (the
+    /// multichannel-patch change, mirrored from the Creator). Expectations
+    /// per patch are documented in rwa-creator/tools/trace/README.md:
+    /// binaural stereo → 2 channels, binaural mono → 1, binaural stereo with
+    /// "headtracker relative to source" off → 1 (raw head data), binaural
+    /// 7 channel → 7 at distinct angular offsets.
+    func testPdModesScenario() throws {
+        let trace = try runAndExport(scenarioName: "pdmodes.scenario",
+                                     gameBasename: "pdmodes.rwa")
+
+        let expectations: [(asset: String, channels: Int)] = [
+            ("stereopatch.pd", 2),
+            ("monopatch.pd", 1),
+            ("rawpatch.pd", 1),
+            ("sevenpatch.pd", 7),
+        ]
+
+        for (asset, channels) in expectations {
+            // The "<tag>-play" init symbol binds tag to asset.
+            let playLine = try XCTUnwrap(
+                trace.first { $0.contains("-play\"") && $0.contains(asset) },
+                "\(asset) was never started")
+            let tag = try XCTUnwrap(tag(ofLine: playLine), "no tag in: \(playLine)")
+
+            // numchannels init value (sent before -play, so match by tag).
+            XCTAssertTrue(trace.contains {
+                $0.contains("\"recv\":\"\(tag)-numchannels\"") && $0.contains("\"val\":\(channels)")
+            }, "\(asset): expected numchannels \(channels)")
+
+            // Per-tick fan-out streams channels 1...N and nothing beyond.
+            for channel in 1...channels {
+                XCTAssertTrue(trace.contains { $0.contains("\"recv\":\"\(tag)-azimuth\(channel)\"") },
+                              "\(asset): azimuth\(channel) never sent")
+            }
+            XCTAssertFalse(trace.contains { $0.contains("\"recv\":\"\(tag)-azimuth\(channels + 1)\"") },
+                           "\(asset): unexpected azimuth\(channels + 1)")
+        }
+
+        // The raw-head patch gets the head azimuth verbatim: 90 after the
+        // t=1000 azimuth input.
+        let rawPlayLine = try XCTUnwrap(trace.first { $0.contains("-play\"") && $0.contains("rawpatch.pd") })
+        let rawTag = try XCTUnwrap(tag(ofLine: rawPlayLine))
+        XCTAssertTrue(trace.contains {
+            $0.contains("\"recv\":\"\(rawTag)-azimuth1\"") && $0.contains("\"val\":90")
+        }, "rawpatch.pd: head azimuth 90 never sent verbatim")
+
+        // The 7-channel patch's channels sit at distinct angular offsets:
+        // their bearings must not all coincide within one tick.
+        let sevenPlayLine = try XCTUnwrap(trace.first { $0.contains("-play\"") && $0.contains("sevenpatch.pd") })
+        let sevenTag = try XCTUnwrap(tag(ofLine: sevenPlayLine))
+        let firstAzimuths: [String] = (1...7).compactMap { channel in
+            trace.first { $0.contains("\"recv\":\"\(sevenTag)-azimuth\(channel)\"") }
+                 .flatMap { line in
+                     line.range(of: #""val":-?\d+(\.\d+)?"#, options: .regularExpression)
+                         .map { String(line[$0]) }
+                 }
+        }
+        XCTAssertEqual(firstAzimuths.count, 7)
+        XCTAssertGreaterThan(Set(firstAzimuths).count, 1,
+                             "7-channel offsets collapsed: all channels share one bearing")
+    }
+
+    /// Leading "<tag>-" of the line's receiver field.
+    private func tag(ofLine line: String) -> Int? {
+        guard let start = line.range(of: #""recv":""#)?.upperBound else {
+            return nil
+        }
+        let digits = line[start...].prefix(while: { $0.isNumber })
+        return digits.isEmpty ? nil : Int(digits)
+    }
+
     /// The harness itself must be deterministic: two in-process replays of the
     /// same scenario produce byte-identical traces. (Patcher $0 tags advance
     /// between runs, so compare with tags canonicalized away via the asset

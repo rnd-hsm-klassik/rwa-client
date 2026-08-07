@@ -41,9 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the number of `azimuthN`/`distanceN`/`elevationN` channels the engine will
   actually stream (from `playbackChannelCount()`), alongside `$0-samplerate`, so
   patches can adapt their receiver wiring. The Creator side went in with the
-  same change; the Creator's `tools/trace/pdmodes/` fixture documents the
-  expected sends (2/1/1/7) for a future parity test: not yet wired into
-  `rwaClient/tests/`.
+  same change; the Creator's `tools/trace/pdmodes/` fixture and scenario are
+  mirrored into `rwaGames/pdmodes/` + `rwaClient/tests/scenarios/`, and a new
+  `EngineParityTests.testPdModesScenario` asserts the expected fan-out per
+  patch (numchannels and `azimuthN` receivers: 2/1/1/7, the raw head azimuth
+  arriving verbatim, and distinct 7-channel bearings).
 
 ## [1.3.4] - 2026-08-07
 

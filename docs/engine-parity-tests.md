@@ -22,7 +22,8 @@ rwaClient/tests/
 ├── EngineParityTests.swift     # XCTest entry points
 ├── rwaclientTests-Bridging-Header.h
 └── scenarios/
-    └── smoke-background.scenario.json   # mirror of rwa-creator/tools/trace/scenarios/
+    ├── smoke-background.scenario.json   # mirror of rwa-creator/tools/trace/scenarios/
+    └── pdmodes.scenario.json            # mirror; game fixture in rwaGames/pdmodes/
 ```
 
 The `rwaclientTests` unit-test target is **hosted in rwa-client.app** (the
