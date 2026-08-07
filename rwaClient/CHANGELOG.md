@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   heading source) and is meaningless for elevation. Devices that already
   ran an interim build with the old seeding keep a stored value; toggle
   the switch once in Settings to write an explicit choice.
+- The "set default game" switches are gone from the Games list;
+  the default game is chosen in Settings > Soundwalk > Default game. The
+  list now marks the current default with a checkmark, and the
+  storyboard's leftover "Default Game" caption is hidden. The Settings
+  picker also stores the Documents-relative name now, matching the earlier
+  path fix: it previously wrote the absolute container path, which
+  would have re-introduced the stale-default-game bug through the
+  Settings door.
 
 ### Fixed
 

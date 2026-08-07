@@ -185,10 +185,11 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         view.backgroundColor = .systemBackground
         gameTable.backgroundColor = .systemBackground
         gameTable.alpha = 1.0
-        // The "Default Game" caption has a baked-in near-black text color
-        // and no outlet; it is the only label directly in this view.
+        // The storyboard's "Default Game" caption (no outlet, only label
+        // directly in this view) is obsolete since the default-game switch
+        // moved to Settings. Hide it.
         for label in view.subviews.compactMap({ $0 as? UILabel }) {
-            label.textColor = .secondaryLabel
+            label.isHidden = true
         }
     }
 
@@ -277,51 +278,17 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
     {
         return games.rwaGames.count
     }
-    
-    @objc func switchChanged(_ sender : UISwitch!)
-    {
-        let defaults = UserDefaults.standard
-        if(sender.isOn) {
-            defaultGame = sender.layer.name!
-            logger.debug("setting new default game: \(defaultGame)")
-            defaults.set(defaultGame, forKey: defaultsKeys.defaultGame)
-        }
-        else {
-            defaultGame = ""
-            defaults.set("", forKey: defaultsKeys.defaultGame)
-        }
-        
-        for cell in gameTable.visibleCells
-        {
-            if let defaultSwitch = cell.accessoryView as? UISwitch {
-                if defaultSwitch != sender {
-                    defaultSwitch.isOn = false
-                }
-            }
-        }
-    }
-    
+
+    // The "set default game" switch moved to Settings > Soundwalk >
+    // Default game; the list is selection-only now. A checkmark
+    // marks the current default game.
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
         let cell: UITableViewCell = UITableViewCell(style: UITableViewCellStyle.subtitle, reuseIdentifier: "Default")
-        let switchView = UISwitch(frame: .zero)
         cell.textLabel!.text = games.rwaGames[indexPath.row].name
         cell.detailTextLabel!.text = games.rwaGames[indexPath.row].path
-        switchView.tag = indexPath.row // for detect which row switch Changed
-        // Documents-relative (e.g. "howest/howest.rwa"): the absolute
-        // Documents path contains the app container UUID, which changes on
-        // every update/reinstall and silently invalidated stored defaults.
-        switchView.layer.name = games.rwaGames[indexPath.row].name
-
-        if(defaultGame == switchView.layer.name) {
-            switchView.setOn(true, animated: true)
-        }
-        else {
-            switchView.setOn(false, animated: true)
-        }
-        
-        switchView.addTarget(self, action: #selector(self.switchChanged(_:)), for: .valueChanged)
-        cell.accessoryView = switchView
+        cell.accessoryType = (defaultGame == games.rwaGames[indexPath.row].name)
+            ? .checkmark : .none
         return cell;
     }
     

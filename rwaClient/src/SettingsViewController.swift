@@ -262,8 +262,10 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
 // MARK: - Default game picker
 
 /// Drill-in list of the downloaded games (same scan the Games tab uses),
-/// plus "None". Stores path + "/" + name, the format FirstViewController
-/// reads on launch.
+/// plus "None". Stores the Documents-relative name (e.g.
+/// "hei-guide/hei-guide.rwa"): the absolute Documents path embeds the app
+/// container UUID, which changes on every update/reinstall and used to
+/// invalidate the stored default silently.
 class DefaultGamePickerViewController: UITableViewController {
 
     private let games = GameManager()
@@ -286,7 +288,7 @@ class DefaultGamePickerViewController: UITableViewController {
         } else {
             let game = games.rwaGames[indexPath.row - 1]
             cell.textLabel?.text = game.name
-            cell.accessoryType = (defaultGame == game.path + "/" + game.name) ? .checkmark : .none
+            cell.accessoryType = (defaultGame == game.name) ? .checkmark : .none
         }
         return cell
     }
@@ -296,7 +298,7 @@ class DefaultGamePickerViewController: UITableViewController {
             defaultGame = ""
         } else {
             let game = games.rwaGames[indexPath.row - 1]
-            defaultGame = game.path + "/" + game.name
+            defaultGame = game.name
         }
         UserDefaults.standard.set(defaultGame, forKey: defaultsKeys.defaultGame)
         tableView.reloadData()
