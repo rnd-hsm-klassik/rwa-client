@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   path fix: it previously wrote the absolute container path, which
   would have re-introduced the stale-default-game bug through the
   Settings door.
+- The Games list no longer displays the absolute Documents path under each entry
+  (same container path on every row). The subtitle line stays populated but
+  hidden, reserved for game metadata; row selection now reads the game from the
+  model instead of scraping the cell labels, so a future metadata line cannot
+  break loading.
 
 ### Fixed
 

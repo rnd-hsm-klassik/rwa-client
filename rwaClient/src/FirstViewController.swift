@@ -286,27 +286,33 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
     {
         let cell: UITableViewCell = UITableViewCell(style: UITableViewCellStyle.subtitle, reuseIdentifier: "Default")
         cell.textLabel!.text = games.rwaGames[indexPath.row].name
+        // Kept populated but hidden: the second line is reserved for game
+        // metadata later; the absolute Documents path it holds today is
+        // operator noise (and selection reads the model, not this label).
         cell.detailTextLabel!.text = games.rwaGames[indexPath.row].path
+        cell.detailTextLabel!.isHidden = true
         cell.accessoryType = (defaultGame == games.rwaGames[indexPath.row].name)
             ? .checkmark : .none
         return cell;
     }
-    
+
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath)
     {
-        let cell = tableView.cellForRow(at: indexPath)
-        currentGame = (cell?.textLabel?.text)!
-        
+        // Read from the model, not the cell labels. The detail label is
+        // hidden today and will carry metadata later.
+        let game = games.rwaGames[indexPath.row]
+        currentGame = game.name
+
         let comps = currentGame.components(separatedBy: "/")
         if(comps.count > 1) {
-            fullAssetPath = (cell?.detailTextLabel?.text)! + "/" + comps[0] + "/assets"
+            fullAssetPath = game.path + "/" + comps[0] + "/assets"
         }
         else {
-            fullAssetPath = (cell?.detailTextLabel?.text)! + "/" + "assets"
+            fullAssetPath = game.path + "/" + "assets"
             gameIsInDocumentsFolder = true;
         }
-        
-        fullGamePath =  (cell?.detailTextLabel?.text)! + "/" + currentGame
+
+        fullGamePath = game.path + "/" + currentGame
 
         logger.info("loading game: \(fullGamePath)")
         logger.info("loading assets folder: \(fullAssetPath)")
@@ -316,4 +322,3 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         }
     }
 }
-
