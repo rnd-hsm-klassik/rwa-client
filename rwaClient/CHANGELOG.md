@@ -7,16 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-08-07
+
 ### Changed
 
-- Elevation is no longer inverted by default (WP-4): the
-  `inverseElevation` default flips to **off** — both the in-memory
-  default and the launch fallback. The WP-1 key migration no longer
-  seeds `inverseElevation` from the legacy shared key either: that value
-  recorded whichever colliding setting was written last (usually the
-  heading source) and is meaningless for elevation. Devices that already
-  ran an interim build with the old seeding keep a stored value; toggle
-  the switch once in Settings to write an explicit choice.
+- Elevation is no longer inverted by default: the `inverseElevation` default
+  flips to *off*, both the in-memory default and the launch fallback. The key
+  migration in `c6f59ff9` no longer seeds `inverseElevation` from the legacy
+  shared key either: that value recorded whichever colliding setting was written
+  last (usually the heading source) and is meaningless for elevation. Devices
+  that already ran an interim build with the old seeding keep a stored value;
+  toggle the switch once in Settings to write an explicit choice.
 - The "set default game" switches are gone from the Games list;
   the default game is chosen in Settings > Soundwalk > Default game. The
   list now marks the current default with a checkmark, and the
@@ -33,82 +34,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The default game loads again after an app update (WP-2). The "default
-  game" switch stored the game's **absolute** path, which embeds the app
-  container UUID — and iOS assigns a new container on every update or
-  reinstall. On the next launch the stored path pointed into the old,
-  deleted container: the XML import failed silently, `scenes` stayed
-  empty, and the Control tab showed the game title but Start did nothing
-  (Scene/State "—", no sound). The setting is now stored
-  Documents-relative and resolved against the current container at launch;
-  legacy absolute values are migrated in place. When the file is genuinely
-  missing the app now stays on the Games list and logs an error instead of
-  showing a phantom title, and `RwaImport.readRwa` logs import failures
-  (missing file, parser error) instead of ignoring them.
+- The default game loads again after an app update. The "default game" switch
+  stored the game's **absolute** path, which embeds the app container UUID, and
+  iOS assigns a new container on every update or reinstall. On the next launch
+  the stored path pointed into the old, deleted container: the XML import failed
+  silently, and the Control tab showed the game title but Start did nothing
+  (Scene/State "—", no sound). The setting is now stored Documents-relative and
+  resolved against the current container at launch; legacy absolute values are
+  migrated in place. When the file is genuinely missing the app now stays on the
+  Games list and logs an error instead of showing a phantom title, and
+  `RwaImport.readRwa` logs import failures (missing file, parser error) instead
+  of ignoring them.
 
-- Internal (device-orientation) heading no longer dies after a relaunch
-  (WP-1). The "Inverse elevation" and "Heading source" settings were both
-  persisted under the same literal UserDefaults key `"true"`, so writing
-  either setting clobbered the other: after setting Heading = Internal and
-  touching Inverse elevation, the next launch silently flipped the heading
-  source back to the headtracker and CoreMotion never started — turning the
-  phone had no effect, audibly or in the Control readout. The two settings
-  now use distinct keys (`inverseElevation`, `useHeadtracker`) with a
-  one-time migration that seeds both from the legacy shared key.
+- Internal (device-orientation) heading no longer dies after a relaunch. The
+  "Inverse elevation" and "Heading source" settings were both persisted under
+  the same literal UserDefaults key `"true"`, so writing either setting
+  clobbered the other: after setting Heading = Internal and touching Inverse
+  elevation, the next launch silently flipped the heading source back to the
+  headtracker and CoreMotion never started, turning the phone had no effect,
+  audibly or in the Control readout. The two settings now use distinct keys
+  (`inverseElevation`, `useHeadtracker`) with a one-time migration that seeds
+  both from the legacy shared key.
 - With Heading = Internal, heading/step frames from a connected headtracker
   (kept connected for RTK positioning) no longer overwrite the CoreMotion
   heading and no longer double-count steps. Position (`l`) frames are
-  unaffected — RTK positioning keeps working. Player-only change: heading
-  source selection does not exist in the Creator engine, no parity impact.
-- The internal-heading path now logs when device-motion updates start, when
-  device motion is unavailable, and the first handler error
-  (`xTrueNorthZVertical` needs the magnetometer and location) — previously
-  it failed silently.
-- Internal heading now reaches Pd on the non-headtracker-relative asset
-  path. `RwaGameLoop.sendData2Asset` sends the raw `azimuth`/`elevation`
-  globals to the `<tag>-azimuth1`/`<tag>-elevation1` receivers, but only
-  the BLE tracker parser ever wrote those globals — with Heading =
-  Internal, CoreMotion updated `hero.azimuth`/`hero.elevation` (readout,
-  bearing calculation) while Pd kept getting the last tracker value or 0.
-  The CoreMotion handler now fills the globals too, mirroring the tracker
-  path. Player-only input plumbing; the values sent to Pd match what the
-  Creator engine sends from its own heading source — no parity impact.
+  unaffected.
+- Internal heading now reaches Pd on the non-headtracker-relative asset path.
+  `RwaGameLoop.sendData2Asset` sends the raw `azimuth`/`elevation` globals to
+  the `<tag>-azimuth1`/`<tag>-elevation1` receivers, but only the BLE tracker
+  parser ever wrote those globals — with Heading = Internal, CoreMotion updated
+  `hero.azimuth`/`hero.elevation` (readout, bearing calculation) while Pd kept
+  getting the last tracker value or 0. The CoreMotion handler now fills the
+  globals too, mirroring the tracker path. Player-only input plumbing; the
+  values sent to Pd match what the Creator engine sends from its own heading
+  source, no parity impact.
 
-- Loading a game no longer freezes the UI and no longer races app launch
-  (WP-2). The default game now auto-loads on the first
-  `didBecomeActive` instead of inside `viewDidLoad`, so view setup and
-  audio-session activation finish first; the `.rwa` XML parse runs on a
-  background queue (libpd patcher work stays on the main thread, the only
-  thread that issues Pd calls); a running game is stopped before a new one
-  loads (the 10 ms tick must not read `scenes` mid-parse); a spinner shows
-  over the games list during the load and the jump to the Control tab
-  happens after the load completes instead of before it starts.
-- The Control tab's connect button now shows "Connecting…" while the BLE
+- Loading a game no longer freezes the UI and no longer races app launch. The
+  default game now auto-loads on the first `didBecomeActive` instead of inside
+  `viewDidLoad`, so view setup and audio-session activation finish first; the
+  `.rwa` XML parse runs on a background queue (libpd patcher work stays on the
+  main thread, the only thread that issues Pd calls); a running game is stopped
+  before a new one loads (the 10 ms tick must not read `scenes` mid-parse); a
+  spinner shows over the games list during the load and the jump to the Control
+  tab happens after the load completes instead of before it starts.
+- The Control tab's connect button now shows "Connecting..." while the BLE
   central is scanning for the tracker (new volatile `headTrackerConnecting`
-  state set by the scan/connect callbacks), so an absent or switched-off
-  tracker is visible as such instead of looking idle.
-- The OSC `/register` message now advertises the Player address that
-  actually routes to the Creator (WP-3). The old code scanned interfaces
-  by name (en0, then cellular pdp_ip0) and on hotspot topologies
-  advertised the public-facing cellular IP, so the Creator sent OSC to
-  the wrong address while file transfer (which uses the manually entered
-  Creator IP) kept working. The address is now derived by UDP-connecting
-  a socket toward the configured Creator IP and reading the kernel's
-  chosen source address back (`getsockname`; no packets sent); the
-  interface scan remains as fallback for non-numeric hosts.
-- Registering with the Creator works on the first tap of an app run
-  (WP-3, found in device testing). `F53OSCClient` defaults its host to
-  "localhost" and the Creator address was only applied *after* the
-  `/register` send — so a fresh run sent `/dummy` and `/register` to the
-  phone itself and the Creator never learned the Player's address. The
-  old Control Data tab masked this by re-applying the host on every tab
-  appearance combined with operators toggling register twice. The client
-  is now pointed at the Creator before anything is sent, and editing the
-  Creator IP in Settings updates an already-configured client
-  immediately. The two `/dummy` "warm-up" messages that preceded
-  `/register` are removed: the Creator has no `/dummy` handler, UDP needs
-  no warm-up, and their only real effect was a redundant
-  `stopUpdatingLocation()` side effect.
+  state set by the scan/connect callbacks), so an absent or switched-off tracker
+  is visible as such instead of looking idle.
+- The OSC `/register` message now advertises the Player address that actually
+  routes to the Creator. The old code scanned interfaces by name (en0, then
+  cellular pdp_ip0) and on hotspot topologies advertised the public-facing
+  cellular IP, so the Creator sent OSC to the wrong address while file transfer
+  (which uses the manually entered Creator IP) kept working. The address is now
+  derived by UDP-connecting a socket toward the configured Creator IP and
+  reading the kernel's chosen source address back (`getsockname`; no packets
+  sent); the interface scan remains as fallback for non-numeric hosts.
+- Registering with the Creator should works on the first tap of an app run.
+  `F53OSCClient` defaults its host to "localhost" and the Creator address was
+  only applied *after* the `/register` send — so a fresh run sent `/dummy` and
+  `/register` to the phone itself and the Creator never learned the Player's
+  address. The old Control Data tab masked this by re-applying the host on every
+  tab appearance combined with operators toggling register twice. The client is
+  now pointed at the Creator before anything is sent, and editing the Creator IP
+  in Settings updates an already-configured client immediately. The two `/dummy`
+  "warm-up" messages that preceded `/register` are removed: the Creator has no
+  `/dummy` handler, UDP needs no warm-up, and their only real effect was a
+  redundant `stopUpdatingLocation()` side effect.
 - Settings: the RWA Creator "IP address" field can now be dismissed, so the
   entered value is stored. The field now uses `.numbersAndPunctuation`
   (a real return key, and a locale-independent `.` instead of the decimal
