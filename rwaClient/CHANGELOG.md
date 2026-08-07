@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Elevation is no longer inverted by default (WP-4): the
+  `inverseElevation` default flips to **off** — both the in-memory
+  default and the launch fallback. The WP-1 key migration no longer
+  seeds `inverseElevation` from the legacy shared key either: that value
+  recorded whichever colliding setting was written last (usually the
+  heading source) and is meaningless for elevation. Devices that already
+  ran an interim build with the old seeding keep a stored value; toggle
+  the switch once in Settings to write an explicit choice.
+
 ### Fixed
 
 - The default game loads again after an app update (WP-2). The "default

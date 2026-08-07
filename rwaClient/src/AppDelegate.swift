@@ -19,7 +19,7 @@ var rwaCreatorIP = ""
 var deviceId = ""
 // Position from the RTK headtracker instead of internal GPS (Settings tab)
 var useRtkGps = false
-var inverseElevation = true;
+var inverseElevation = false;
 // Session-only by design: always starts off, not persisted (Settings tab)
 var sendGPS2Creator = false;
 var oscClient = F53OSCClient.init()
@@ -74,13 +74,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         let defaults = UserDefaults.standard
 
-        // One-time migration off the shared legacy key (see defaultsKeys):
-        // seed both distinct keys with its last-written value — the same
-        // value both reads would have produced before the split.
+        // One-time migration off the shared legacy key (see defaultsKeys).
+        // Only the heading source is seeded from it: the legacy value
+        // recorded whichever of the two colliding settings was written
+        // last — usually the heading source — so it is meaningless for
+        // inverseElevation, which instead starts at the WP-4 default
+        // (not inverted) until explicitly set in Settings.
         if let legacy = defaults.string(forKey: defaultsKeys.legacySharedHeadingKey) {
-            if defaults.string(forKey: defaultsKeys.inverseElevation) == nil {
-                defaults.set(legacy, forKey: defaultsKeys.inverseElevation)
-            }
             if defaults.string(forKey: defaultsKeys.useHeadtracker) == nil {
                 defaults.set(legacy, forKey: defaultsKeys.useHeadtracker)
             }
@@ -117,7 +117,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             }
         }
         else {
-            inverseElevation = true;
+            inverseElevation = false;
         }
         
         if let useTracker = defaults.string(forKey: defaultsKeys.useHeadtracker) {
@@ -344,4 +344,3 @@ extension PdAudioStatus {
         }
     }
 }
-
