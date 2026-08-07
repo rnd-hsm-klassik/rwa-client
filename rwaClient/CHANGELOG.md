@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.5] - in preparation
+
+### Fixed
+
+- **Engine parity: multichannel spatial data for Pd-patch assets** (mirrors the
+  Creator's changes, see rwa-creator `CHANGELOG.md` [v1.4.3]). The Playback Mode
+  of a patch asset now determines how many channels of spatial data it receives
+  per tick; previously the game loop ignored the mode for patch assets and
+  always sent one data set (`$0-distance1`/`azimuth1`/ `elevation1`). The
+  per-playback-type fan-out in `RwaGameLoop.sendData2Asset` is now one loop over
+  new `RwaAsset.playbackChannelCount()` (patches: minimum 1; with "headtracker
+  relative to source" off always 1 raw-head data set, as before). Two
+  divergences from the Creator's Pd branch were aligned in the process: a
+  patch's channel-1 distance now folds in the asset altitude
+  (`calculateDistanceWithAltitude`) and its elevation is the computed
+  source-relative elevation (`calculateElevationEasy`) instead of the raw asset
+  altitude — same formulas the audio branch already used.
+
+- **Engine parity: 7-channel offsets**: `getOffsetForChannel` had no case for
+  `RWAPLAYBACKTYPE_BINAURAL7CHANNEL_FABIAN`, so all seven channels of a
+  7-channel asset were placed at the same angular offset (the same gap just
+  fixed in the Creator). The per-mode tables are replaced by
+  `RwaAsset.channelCountForPlaybackType` / `channelOffsetForPlaybackType`,
+  hand-mirrored from `RwaAsset1` in the Creator (7-ch spread
+  −40/0/40/−80/80/−120/120°). The Custom IR-Set modes (14–16) now send one data
+  channel like in the Creator; the missing playback-type constants 13–16
+  (`BINAURALSPACE`, `CUSTOM1-3`) were added to `RwaAsset.swift`.
+
+### Added
+
+- **Engine parity: `$0-numchannels` init value**: every asset activation sends
+  the number of `azimuthN`/`distanceN`/`elevationN` channels the engine will
+  actually stream (from `playbackChannelCount()`), alongside `$0-samplerate`, so
+  patches can adapt their receiver wiring. The Creator side went in with the
+  same change; the Creator's `tools/trace/pdmodes/` fixture documents the
+  expected sends (2/1/1/7) for a future parity test: not yet wired into
+  `rwaClient/tests/`.
+
 ## [1.3.4] - 2026-08-07
 
 ### Changed

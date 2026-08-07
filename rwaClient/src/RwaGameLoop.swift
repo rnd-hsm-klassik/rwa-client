@@ -1121,61 +1121,9 @@ class RwaGameLoop:NSObject, PdListener
         PdBase.send(elevation, toReceiver: elevation2Pd)
     }
     
-    func getOffsetForChannel(_ channel:Int, playbackType:Int) -> Int
-    {
-        switch(playbackType)
-        {
-            case RWAPLAYBACKTYPE_BINAURALMONO:
-                return 0;
-            
-            case RWAPLAYBACKTYPE_BINAURALMONO_FABIAN:
-                return 0;
-            
-            case RWAPLAYBACKTYPE_BINAURALSTEREO:
-            if(channel == 0)
-                {return -60}
-            if(channel == 1)
-                {return 60}
-            
-            case RWAPLAYBACKTYPE_BINAURALSTEREO_FABIAN:
-                if(channel == 0)
-                    {return -60}
-                if(channel == 1)
-                    {return 60}
-            
-            case RWAPLAYBACKTYPE_BINAURAL5CHANNEL:
-                if(channel == 0)
-                    {return -60}
-                if(channel == 1)
-                    {return 0}
-                if(channel == 2)
-                    {return 60}
-                if(channel == 3)
-                    {return -120}
-                if(channel == 4)
-                    {return 120}
-            
-            case RWAPLAYBACKTYPE_BINAURAL5CHANNEL_FABIAN:
-                if(channel == 0)
-                    {return -60}
-                if(channel == 1)
-                    {return 0}
-                if(channel == 2)
-                    {return 60}
-                if(channel == 3)
-                    {return -120}
-                if(channel == 4)
-                    {return 120}
-            
-            default:
-                return 0
-        }
-        return 0
-    }
-    
     func calculateChannelBearingAndDistance(_ channel:Int, _ asset:RwaAsset)
     {
-        var offset = getOffsetForChannel(channel, playbackType: Int(asset.playbackType))
+        var offset = RwaAsset.channelOffsetForPlaybackType(Int(asset.playbackType), channel)
         offset += (360 - asset.rotateOffset) % 360;
         
         if(asset.individuellChannelPosition[channel] == false) {
@@ -1228,83 +1176,40 @@ class RwaGameLoop:NSObject, PdListener
         {
             PdBase.send(hero.coordinates.longitude, toReceiver: lon2Pd)
             PdBase.send(hero.coordinates.latitude, toReceiver: lat2Pd)
-            
+        }
+
+        if(Int(asset.type) == RWAASSETTYPE_PD && !asset.headtrackerRelative2Source)
+        {
+            // The patch spatialises on its own from the raw head orientation:
+            // one set of data, azimuth/elevation are the head values, not source-relative.
             calculateChannelBearingAndDistance(0, asset)
-            sendDistance(0, intPatcherTag , asset.channelDistance[0])
-            
-            if(asset.headtrackerRelative2Source)
+            let totalDistance = calculateDistanceWithAltitude(Double(asset.channelDistance[0]), p2: Double(asset.elevation))
+            sendDistance(0, intPatcherTag , Float(totalDistance))
+            sendBearing(0, intPatcherTag , Float(azimuth))
+            sendElevation(0, intPatcherTag , Float(elevation))
+        }
+        else
+        {
+            let numChannels = asset.playbackChannelCount()
+
+            for i in 0 ..< numChannels
             {
-                sendBearing(0, intPatcherTag , asset.channelBearing[0])
-                sendElevation(0, intPatcherTag , asset.elevation)
+                calculateChannelBearingAndDistance(i, asset)
+                let channelElevation = calculateElevationEasy(hero.coordinates, p2: asset.channelCoordinates[i], elevation: Double(asset.elevation), headDirection: Double(hero.elevation))
+                let totalDistance = calculateDistanceWithAltitude(Double(asset.channelDistance[i]), p2: Double(asset.elevation))
+                sendDistance(i, intPatcherTag , Float(totalDistance))
+                sendBearing(i, intPatcherTag , asset.channelBearing[i])
+                sendElevation(i, intPatcherTag , Float(channelElevation))
             }
-            else
-            {
-                sendBearing(0, intPatcherTag , Float(azimuth))
-                sendElevation(0, intPatcherTag , Float(elevation))
-            }
-            
+        }
+
+        if(Int(asset.type) == RWAASSETTYPE_PD)
+        {
             if(stepCount != lastStep)
             {
                 lastStep = stepCount
                 PdBase.sendBang(toReceiver: step2Pd)
                 self.logger.info("STEP to Pd")
-            }
-        }
-        else
-        {
-            if( (asset.playbackType == Int32(RWAPLAYBACKTYPE_BINAURALMONO)) ||
-                (asset.playbackType == Int32(RWAPLAYBACKTYPE_BINAURALMONO_FABIAN)) ||
-                (asset.playbackType == Int32(RWAPLAYBACKTYPE_MONO) ) ||
-                (asset.playbackType == Int32(RWAPLAYBACKTYPE_STEREO)) )
-            {
-                calculateChannelBearingAndDistance(0, asset)
-                let elevation = calculateElevationEasy(hero.coordinates, p2: asset.channelCoordinates[0], elevation: Double(asset.elevation), headDirection: Double(hero.elevation))
-                let totalDistance = calculateDistanceWithAltitude(Double(asset.channelDistance[0]), p2: Double(asset.elevation))
-                
-                sendDistance(0, intPatcherTag , Float(totalDistance))
-                sendBearing(0, intPatcherTag , asset.channelBearing[0])
-                sendElevation(0, intPatcherTag , Float(elevation))
-            }
-            
-            if(asset.playbackType == Int32(RWAPLAYBACKTYPE_BINAURALSTEREO) ||
-               asset.playbackType == Int32(RWAPLAYBACKTYPE_BINAURALSTEREO_FABIAN) )
-            {
-                for i in 0 ..< 2
-                {
-                    calculateChannelBearingAndDistance(i, asset)
-                    let elevation = calculateElevationEasy(hero.coordinates, p2: asset.channelCoordinates[i], elevation: Double(asset.elevation), headDirection: Double(hero.elevation))
-                    let totalDistance = calculateDistanceWithAltitude(Double(asset.channelDistance[i]), p2: Double(asset.elevation))
-                    sendDistance(i, intPatcherTag , Float(totalDistance))
-                    sendBearing(i, intPatcherTag , asset.channelBearing[i])
-                    sendElevation(i, intPatcherTag , Float(elevation))
-                }
-            }
-            
-            if(asset.playbackType == Int32(RWAPLAYBACKTYPE_BINAURAL5CHANNEL) ||
-               asset.playbackType == Int32(RWAPLAYBACKTYPE_BINAURAL5CHANNEL_FABIAN))
-            {
-                for i in 0 ..< 5
-                {
-                    calculateChannelBearingAndDistance(i, asset)
-                    let elevation = calculateElevationEasy(hero.coordinates, p2: asset.channelCoordinates[i], elevation: Double(asset.elevation), headDirection: Double(hero.elevation))
-                    let totalDistance = calculateDistanceWithAltitude(Double(asset.channelDistance[i]), p2: Double(asset.elevation))
-                    sendDistance(i, intPatcherTag , Float(totalDistance))
-                    sendBearing(i, intPatcherTag , asset.channelBearing[i])
-                    sendElevation(i, intPatcherTag , Float(elevation))
-                }
-            }
-            
-            if(asset.playbackType == Int32(RWAPLAYBACKTYPE_BINAURAL7CHANNEL_FABIAN))
-            {
-                for i in 0 ..< 7
-                {
-                    calculateChannelBearingAndDistance(i, asset)
-                    let elevation = calculateElevationEasy(hero.coordinates, p2: asset.channelCoordinates[i], elevation: Double(asset.elevation), headDirection: Double(hero.elevation))
-                    let totalDistance = calculateDistanceWithAltitude(Double(asset.channelDistance[i]), p2: Double(asset.elevation))
-                    sendDistance(i, intPatcherTag , Float(totalDistance))
-                    sendBearing(i, intPatcherTag , asset.channelBearing[i])
-                    sendElevation(i, intPatcherTag , Float(elevation))
-                }
             }
         }
         
@@ -1434,6 +1339,12 @@ class RwaGameLoop:NSObject, PdListener
         // .ogg player needs samplerate
         pdReceiver = "\(patcherTag)-samplerate"
         PdBase.send((Double(sampleRate * 1000)), toReceiver: pdReceiver)
+
+        // how many azimuthN/distanceN/elevationN channels this asset will be
+        // streamed, so patches can adapt (derived from the playback mode; the
+        // channelcount XML attribute is unreliable and not used)
+        pdReceiver = "\(patcherTag)-numchannels"
+        PdBase.send(Double(asset.playbackChannelCount()), toReceiver: pdReceiver)
         
         pdReceiver = "\(patcherTag)-dampingfunction"
         PdBase.send((Double(asset.dampingFunction)), toReceiver: pdReceiver)

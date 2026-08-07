@@ -37,6 +37,10 @@ let RWAPLAYBACKTYPE_BINAURALSTEREO_FABIAN = 9
 let RWAPLAYBACKTYPE_BINAURALAUTO_FABIAN = 10
 let RWAPLAYBACKTYPE_BINAURAL5CHANNEL_FABIAN = 11
 let RWAPLAYBACKTYPE_BINAURAL7CHANNEL_FABIAN = 12
+let RWAPLAYBACKTYPE_BINAURALSPACE = 13
+let RWAPLAYBACKTYPE_CUSTOM1 = 14
+let RWAPLAYBACKTYPE_CUSTOM2 = 15
+let RWAPLAYBACKTYPE_CUSTOM3 = 16
 
 let RWAASSETATTRIBUTE_ISEXCLUSIVE = 1
 let RWAASSETATTRIBUTE_PLAYONCE = 2
@@ -56,6 +60,82 @@ let RWAASSETATTRIBUTE_DISTANCE2VOLUME = 14
 
 class RwaAsset:NSObject
 {
+    // Number of spatial data channels (azimuthN/distanceN/elevationN) a playback
+    // mode implies; 0 for modes without per-channel spatialisation data.
+    // Mirrors RwaAsset1::channelCountForPlaybackType (rwa-creator/rwaasset1.cpp).
+    static func channelCountForPlaybackType(_ playbackType: Int) -> Int
+    {
+        switch(playbackType)
+        {
+            case RWAPLAYBACKTYPE_MONO,
+                 RWAPLAYBACKTYPE_STEREO,
+                 RWAPLAYBACKTYPE_BINAURALMONO,
+                 RWAPLAYBACKTYPE_BINAURALMONO_FABIAN,
+                 RWAPLAYBACKTYPE_CUSTOM1,
+                 RWAPLAYBACKTYPE_CUSTOM2,
+                 RWAPLAYBACKTYPE_CUSTOM3:
+                return 1
+
+            case RWAPLAYBACKTYPE_BINAURALSTEREO,
+                 RWAPLAYBACKTYPE_BINAURALSTEREO_FABIAN:
+                return 2
+
+            case RWAPLAYBACKTYPE_BINAURAL5CHANNEL,
+                 RWAPLAYBACKTYPE_BINAURAL5CHANNEL_FABIAN:
+                return 5
+
+            case RWAPLAYBACKTYPE_BINAURAL7CHANNEL_FABIAN:
+                return 7
+
+            // AUTO/NATIVE dispatch on the file's channel count at patcher
+            // selection, but the engine has never sent spatial data for them
+            default: // AUTO, NATIVE, BINAURALSPACE, undetermined
+                return 0
+        }
+    }
+
+    // Angular offset (degrees, clockwise from the asset's forward direction) of
+    // a channel's default position around the asset.
+    // Mirrors RwaAsset1::channelOffsetForPlaybackType (rwa-creator/rwaasset1.cpp).
+    static func channelOffsetForPlaybackType(_ playbackType: Int, _ channel: Int) -> Int
+    {
+        let stereoOffsets = [-60, 60]
+        let fiveChannelOffsets = [-60, 0, 60, -120, 120]
+        let sevenChannelOffsets = [-40, 0, 40, -80, 80, -120, 120]
+
+        let count = channelCountForPlaybackType(playbackType)
+        if(channel < 0 || channel >= count) {
+            return 0
+        }
+
+        switch(count)
+        {
+            case 2: return stereoOffsets[channel]
+            case 5: return fiveChannelOffsets[channel]
+            case 7: return sevenChannelOffsets[channel]
+            default: return 0
+        }
+    }
+
+    // The number of spatial data channels the engine actually streams to this
+    // asset: channelCountForPlaybackType, except Pd-patch assets never get less
+    // than 1, and only 1 (raw head data) when "headtracker relative to source"
+    // is off. Mirrors RwaAsset1::playbackChannelCount (rwa-creator/rwaasset1.cpp).
+    func playbackChannelCount() -> Int
+    {
+        if(Int(type) == RWAASSETTYPE_PD && !headtrackerRelative2Source) {
+            return 1
+        }
+
+        var count = RwaAsset.channelCountForPlaybackType(Int(playbackType))
+
+        if(Int(type) == RWAASSETTYPE_PD && count < 1) {
+            count = 1
+        }
+
+        return count
+    }
+
     override init()
     {
         let tmp: CLLocationCoordinate2D = CLLocationCoordinate2D(latitude: 0,longitude: 0)
