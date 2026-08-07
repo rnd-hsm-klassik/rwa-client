@@ -63,6 +63,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   central is scanning for the tracker (new volatile `headTrackerConnecting`
   state set by the scan/connect callbacks), so an absent or switched-off
   tracker is visible as such instead of looking idle.
+- The OSC `/register` message now advertises the Player address that
+  actually routes to the Creator (WP-3). The old code scanned interfaces
+  by name (en0, then cellular pdp_ip0) and on hotspot topologies
+  advertised the public-facing cellular IP, so the Creator sent OSC to
+  the wrong address while file transfer (which uses the manually entered
+  Creator IP) kept working. The address is now derived by UDP-connecting
+  a socket toward the configured Creator IP and reading the kernel's
+  chosen source address back (`getsockname`; no packets sent); the
+  interface scan remains as fallback for non-numeric hosts.
 - Settings: the RWA Creator "IP address" field can now be dismissed, so the
   entered value is stored. The field now uses `.numbersAndPunctuation`
   (a real return key, and a locale-independent `.` instead of the decimal

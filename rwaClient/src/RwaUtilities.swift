@@ -360,9 +360,9 @@ extension UIViewController {
 
         if !registered {
             registered = true
-            if let adress = getWiFiAddress() {
+            if let adress = localAddress(routingTo: rwaCreatorIP) ?? getWiFiAddress() {
                 let message = F53OSCMessage(addressPattern: "/register", arguments: ["Gandalf", adress])
-                logger.debug("OSC: register client")
+                logger.info("OSC: registering with local address \(adress) (Creator at \(rwaCreatorIP))")
                 oscClient.send(message)
                 startOscListening()
                 coreLocationController?.locationManager.stopUpdatingLocation()
@@ -374,8 +374,51 @@ extension UIViewController {
         }
     }
 
-    /// Local IPv4 address (Wi-Fi first, cellular as fallback) — sent to
-    /// rwaCreator on /register so it knows where to reply.
+    /// Local IPv4 address of the interface the kernel actually routes to
+    /// `host` — determined by connecting a UDP socket (connect() on UDP
+    /// sends no packets) and reading the chosen source address back with
+    /// getsockname(). Unlike the interface-name scan below, this is
+    /// correct on every topology (hotspot, bridge, USB, Wi-Fi): the
+    /// Creator's IP is known-good because file transfer already uses it.
+    func localAddress(routingTo host: String, port: UInt16 = 8000) -> String? {
+        let fd = socket(AF_INET, SOCK_DGRAM, 0)
+        if fd < 0 { return nil }
+        defer { close(fd) }
+
+        var remote = sockaddr_in()
+        remote.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        remote.sin_family = sa_family_t(AF_INET)
+        remote.sin_port = port.bigEndian
+        // Numeric IPv4 only; a hostname (or garbage) falls through to the
+        // interface-scan fallback at the call site.
+        if inet_pton(AF_INET, host, &remote.sin_addr) != 1 { return nil }
+
+        let connected = withUnsafePointer(to: &remote) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                connect(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        if connected != 0 { return nil }
+
+        var local = sockaddr_in()
+        var len = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let resolved = withUnsafeMutablePointer(to: &local) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                getsockname(fd, $0, &len)
+            }
+        }
+        if resolved != 0 { return nil }
+
+        var buffer = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+        var addr = local.sin_addr
+        if inet_ntop(AF_INET, &addr, &buffer, socklen_t(INET_ADDRSTRLEN)) == nil { return nil }
+        return String(cString: buffer)
+    }
+
+    /// Legacy fallback: first IPv4 on en0, else cellular (pdp_ip0). On
+    /// hotspot topologies this picked the public-facing cellular address,
+    /// which is why /register used to advertise the wrong IP (WP-3) —
+    /// prefer localAddress(routingTo:).
     func getWiFiAddress() -> String? {
         var address: String?
 
