@@ -334,12 +334,6 @@ extension String  {
 }
 
 extension UIViewController {
-     func sendDummyOscMessage() {
-        let message = F53OSCMessage(addressPattern: "/dummy", arguments: ["Gandalf", "dummy"])
-        oscClient.send(message)
-        coreLocationController?.locationManager.stopUpdatingLocation()
-    }
-
     /// Points the OSC client/server at the configured rwaCreator and starts
     /// listening. The receiver (F53OSCPacketDestination) is set separately by
     /// whichever controller owns message handling — currently the Control tab.
@@ -362,9 +356,9 @@ extension UIViewController {
         // Creator never learned our address.
         oscClient.host = rwaCreatorIP
         oscClient.port = 8000
-
-        sendDummyOscMessage()
-        sendDummyOscMessage()
+        // (The two "/dummy" warm-up messages that used to precede
+        // register served no purpose: the Creator has no /dummy handler
+        // and UDP needs no warm-up — removed.)
 
         if !registered {
             registered = true

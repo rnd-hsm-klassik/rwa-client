@@ -81,7 +81,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   appearance combined with operators toggling register twice. The client
   is now pointed at the Creator before anything is sent, and editing the
   Creator IP in Settings updates an already-configured client
-  immediately.
+  immediately. The two `/dummy` "warm-up" messages that preceded
+  `/register` are removed: the Creator has no `/dummy` handler, UDP needs
+  no warm-up, and their only real effect was a redundant
+  `stopUpdatingLocation()` side effect.
 - Settings: the RWA Creator "IP address" field can now be dismissed, so the
   entered value is stored. The field now uses `.numbersAndPunctuation`
   (a real return key, and a locale-independent `.` instead of the decimal
