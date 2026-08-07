@@ -355,6 +355,14 @@ extension UIViewController {
     /// Settings tab (the button's new home) and the Control tab's resume
     /// logic go through one path.
     func toggleCreatorRegistration() {
+        // Point the OSC client at the Creator BEFORE anything is sent:
+        // F53OSCClient defaults to "localhost", so the /dummy and /register
+        // of a fresh app run went to the phone itself (the host was only
+        // set in startOscListening(), after the register send) and the
+        // Creator never learned our address.
+        oscClient.host = rwaCreatorIP
+        oscClient.port = 8000
+
         sendDummyOscMessage()
         sendDummyOscMessage()
 

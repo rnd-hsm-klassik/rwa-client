@@ -217,6 +217,9 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
         case .some(.creatorIP):
             rwaCreatorIP = text
             defaults.set(text, forKey: defaultsKeys.rwaCreatorIP)
+            // Keep an already-configured OSC client in sync; otherwise it
+            // sends to the old address until the next register toggle.
+            oscClient.host = text
         default:
             break
         }

@@ -72,6 +72,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a socket toward the configured Creator IP and reading the kernel's
   chosen source address back (`getsockname`; no packets sent); the
   interface scan remains as fallback for non-numeric hosts.
+- Registering with the Creator works on the first tap of an app run
+  (WP-3, found in device testing). `F53OSCClient` defaults its host to
+  "localhost" and the Creator address was only applied *after* the
+  `/register` send — so a fresh run sent `/dummy` and `/register` to the
+  phone itself and the Creator never learned the Player's address. The
+  old Control Data tab masked this by re-applying the host on every tab
+  appearance combined with operators toggling register twice. The client
+  is now pointed at the Creator before anything is sent, and editing the
+  Creator IP in Settings updates an already-configured client
+  immediately.
 - Settings: the RWA Creator "IP address" field can now be dismissed, so the
   entered value is stored. The field now uses `.numbersAndPunctuation`
   (a real return key, and a locale-independent `.` instead of the decimal
