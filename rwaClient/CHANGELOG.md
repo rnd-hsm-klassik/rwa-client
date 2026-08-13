@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.7] - 2026-08-13
+
 ### Added
 
 - Register the `vas_reverb~` Pd external with the runtime, mirroring the Creator
