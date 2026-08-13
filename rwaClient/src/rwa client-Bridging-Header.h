@@ -18,6 +18,7 @@
 #import "F53OSCTimeTag.h"
 #import "vas_fir_binaural.h"
 #import "rwa_binauralsimple~.h"
+#import "vas_reverb~.h"
 #include <ifaddrs.h>
 
 extern void freeverb_tilde_setup(void);

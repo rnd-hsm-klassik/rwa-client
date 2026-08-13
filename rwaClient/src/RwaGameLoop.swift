@@ -60,7 +60,7 @@ class RwaGameLoop:NSObject, PdListener
         }
         //rwa_binauralrir_tilde_setup();
         rwa_binauralsimple_tilde_setup();
-        //rwa_reverb_tilde_setup();
+        vas_reverb_tilde_setup();
         freeverb_tilde_setup();
         oggread_tilde_setup();
         

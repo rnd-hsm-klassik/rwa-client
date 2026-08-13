@@ -121,6 +121,7 @@
 		E4232CB523D9C09D00E44DE3 /* rwa_binauralsimple~.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */; };
 		E4232CB723D9C12B00E44DE3 /* vas_firobject.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB623D9C12B00E44DE3 /* vas_firobject.c */; };
 		E4232CB923D9C16D00E44DE3 /* vas_fir_list.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */; };
+		E4232CBB23D9C20000E44DE3 /* vas_reverb~.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CBA23D9C20000E44DE3 /* vas_reverb~.c */; };
 		E45AB4CD27CF5E0100D65E93 /* DownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E45AB4C827CF5E0100D65E93 /* DownloadManager.swift */; };
 		E45AB4CE2807220000D65E93 /* ZipExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E45AB4C92807220000D65E93 /* ZipExtractor.swift */; };
 /* End PBXBuildFile section */
@@ -293,6 +294,7 @@
 		E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "rwa_binauralsimple~.c"; path = "../vas_library/examples/PureData/rwa_binauralsimple~.c"; sourceTree = "<group>"; };
 		E4232CB623D9C12B00E44DE3 /* vas_firobject.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_firobject.c; path = ../vas_library/source/vas_firobject.c; sourceTree = "<group>"; };
 		E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_fir_list.c; path = ../vas_library/source/vas_fir_list.c; sourceTree = "<group>"; };
+		E4232CBA23D9C20000E44DE3 /* vas_reverb~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "vas_reverb~.c"; path = "../vas_library/examples/PureData/vas_reverb~.c"; sourceTree = "<group>"; };
 		E45AB4C827CF5E0100D65E93 /* DownloadManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = DownloadManager.swift; path = src/DownloadManager.swift; sourceTree = "<group>"; };
 		E45AB4C92807220000D65E93 /* ZipExtractor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ZipExtractor.swift; path = src/ZipExtractor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -407,6 +409,7 @@
 				84C70E9D2212E6D9005C49C3 /* stereoout.pd */,
 				E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */,
 				E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */,
+				E4232CBA23D9C20000E44DE3 /* vas_reverb~.c */,
 				84BD68472211B748005A22B5 /* vas_dynamicFirChannel.c */,
 				846BDDFC3011841E008E721D /* vas_pdmaxobject.c */,
 				846BDDFE30118477008E721D /* vas_fir_read.c */,
@@ -794,6 +797,7 @@
 				8411A77528BF69DB00205E32 /* bitrate.c in Sources */,
 				84F48CED1F24B14C00869BF2 /* FirstViewController.swift in Sources */,
 				E4232CB523D9C09D00E44DE3 /* rwa_binauralsimple~.c in Sources */,
+				E4232CBB23D9C20000E44DE3 /* vas_reverb~.c in Sources */,
 				8411A77728BF69DB00205E32 /* lsp.c in Sources */,
 				84BD684F2211B749005A22B5 /* vas_gps_util.c in Sources */,
 				84BD68522211B749005A22B5 /* vas_util.c in Sources */,

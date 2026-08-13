@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Register the `vas_reverb~` Pd external with the runtime, mirroring the Creator
+  (`rwa-creator` commit `46d7855`). The source comes from the shared
+  `vas_library` submodule (`examples/PureData/vas_reverb~.c`), which already
+  contained it at the pinned commit `7368810`; its convolution engine is the
+  existing `vas_fir_binaural` code (`vas_fir_reverb_*` are aliases), so no
+  further sources were needed. Registered in `RwaGameLoop.init` alongside
+  `rwa_binauralsimple~`, in the Creator's registration order.
+
 ## [1.3.6] - 2026-08-13
 
 ### Added
