@@ -87,6 +87,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             defaults.removeObject(forKey: defaultsKeys.legacySharedHeadingKey)
         }
 
+        // Operator settings pushed over USB (tools/deploy_games.sh -s) win over
+        // whatever is stored, so this must run before the reads below.
+        ProvisioningLoader.applyIfNeeded(defaults: defaults)
+
         if let dg = defaults.string(forKey: defaultsKeys.defaultGame) {
             defaultGame = dg
         }

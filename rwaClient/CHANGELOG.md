@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- USB deployment of games to kiosk phones: `tools/deploy_games.sh` pushes game
+  folders into the app's Documents container on every USB-connected paired
+  iPhone. iOS 17+ phones go over `xcrun devicectl` (phone unlocked); iOS 16
+  phones are invisible to `devicectl` and go over classic lockdown/AFC
+  (house_arrest) instead, via `deploy_games_afc.py` run with an installed
+  `pymobiledevice3` (`pipx install pymobiledevice3`). The AFC path emulates
+  devicectl's skip-unmodified behaviour with a `.deploy-manifest.json` (relpath
+  → size+mtime) kept in each pushed game folder. Games are staged via APFS clone
+  with the Creator's working files stripped (`tilecache/`, `tmp/`, `undo/`,
+  `layouts.ini`) plus macOS junk.
+
+  The script deliberately has no mirror/delete mode: devicectl's
+  `--remove-existing-content` was found to wipe the entire app container (all
+  games, `Library/Preferences` (i.e. the app's UserDefaults) and pending
+  telemetry in `Library/Application Support`), not just the destination folder.
+  Stale games are removed via the iOS Files app or Finder file sharing.
+
+- Per-phone settings provisioning: `ProvisioningLoader.swift` applies
+  `Documents/player-settings.plist` to UserDefaults at launch, before the
+  AppDelegate reads them. The file is pushed by `deploy_games.sh -s <plist>`
+  from a single laptop-side plist keyed by hardware UDID (one settings dict per
+  phone; format in `provisioning.example.plist`, the real file is not tracked in
+  this repo). Applied once per file content, so settings changed on the phone
+  afterwards survive relaunches until a changed file is pushed.
+
 ## [1.3.7] - 2026-08-13
 
 ### Added
