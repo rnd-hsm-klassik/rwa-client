@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Two-phase stop/start** (port of the Creator's unreleased two-phase stop;
+  reference: `rwa-creator` `rwasimulator.{h,cpp}`). Stopping a walk is now phase
+  A (game loop off, audible 800 ms master fade via the new `rwamasterfade`
+  receiver in `stereoout.pd`) followed ~100 ms after the fade by phase B1
+  (release protocol `-free`/`-fadeouttime 0`/`-end` completed for the whole
+  patcher pool) and, after a 60 ms settle window, phase B2 (receive queue
+  drained immediately, never on a delayed timer, asset maps cleared, and only
+  then may a new start fire). Without this, pooled patchers' pending `[delay]`
+  clocks survive a stop (`pd_systime` is continuous), and a fade-out mid-flight
+  could fire into the next run and silently switch off a patch a fresh asset
+  owns; stale `activeAssets`/`backgroundAssets` entries also leaked across game
+  switches.
+
+  Starts open silent: the master fade jumps to 0, then ramps to 1.0 over 300 ms.
+  A start requested while stopping is queued and fired when the reset completes;
+  a stop while a start is queued cancels the start; loading a game while a walk
+  runs waits for the new "Game Stopped" notification before parsing.
+
+  App termination uses a synchronous variant (no fade, no settle; Pd's
+  state dies with the process), a scheduled timer never fires once the run
+  loop winds down. Backgrounding deliberately does *not* stop the walk
+  (background audio is a feature).
+
+  **Engine parity**: intentional mirror of the Creator's design, with two
+  deliberate divergences:
+
+  1. The Player never closes the audio stream: the always-on stream matures the
+     pending zero-length fades in real time during the settle window, where the
+     Creator closes the stream and hand-advances the scheduler with silent
+     buffers; safe because the Player's libpd serializes every API call *and*
+     the render callback with `sys_lock`, so there is no unlocked teardown to
+     protect (the Creator's original motivation).
+
+  2. The Creator closes its dynamic (creator-authored) Pd patchers on every
+     stop, the Player keeps them open across start/stop of a loaded game and
+     sweeps them with the same release protocol instead. New `TeardownTests`
+     asserts the protocol fan-out over every pool.
+
+### Changed
+
+- **Control tab: the Start button is disabled (grayed) while no game is loaded**
+  (`scenes` empty); it enables on "Game Loaded". Previously a tap started an
+  empty game loop.
+
+- **vas_library bumped `89f3d97` → `7368810`** (fork branch `rwa-player-fixes`):
+  engines now deregister from the shared IRs cache in `vas_fir_binaural_free()`.
+  Before this, closing a game's dynamic Pd patch containing binaural externals
+  left a dangling engine in the cache (use-after-free candidate on the next game
+  load); also guards for the array-IR path, the garray double-free fix
+  (externals the Player does not compile), and self-identifying filter-loading
+  log output.
+
+- **Pd patches deliberately synced with `rwa-creator/puredata/`**:
+  `stereoout.pd` replaced by the Creator's version; debug `[print]`s removed
+  from shipped patchers; the `r $0-samplerate` receiver the Creator's ogg
+  patches have (feeds the `/ 48000` playhead-seconds conversion in `pd
+  generatestartmessage`) added to the three Player ogg patches that lacked it
+  (the engine already sends `<tag>-samplerate` on every activation). Residual
+  patch divergence vs the Creator is now cosmetic only (canvas geometry/fonts),
+  plus a few Creator-side debug number boxes.
+
+### Removed
+
+- **Dead diverged DSP copies at `rwaClient/` level** (`rwa_reverb~.c`,
+  `rwa_binauralsimple~.c`, `rwa_binauralrir~.c`, `rwa_firobject.c`, `vas_*.c`):
+  the Xcode project compiles the `vas_library` submodule sources (and
+  `rwaClient/oggread~.c`, which stays in the codebase, identical to the
+  Creator's copy); these copies were not referenced by the project and had
+  drifted from the fixed fork sources. Those are checked separately.
+
 ## [1.3.5] - 2026-08-07
 
 ### Fixed

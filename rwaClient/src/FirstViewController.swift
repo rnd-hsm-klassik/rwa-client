@@ -149,6 +149,11 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
     /// patcher work stays on the main thread — libpd calls are only ever
     /// issued from there. The spinner over the games list animates during
     /// the parse; `completion` runs on main after "Game Loaded" is posted.
+    ///
+    /// The stop is two-phase and asynchronous (master fade, then silent
+    /// teardown), so the load is queued on "Game Stopped": parsing must not
+    /// race the fading run, and initDynamicPatchers() must not close
+    /// patchers that are still completing their release protocol.
     func loadGameAndInitDynamicPatchers(game: String, completion: (() -> Void)? = nil) {
         loadingSpinner.startAnimating()
         gameTable.isUserInteractionEnabled = false
@@ -157,20 +162,33 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         // merely touching `rwagameloop` below materializes the lazy global,
         // which opens the ~170 static patchers synchronously on first use.
         DispatchQueue.main.async {
-            if rwagameloop.isRunning {
-                NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Stop Game"), object: nil)
+            let proceed = {
+                DispatchQueue.global(qos: .userInitiated).async {
+                    self.rwaimport.readRwa(game)
+
+                    DispatchQueue.main.async {
+                        rwagameloop.initDynamicPatchers()
+                        self.loadingSpinner.stopAnimating()
+                        self.gameTable.isUserInteractionEnabled = true
+                        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Game Loaded"), object: nil)
+                        completion?()
+                    }
+                }
             }
 
-            DispatchQueue.global(qos: .userInitiated).async {
-                self.rwaimport.readRwa(game)
-
-                DispatchQueue.main.async {
-                    rwagameloop.initDynamicPatchers()
-                    self.loadingSpinner.stopAnimating()
-                    self.gameTable.isUserInteractionEnabled = true
-                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Game Loaded"), object: nil)
-                    completion?()
+            if rwagameloop.isRunning {
+                var observer: NSObjectProtocol?
+                observer = NotificationCenter.default.addObserver(forName: NSNotification.Name(rawValue: "Game Stopped"),
+                                                                  object: nil, queue: OperationQueue.main) { _ in
+                    if let observer = observer {
+                        NotificationCenter.default.removeObserver(observer)
+                    }
+                    proceed()
                 }
+                NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Stop Game"), object: nil)
+            }
+            else {
+                proceed()
             }
         }
     }

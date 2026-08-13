@@ -14,6 +14,18 @@ import CoreMotion
 // 10ms
 let schedulerRate: Double = 10
 
+// fade-times for start / stop (phase A)
+let masterFadeOutMs = 800
+let masterFadeInMs = 300
+// one audio buffer (16 ticks * 64 samples at 48 kHz ~ 21 ms) plus margin for phase B
+let stopTeardownDelayMs = masterFadeOutMs + 100
+let stopSettleMs = 60
+
+// True during phase A+B of a stop. isRunning stays true throughout, so every
+// guard that protects a running game keeps holding; this flag separates
+// "stopping" from "running" for the UI and for start-queueing.
+var gameStopInProgress = false
+
 var ubloxLon = Double("3.1415926536")
 var ubloxLat = Double("3.1415926536")
 // Freshness markers for telemetry source attribution (read at 1 Hz by
@@ -646,9 +658,29 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
             }
         }
     }
-    
+
+    // True while a start was requested during a stop's teardown; the queued
+    // start fires from finishStop() once the reset completes. A stop request
+    // arriving in the meantime cancels it (the stop wins).
+    var startPending = false
+
     @objc func start()
     {
+        // A start during teardown is queued, not lost:
+        // finishStop() launches it once the reset is complete.
+        if(gameStopInProgress) {
+            startPending = true
+            return
+        }
+        if(rwagameloop.isRunning) {
+            return
+        }
+
+        // Start silent: the master [line~] in stereoout.pd jumps to 0, so
+        // nothing left standing in the signal graph is heard, then ramps to
+        // 1.0 below. (Belt and braces: a completed stop leaves it at 0.)
+        rwagameloop.sendMasterFade(0, 0)
+
         let interval:TimeInterval = schedulerRate/1000
         rwagameloop.isRunning = true
         rwagameloop.startGame()
@@ -657,29 +689,122 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         // volume slider) instead of this hidden tab's own slider, which is
         // stuck at its storyboard default and would clobber the user's volume.
         PdBase.send(Float(pdGainVal), toReceiver: "rwamainvolume")
+        rwagameloop.sendMasterFade(1.0, masterFadeInMs)
         timer = Timer.scheduledTimer(timeInterval: interval, target: self, selector: #selector(SecondViewController.countUp), userInfo: nil, repeats: true)
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Redraw Map"), object: nil)
-        
+
         if(headTrackerConnected && calibrateOnStart)  // this is here because something weird happend in zofingen, north was sometimes not north anymore..:(
         {
             azimuthOffset = azimuthOrg
             elevationOffset = elevationOrg
         }
     }
-    
+
+    /// Phase A of the two-phase stop: no new asset activity (loop timer off),
+    /// audible fade of the master output to 0 while the stream keeps running.
+    /// isRunning stays true until phase B completes, so every guard that
+    /// protects a running game keeps holding.
     @objc func stop()
     {
-        rwagameloop.isRunning = false
-        TelemetryService.shared?.recordAppEvent(name: "walk_stopped")
+        if(gameStopInProgress) {
+            // Stop while a queued start waits: the stop wins, the start is forgotten.
+            startPending = false
+            return
+        }
+        if(!rwagameloop.isRunning) {
+            return
+        }
+
+        gameStopInProgress = true
         timer?.invalidate()
+        TelemetryService.shared?.recordAppEvent(name: "walk_stopped")
         currentScene.text = "Current Scene"
         currentState.text = "Current State"
+        // Audible fade-outs of the assets themselves; whatever outlasts the
+        // master fade is cut silently in phase B.
         rwagameloop.sendEnd2BackgroundAssets()
         rwagameloop.sendEnd2ActiveAssets()
+        rwagameloop.sendMasterFade(0, masterFadeOutMs)
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(stopTeardownDelayMs), execute: {
+            self.finishStop()
+        })
     }
-   
+
+    /// Phase B1, after the fade has conmpleted: the whole patcher pool
+    /// completes its release protocol. Unlike the Creator, the Player never
+    /// closes the audio stream, so the zero-length fades queued here mature
+    /// in real time on the live (silent, master fade is at 0) stream.
+    /// Phase B2 follows after the settle window instead of a hand-flushed
+    /// scheduler. Safe without the Creator's close-stream step because this
+    /// libpd serializes every API call and the render callback with sys_lock.
+    func finishStop()
+    {
+        if(!rwagameloop.isRunning) {
+            // A synchronous stop already ran; the scheduled phase B no-ops.
+            gameStopInProgress = false
+            return
+        }
+
+        rwagameloop.resetAllPatchers()
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(stopSettleMs), execute: {
+            self.completeStop()
+        })
+    }
+
+    /// Phase B2, once every pending clock has matured: drain the receive
+    /// queue *now* (never on a delayed timer - a delayed drain leaks this
+    /// run's "-playfinished" bangs into the next run), clear the asset maps,
+    /// and only then allow (or fire the queued) start. Bangs the 20 ms poll
+    /// timer picked up during the settle window went through receiveBang
+    /// with the maps intact (the normal release path), the drain catches
+    /// the rest.
+    func completeStop()
+    {
+        if(!rwagameloop.isRunning) {
+            // A synchronous stop already ran; the scheduled phase B2 no-ops.
+            gameStopInProgress = false
+            return
+        }
+
+        PdBase.receiveMessages()
+        // leftovers: dynamic patches without the protocol never send playfinished.
+        hero.activeAssets.removeAll()
+        hero.backgroundAssets.removeAll()
+
+        rwagameloop.isRunning = false
+        gameStopInProgress = false
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Game Stopped"), object: nil)
+
+        if(startPending) {
+            startPending = false
+            start()
+        }
+    }
+
+    /// Synchronous stop variant for app termination: no fade, no settle,
+    /// scheduled timers never fire once the run loop winds down, and Pd's
+    /// state dies with the process, so un-matured clocks are moot; the reset
+    /// and drain just keep the app-side state consistent.
+    func stopGameNow()
+    {
+        if(!rwagameloop.isRunning) {
+            return
+        }
+        timer?.invalidate()
+        startPending = false
+        if(!gameStopInProgress) {
+            TelemetryService.shared?.recordAppEvent(name: "walk_stopped")
+        }
+        gameStopInProgress = true
+        rwagameloop.resetAllPatchers()
+        completeStop()
+    }
+
     @objc func countUp()
     {
         rwagameloop.updateGameState()
@@ -766,7 +891,10 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     func updateStartStopButton()
     {
         DispatchQueue.main.async() {
-            if(rwagameloop.isRunning) {
+            if(gameStopInProgress) {
+                self.startStopButton.setTitle("Stopping…", for: UIControlState())
+            }
+            else if(rwagameloop.isRunning) {
                 self.startStopButton.setTitle("Stop", for: UIControlState())
             }
             else {

@@ -725,6 +725,55 @@ class RwaGameLoop:NSObject, PdListener
         }
     }
     
+    /// Master output fade in stereoout.pd: "rwamasterfade" is a `<target> <ms>`
+    /// list into a [line~] factor that is independent of the user volume ("rwamainvolume").
+    /// Mirrors RwaSimulator::sendMasterFade in the Creator.
+    func sendMasterFade(_ target: Float, _ milliseconds: Int)
+    {
+        PdBase.sendList([target, Float(milliseconds)], toReceiver: "rwamasterfade")
+    }
+
+    /// Completes the release protocol for one patcher: cancel a possibly
+    /// pending fade, make the fade-out zero-length, and end playback.
+    /// Mirrors RwaRuntime::resetPatcher in the Creator.
+    func resetPatcher(_ patcherTag: Int32)
+    {
+        PdBase.sendBang(toReceiver: "\(patcherTag)-free")
+        PdBase.send(Float(0), toReceiver: "\(patcherTag)-fadeouttime")
+        PdBase.sendBang(toReceiver: "\(patcherTag)-end")
+    }
+
+    private func resetPool(_ pool: inout [pdPatcher])
+    {
+        for i in 0 ..< pool.count
+        {
+            resetPatcher(PdBase.dollarZero(forFile: pool[i].patcherTag))
+            pool[i].isBusy = false
+        }
+    }
+
+    /// Sweeps every pooled patcher with the release protocol at stop, so no
+    /// pending [delay] survives into the next run and switches a patch off
+    /// under a fresh asset.
+    /// Mirrors RwaRuntime::resetAllPatchers, with one deliberate divergence:
+    /// the Creator closes its dynamic patchers on every stop (which frees their
+    /// clocks), while the Player keeps them open across start/stop of a loaded
+    /// game, so they are swept with the same protocol here. 
+    func resetAllPatchers()
+    {
+        resetPool(&monoPatchers)
+        resetPool(&monoPatchersOgg)
+        resetPool(&stereoPatchers)
+        resetPool(&stereoPatchersOgg)
+        resetPool(&binauralMonoPatchers_fabian)
+        resetPool(&binauralMonoPatchersOgg_fabian)
+        resetPool(&binauralStereoPatchers_fabian)
+        resetPool(&binauralStereoPatchersOgg_fabian)
+        resetPool(&binaural5ChannelPatchers_fabian)
+        resetPool(&binaural7ChannelPatchers_fabian)
+        resetPool(&dynamicPatchers)
+    }
+
     func unblockAssets(state: RwaState)
     {
         for asset in state.assets {

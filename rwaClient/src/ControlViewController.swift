@@ -65,6 +65,10 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
         NotificationCenter.default.addObserver(self, selector: #selector(self.updateButtons),
                                                name: NSNotification.Name(rawValue: "Update Buttons"),
                                                object: nil)
+        // Re-enables the Start button once a game's scenes are in.
+        NotificationCenter.default.addObserver(self, selector: #selector(self.updateButtons),
+                                               name: NSNotification.Name(rawValue: "Game Loaded"),
+                                               object: nil)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -322,14 +326,28 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
     }
 
     private func updateStartStopButton() {
-        if(rwagameloop.isRunning) {
+        if(gameStopInProgress) {
+            // Phase A+B of the two-phase stop: the game still counts as
+            // running (a tap queues nothing new; a start must wait)
+            startStopButton.setTitle("Stopping…", for: UIControlState())
+            startStopButton.backgroundColor = .systemGray
+        }
+        else if(rwagameloop.isRunning) {
             startStopButton.setTitle("Stop", for: UIControlState())
             startStopButton.backgroundColor = .systemRed
+        }
+        else if(scenes.isEmpty) {
+            // No game loaded, nothing to start (readRwa fills `scenes`).
+            startStopButton.setTitle("Start", for: UIControlState())
+            startStopButton.isEnabled = false
+            startStopButton.backgroundColor = .systemGray
+            return
         }
         else {
             startStopButton.setTitle("Start", for: UIControlState())
             startStopButton.backgroundColor = .tintColor
         }
+        startStopButton.isEnabled = true
     }
 
     // Same titles the old Control Data / Current Scene tabs showed
