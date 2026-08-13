@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-08-13
+
 ### Added
 
 - **Two-phase stop/start** (port of the Creator's unreleased two-phase stop;
