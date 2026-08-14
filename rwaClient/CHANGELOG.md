@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.8] - 2026-08-14
+
 ### Added
 
 - USB deployment of games to kiosk phones: `tools/deploy_games.sh` pushes game
