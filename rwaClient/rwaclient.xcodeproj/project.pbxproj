@@ -16,7 +16,6 @@
 		7E7E1E1800000000000000AA /* LiveTelemetrySource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0800000000000000AA /* LiveTelemetrySource.swift */; };
 		7E7E1E1900000000000000AA /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0900000000000000AA /* SettingsViewController.swift */; };
 		7E7E1E1A00000000000000AA /* ControlViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0A00000000000000AA /* ControlViewController.swift */; };
-		7E7E1E1D00000000000000AA /* ProvisioningLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0D00000000000000AA /* ProvisioningLoader.swift */; };
 		7E7E1E1B00000000000000AA /* TelemetryKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0B00000000000000AA /* TelemetryKeys.swift */; };
 		7E7E1E1C00000000000000AA /* DeviceTelemetryDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0C00000000000000AA /* DeviceTelemetryDecoder.swift */; };
 		7E7E1E1D00000000000000AA /* ProvisioningLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0D00000000000000AA /* ProvisioningLoader.swift */; };
@@ -116,7 +115,6 @@
 		BEEF00000000000000000012 /* ScenarioRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF0000000000000000000D /* ScenarioRunner.swift */; };
 		BEEF00000000000000000013 /* EngineParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF0000000000000000000E /* EngineParityTests.swift */; };
 		BEEF00000000000000000014 /* smoke-background.scenario.json in Resources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000010 /* smoke-background.scenario.json */; };
-		BEEF00000000000000000018 /* pdmodes.scenario.json in Resources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000017 /* pdmodes.scenario.json */; };
 		BEEF00000000000000000016 /* DeviceTelemetryDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */; };
 		BEEF00000000000000000018 /* pdmodes.scenario.json in Resources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000017 /* pdmodes.scenario.json */; };
 		BEEF0000000000000000001A /* TeardownTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000019 /* TeardownTests.swift */; };
@@ -183,7 +181,6 @@
 		7E7E1E0800000000000000AA /* LiveTelemetrySource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LiveTelemetrySource.swift; path = src/Telemetry/LiveTelemetrySource.swift; sourceTree = "<group>"; };
 		7E7E1E0900000000000000AA /* SettingsViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = SettingsViewController.swift; path = src/SettingsViewController.swift; sourceTree = "<group>"; };
 		7E7E1E0A00000000000000AA /* ControlViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ControlViewController.swift; path = src/ControlViewController.swift; sourceTree = "<group>"; };
-		7E7E1E0D00000000000000AA /* ProvisioningLoader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ProvisioningLoader.swift; path = src/ProvisioningLoader.swift; sourceTree = "<group>"; };
 		7E7E1E0B00000000000000AA /* TelemetryKeys.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TelemetryKeys.swift; path = src/Telemetry/TelemetryKeys.swift; sourceTree = "<group>"; };
 		7E7E1E0C00000000000000AA /* DeviceTelemetryDecoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = DeviceTelemetryDecoder.swift; path = src/Telemetry/DeviceTelemetryDecoder.swift; sourceTree = "<group>"; };
 		7E7E1E0D00000000000000AA /* ProvisioningLoader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ProvisioningLoader.swift; path = src/ProvisioningLoader.swift; sourceTree = "<group>"; };
@@ -291,7 +288,6 @@
 		BEEF0000000000000000000E /* EngineParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineParityTests.swift; sourceTree = "<group>"; };
 		BEEF0000000000000000000F /* rwaclientTests-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "rwaclientTests-Bridging-Header.h"; sourceTree = "<group>"; };
 		BEEF00000000000000000010 /* smoke-background.scenario.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "smoke-background.scenario.json"; path = "scenarios/smoke-background.scenario.json"; sourceTree = "<group>"; };
-		BEEF00000000000000000017 /* pdmodes.scenario.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "pdmodes.scenario.json"; path = "scenarios/pdmodes.scenario.json"; sourceTree = "<group>"; };
 		BEEF00000000000000000015 /* DeviceTelemetryDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceTelemetryDecoderTests.swift; sourceTree = "<group>"; };
 		BEEF00000000000000000017 /* pdmodes.scenario.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = pdmodes.scenario.json; path = scenarios/pdmodes.scenario.json; sourceTree = "<group>"; };
 		BEEF00000000000000000019 /* TeardownTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeardownTests.swift; sourceTree = "<group>"; };
