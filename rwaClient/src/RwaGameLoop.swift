@@ -40,7 +40,12 @@ class RwaGameLoop:NSObject, PdListener
     var stereoOut:UnsafeMutableRawPointer?
     var isRunning = false
     var assetFolder:String = String();
-    
+
+    // Patchers of superseded background-asset instances, still fading out after "-end";
+    // released when their "<tag>-playfinished" arrives (see startBackgroundState / receiveBang).
+    // Mirror of RwaRuntime::assetsPendingRelease in the Creator.
+    var assetsPendingRelease:[RwaEntity.AssetMapItem] = []
+
     let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "RWA Player", category: "Game Loop")
     
     override init()
@@ -1465,6 +1470,14 @@ class RwaGameLoop:NSObject, PdListener
         
         for asset in state.assets
         {
+            // An instance from an earlier visit may still be fading out (scene re-entered
+            // within the fade-out window). Park its patcher for release on its
+            // "-playfinished" before the new instance takes over the map slot.
+            // Mirror of RwaRuntime::startBackgroundState in the Creator.
+            if let fading = hero.backgroundAssets.removeValue(forKey: asset.uniqueId) {
+                assetsPendingRelease.append(fading)
+            }
+
             patcherTag = findFreePatcher(asset: asset)
             gain2Pd = "\(patcherTag)-gain"
             PdBase.send(asset.gain, toReceiver: gain2Pd)
@@ -1480,7 +1493,12 @@ class RwaGameLoop:NSObject, PdListener
     {
         hero.timeInCurrentScene = 0;
         hero.timeInCurrentState = 0;
-        
+
+        for item in assetsPendingRelease {
+            releasePatcherFromItem(item)
+        }
+        assetsPendingRelease.removeAll()
+
         if(!scenes.isEmpty)
         {
             for scene in scenes
@@ -1594,6 +1612,16 @@ class RwaGameLoop:NSObject, PdListener
                     releasePatcherFromItem(mapItem.value)
                     
                 }
+            }
+
+            // superseded background instance finished its fade-out
+            assetsPendingRelease.removeAll { item in
+                if item.patcherTag == Int32(patcherTag) {
+                    releasePatcherFromItem(item)
+                    self.logger.info("Released superseded background patcher \(patcherTag)")
+                    return true
+                }
+                return false
             }
         }
         
