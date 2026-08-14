@@ -899,6 +899,14 @@ class RwaGameLoop:NSObject, PdListener
     
     func setEntityScene()
     {
+        // While the hero is still inside the current scene's area, stay. Without this,
+        // overlapping scene areas switch back and forth on every tick, each switch
+        // ending and restarting the background states.
+        // Mirror of RwaRuntime::setEntityScene in the Creator.
+        if let currentScene = hero.currentScene, entityIsWithinArea(currentScene, RWAAREAOFFSETTYPE_EXIT) {
+            return
+        }
+
         for scene in (scenes)
         {
             if(scene.level == hero.currentScene?.level)
