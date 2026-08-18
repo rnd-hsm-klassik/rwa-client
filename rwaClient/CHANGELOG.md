@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `ITSAppUsesNonExemptEncryption = false` in the app Info.plist, so App Store Connect
+  stops asking for an export-compliance answer on every TestFlight build (the app only
+  uses HTTPS/system crypto, which is exempt).
+
 ## [1.3.9] - 2026-08-18
 
 ### Changed
