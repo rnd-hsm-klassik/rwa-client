@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `<tag>-seed` init value (parity with RWA Creator): every asset activation now
+  sends a fresh random seed right before `-play`
+  (`RwaGameLoop.sendInitValues2Pd`), so Pd asset patches can reseed `[random]`
+  and friends. Value is a `UInt32.random` draw kept in `1..2^24-1` (exact in
+  float32); patches that don't bind the receiver are unaffected.
+  
+  Intentionally not identical (more simple) RNG with the Creator: each engine
+  draws its own. The source is injectable (`seedSource`) and
+  `ScenarioTraceRunner` pins it so parity traces show `-seed 1`.
+
 ## [1.3.10] - 2026-08-18
 
 ### Added

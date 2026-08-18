@@ -46,6 +46,11 @@ class RwaGameLoop:NSObject, PdListener
     // Mirror of RwaRuntime::assetsPendingRelease in the Creator.
     var assetsPendingRelease:[RwaEntity.AssetMapItem] = []
 
+    // Source of the "<tag>-seed" init value (see sendInitValues2pd).
+    // Defaults to the platform RNG; Intentionally not mirrored value-for-value
+    // with the Creator (RwaRuntime::seedSource): each engine draws its own.
+    var seedSource: () -> UInt32 = { UInt32.random(in: 0...UInt32.max) }
+
     let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "RWA Player", category: "Game Loop")
     
     override init()
@@ -1468,7 +1473,11 @@ class RwaGameLoop:NSObject, PdListener
 
         pdReceiver = "\(patcherTag)-playheadposition"
         PdBase.send((Double(asset.playheadPosition)), toReceiver: pdReceiver)
-        
+
+        // fresh seed per activation for [random] etc. in Pd asset patches
+        pdReceiver = "\(patcherTag)-seed"
+        PdBase.send(Double(1 + (seedSource() & 0xFFFFFE)), toReceiver: pdReceiver)
+
         pdReceiver = "\(patcherTag)-play"
         let path = fullAssetPath + "/" + asset.name
         PdBase.sendSymbol(path , toReceiver: pdReceiver)

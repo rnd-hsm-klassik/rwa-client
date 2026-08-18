@@ -143,6 +143,11 @@ final class ScenarioTraceRunner {
         RwaImport().readRwa(gamePath)          // fills `scenes`, hero.loadGameScript()
         rwagameloop.resetGame()                // unblock states/assets, reset playheads
         rwagameloop.initDynamicPatchers()      // open per-asset PD patches (asset type PD)
+
+        // deterministic trace: the "<tag>-seed" init value is a platform-RNG draw in
+        // production, pin it here (the engine sends 1 + (source & 0xFFFFFE), i.e. 1),
+        // same as rwatrace does with RwaRuntime::seedSource
+        rwagameloop.seedSource = { 0 }
     }
 
     // MARK: - Scenario inputs

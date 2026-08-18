@@ -130,6 +130,12 @@ Not byte-diffable as-is — canonicalize first, with tolerances:
   state-evaluation gate on iOS, patcher pool sizes, `-playfinished` handling
   details (iOS also sends `<tag>-gain 0` on release). These get triaged into
   intentional (allowlist) vs bug (fix), then goldens are frozen (Phase D).
+- **`<tag>-seed`** (init block, right before `-play`): a platform-RNG draw
+  per activation in production, intentionally independent on both engines
+  (real randomness beats parity, Creator divergence #7). Both harnesses pin
+  the source (`ScenarioTraceRunner` sets `rwagameloop.seedSource = { 0 }`,
+  `rwatrace` sets `RwaRuntime::seedSource`) so the traces show `-seed 1`;
+  should the pin ever be lifted, diff this receiver by presence only.
 
 ## Scenario mirroring
 
