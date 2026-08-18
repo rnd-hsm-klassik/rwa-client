@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Integrated the rewritten pooled playback patches from RWA Creator (parity).
+
 ## [1.3.8] - 2026-08-14
 
 ### Added
