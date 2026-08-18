@@ -44,6 +44,7 @@ class RwaState:RwaArea {
     var isImmortal:Bool = false
     var blockUntilRadiusHasBeenLeft:Bool = false
     var stateWithinState:Bool = false
+    var gain: Double = 1 // linear; multiplied into every asset of this state by the game loop
     
     var nextScene:String = ""
     var nextState:String = ""

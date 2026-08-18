@@ -21,6 +21,7 @@ class RwaScene:RwaArea {
     var type: Int32 = 0
     var level: Int = -1
     var fallbackDisabled: Bool = false;
+    var gain: Double = 1 // linear; multiplied into every asset of this scene by the game loop
     
     override init()
     {

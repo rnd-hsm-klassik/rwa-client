@@ -199,6 +199,10 @@ bundle (`rwatest.rwa` and its assets sit next to each other in
 
 Note the trailing `-gain 0`: the iOS release path zeroes the patcher gain on
 playfinished (C++ only frees the patcher) — a known, intentional-looking
-divergence for the allowlist. Also note the double `-gain` in the init block:
-`startBackgroundState` sends gain once itself and once via
-`sendInitValues2Pd` — background assets only, worth triaging.
+divergence for the allowlist. The excerpt predates the hierarchical-gain
+change (2026-08): back then `startBackgroundState` sent `-gain` once itself
+and once via `sendInitValues2Pd`, so background init blocks showed the value
+twice; that duplicate is gone on both sides and the value is now the product
+scene × state × asset gain (`effectiveGain`). Creator fixture for it:
+`../rwa-creator/tools/trace/gainhierarchy/` + `scenarios/gainhierarchy.scenario.json`
+(expect 0.125 for the GPS-state asset, 0.5 for the background asset).

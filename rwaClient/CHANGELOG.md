@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Hierarchical gain (parity with RWA Creator): scenes and states carry a `gain`
+  of their own (optional `gain="..."` attribute on `<scene>`/`<state>`, linear,
+  default 1, older files load unchanged). Sending it once at activation is
+  enough (Creator streams it every tick for live mixing, planned divergence #3
+  in the Creator's `docs/engine-runtime-investigation.md`).
+
+### Changed
+
+- `startBackgroundState()` no longer sends `<tag>-gain` a second time right
+  before `sendInitValues2Pd()` (which sends it anyway). Same cleanup as in
+  the Creator, so background-asset init blocks stay comparable in the parity
+  traces (`docs/engine-parity-tests.md`).
+
 - `ITSAppUsesNonExemptEncryption = false` in the app Info.plist, so App Store Connect
   stops asking for an export-compliance answer on every TestFlight build (the app only
   uses HTTPS/system crypto, which is exempt).

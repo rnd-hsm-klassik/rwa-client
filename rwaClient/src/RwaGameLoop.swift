@@ -1354,7 +1354,22 @@ class RwaGameLoop:NSObject, PdListener
         }
     }
     
-    func sendInitValues2Pd(_ asset:RwaAsset, _ patcherTag: Int)
+    // The gain that actually reaches Pd: asset gain * state gain * scene gain.
+    // Creator sends this every tick, we only need it at activation since
+    // nothing edits gain while a game runs.
+    func effectiveGain(_ asset: RwaAsset, _ state: RwaState?, _ scene: RwaScene?) -> Double
+    {
+        var gain = asset.gain
+        if let state = state {
+            gain *= state.gain
+        }
+        if let scene = scene {
+            gain *= scene.gain
+        }
+        return gain
+    }
+
+    func sendInitValues2Pd(_ asset:RwaAsset, _ patcherTag: Int, gain: Double)
     {
         var pdReceiver: String
         
@@ -1432,9 +1447,9 @@ class RwaGameLoop:NSObject, PdListener
         pdReceiver = "\(patcherTag)-loop"
         PdBase.send(boolean2Double(asset.loop), toReceiver: pdReceiver)
         
-        // now also added this in RWA Creator
+        // effective gain (scene x state x asset), see effectiveGain(); also in RWA Creator
         pdReceiver = "\(patcherTag)-gain"
-        PdBase.send(Double(asset.gain), toReceiver: pdReceiver)
+        PdBase.send(gain, toReceiver: pdReceiver)
         
         pdReceiver = "\(patcherTag)-fadeintime"
         PdBase.send(Double(asset.fadeInTime), toReceiver: pdReceiver)
@@ -1464,7 +1479,6 @@ class RwaGameLoop:NSObject, PdListener
     func startBackgroundState()
     {
         var state: RwaState
-        var gain2Pd: String
         var patcherTag: Int32
         
         state = hero.currentScene!.backgroundState
@@ -1487,10 +1501,7 @@ class RwaGameLoop:NSObject, PdListener
             }
 
             patcherTag = findFreePatcher(asset: asset)
-            gain2Pd = "\(patcherTag)-gain"
-            PdBase.send(asset.gain, toReceiver: gain2Pd)
-            
-            sendInitValues2Pd(asset, Int(patcherTag))
+            sendInitValues2Pd(asset, Int(patcherTag), gain: effectiveGain(asset, state, hero.currentScene)) // sends "-gain" itself
             let mapItem: RwaEntity.AssetMapItem = RwaEntity.AssetMapItem(asset, patcherTag)
             hero.backgroundAssets[asset.uniqueId] = mapItem
             self.logger.info("Add Background Asset '\(asset.name)'")
@@ -1548,7 +1559,7 @@ class RwaGameLoop:NSObject, PdListener
             if(!hero.isActiveAsset(asset.uniqueId) && !asset.blocked && !asset.mute && !asset.blockedForever)
             {
                 let patcherTag = findFreePatcher(asset: asset)
-                sendInitValues2Pd(asset, Int(patcherTag))
+                sendInitValues2Pd(asset, Int(patcherTag), gain: effectiveGain(asset, hero.currentState, hero.currentScene))
 
                 if(asset.playOnce) {
                     asset.blockedForever = true;

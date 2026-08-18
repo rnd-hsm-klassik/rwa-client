@@ -157,6 +157,10 @@ class RwaImport:NSObject, XMLParserDelegate
             newScene.width = Double(attributeDict.removeValue(forKey: "width")!)!
             newScene.height = Double(attributeDict.removeValue(forKey: "height")!)!
             newScene.exitOffset = Double(attributeDict.removeValue(forKey: "exitoffset")!)!
+            // optional (older files): hierarchical gain, linear, default 1
+            if let gain = attributeDict.removeValue(forKey: "gain"), let value = Double(gain) {
+                newScene.gain = value
+            }
             
             scenes.append(newScene)
             scenePtr = newScene;
@@ -188,6 +192,10 @@ class RwaImport:NSObject, XMLParserDelegate
             newState.leaveOnlyAfterAssetsFinish = (leaveOnlyAfterAssetFinish?.toBool())!
             newState.timeOut = Double(timeOut!)!
             newState.minStayTime = Double(minStayTime!)!
+            // optional (older files): hierarchical gain, linear, default 1
+            if let gain = attributeDict.removeValue(forKey: "gain"), let value = Double(gain) {
+                newState.gain = value
+            }
             if(Int(stateType!) == RWASTATETYPE_BACKGROUND)
             {
                 scenePtr?.backgroundState = newState
