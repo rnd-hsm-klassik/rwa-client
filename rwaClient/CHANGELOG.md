@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Diagnostics tab: new "Correction link" section above GNSS quality.
+  Show the headtracker's WiFi RSSI (ESP32 → hotspot, dBm) and NTRIP caster
+  connection state from the heartbeat. When the tracker has no WiFi or no caster
+  session the firmware sends no `gnss_fix` telemetry, so the GNSS section alone
+  could not distinguish "GNSS dead" from "no corrections yet".
+
 ### Fixed
 
 - Device discovery also matches the advertised BLE local name, not just

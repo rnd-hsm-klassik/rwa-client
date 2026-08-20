@@ -80,6 +80,12 @@ class AboutViewController: UITableViewController {
         if let r = h.imuReportRateHz { imu.append(Row(label: "Report rate", value: String(format: "%.0f Hz", r))) }
         out.append(Section(title: "Motion data", rows: imu))
 
+        // Correction link (ESP32 -> hotspot -> NTRIP caster).
+        out.append(Section(title: "Correction link", rows: [
+            Row(label: "WiFi signal", value: Self.dbm(h.wifiRssi)),
+            Row(label: "NTRIP", value: Self.bool(h.ntripConnected, on: "Connected", off: "Disconnected"))
+        ]))
+
         // GNSS quality
         out.append(Section(title: "Global Navigation Satellite System quality", rows: [
             Row(label: "Position", value: Self.latlon(h.lat, h.lon)),
