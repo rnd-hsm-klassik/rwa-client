@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.13] - 2026-08-20
+
 ### Added
 
 - Diagnostics tab: new "Correction link" section above GNSS quality.
@@ -23,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   renamed by a firmware update kept its old name on every iPhone that had
   ever connected and could never be matched under its current name.
 
+## [1.3.12] - 2026-08-20
 
 ### Fixed
 
