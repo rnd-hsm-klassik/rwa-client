@@ -312,8 +312,13 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     }
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        logger.debug("BT: Discovered \(String(describing: peripheral.name)) at \(RSSI)")
-        if(peripheral.name == headtrackerID)
+        // peripheral.name can be a stale GAP name from the system's Bluetooth
+        // cache (renamed trackers keep their old name per phone, indefinitely);
+        // the local name in the advertisement is always what the device
+        // broadcasts right now, so match either.
+        let advertisedName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
+        logger.debug("BT: Discovered \(String(describing: peripheral.name)) (advertised: \(String(describing: advertisedName))) at \(RSSI)")
+        if(peripheral.name == headtrackerID || advertisedName == headtrackerID)
         {
             if self.peripheral != peripheral {
                 

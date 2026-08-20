@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [v1.3.12] - 2026-08-20
+### Fixed
+
+- Device discovery also matches the advertised BLE local name, not just
+  `peripheral.name` (`SecondViewController.centralManager(_:didDiscover:…)`).
+  `peripheral.name` comes from iOS's persistent GAP-name cache, so a rover
+  renamed by a firmware update kept its old name on every iPhone that had
+  ever connected and could never be matched under its current name.
+
 
 ### Fixed
 
