@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.3.12] - 2026-08-20
+
+### Fixed
+
+- Fix a crash when reloading impulse responses with shared instances.
+  Pulled in through submodule `vas_library`.
+
 ## [1.3.11] - 2026-08-19
 
 ### Added
