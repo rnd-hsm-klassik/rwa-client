@@ -37,7 +37,20 @@ Two cross-repo contracts to read before changing anything that crosses a boundar
 
 ## Naming
 
-Several names refer to the same thing, in directories, project files and app titles:
+The cross-repo vocabulary is `PROJECT-PLAN.md` §1.1 (glossary) — use it in docs, UI strings and
+wire fields. In short: the **headset assembly** is what the visitor wears (an **RTK headtracker**
+running rtk-rover, or a plain **headtracker** running RWAHT from `../rwa-headtracker`); the
+**phone** runs RWA Player; the **unit** is assembly + phone and its label `rwa-hs-N` is
+`device_id` in telemetry; *rover* is the RTK role of the GNSS receiver, not the hardware.
+
+Swift identifiers predate the glossary and are deliberately left alone (see the legacy notes
+below): `headtrackerID` / "Headtracker" mean the connected assembly's BLE name, `deviceId` /
+"Device ID" mean the unit label, and the `Device*` telemetry types (`DeviceTelemetryDecoder`,
+`recordDeviceEvent`, `DeviceHealth`) mean "created by the RTK headtracker firmware". The
+telemetry naming clean-up (contract v3, 2026-08-23) lands in stages; until it is complete, the
+code's `source` values and field names may lag the contract — the contract wins.
+
+Several names refer to the app itself, in directories, project files and app titles:
 
 - rwa-player, RWA Player — current name (repo slug, app title, in-app strings: done)
 - rwa-client, rwaclient-ios, rwaClient — the former name. Directories inside the Xcode project
@@ -137,9 +150,11 @@ Implemented end to end; the pieces are in `rwaClient/src/Telemetry/`.
    integer key table (`TelemetryKeys.swift` mirrors the firmware's `telemetry_keys.h`).
 2. Each event is stamped with wall-clock `time` and envelope context (device_id, session_id,
    soundwalk_id, app_version, fw_version) and persisted to SQLite (`pending_events`) on receipt.
-3. App-origin events (`gnss_fix`, `heading`, `heartbeat` from `LiveTelemetrySource`, plus
-   `app_event`s) go into the same store using the app seq counter (offset 2^32, §4.2), so
-   `(device_id, session_id, seq)` stays globally unique for dedup.
+3. App-created events (`gnss_fix`, `heading`, `heartbeat` sampled by `LiveTelemetrySource` from
+   the app's positioning state — which may itself stem from the assembly, the phone's sensors or
+   the Creator — plus `app_event`s) go into the same store. Today they use the in-memory app seq
+   counter (offset 2^32); contract v3 replaces all seq handling with the SQLite row id
+   (PROJECT-PLAN.md §4.2) — the firmware counter restarts on every boot and must not be a key.
 4. The uploader POSTs the oldest ≤ 500 events as one JSON batch to `<backend>/v1/batch` every
    15 s with the bearer token; rows are deleted only on HTTP 2xx, failures back off
    exponentially to 5 min, and retries are dedup-safe.

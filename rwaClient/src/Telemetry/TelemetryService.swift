@@ -8,9 +8,6 @@
 //  to POST /v1/batch. Rows are deleted only on HTTP 2xx, so events survive
 //  app relaunches; re-sends are dedup-safe on the backend.
 //
-//  Next stages: background URLSession for uploads across background/
-//  foreground cycles, BLE/CBOR producer replacing the synthetic source.
-//
 
 import Foundation
 import os

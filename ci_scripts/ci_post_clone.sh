@@ -15,7 +15,7 @@
 # Required environment variables:
 #   DEVELOPMENT_TEAM         Apple Developer Team ID (plain)
 #   TELEMETRY_BASE_URL       backend base URL, no trailing slash (plain)
-#   TELEMETRY_DEVICE_ID      (optional) kiosk device id, e.g. hs-01 (plain)
+#   TELEMETRY_DEVICE_ID      (optional) unit label override, e.g. rwa-hs-1 (plain)
 #   TELEMETRY_INGEST_TOKEN   bearer token for /v1/batch (SECRET)
 
 set -eu

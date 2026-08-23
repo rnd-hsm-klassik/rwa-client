@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Docs: telemetry contract v3 adopted** (`PROJECT-PLAN.md` 2026-08-23, identical
+  copy in `rtk-rover` and `rwa-backend`). Glossary §1.1 fixes the vocabulary:
+  *headset assembly* (RTK headtracker or plain headtracker), *board*, *phone*,
+  *unit* (assembly + phone; its label `rwa-hs-N` is `device_id`), and §4.2
+  makes the app the owner of the dedup `seq` (SQLite row id) while the
+  firmware's per-boot counter becomes the diagnostic `dev_seq`; every event gets
+  a `source` (`rtk_headtracker` / `headtracker` / `phone` / `creator`). This
+  entry covers the documentation only (`CLAUDE.md`, `README.md`,
+  `ci_scripts/ci_post_clone.sh` comments); the code follows in separate steps
+  listed below as they land.
+
 ## [1.3.13] - 2026-08-20
 
 ### Added
