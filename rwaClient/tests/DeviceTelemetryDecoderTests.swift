@@ -38,7 +38,11 @@ final class DeviceTelemetryDecoderTests: XCTestCase {
 
         let event = try XCTUnwrap(DeviceTelemetryDecoder.event(fromFramePayload: payloads[0]))
         XCTAssertEqual(event["type"] as? String, "heartbeat")
-        XCTAssertEqual(event["seq"] as? UInt64, 65)
+        // CBOR key 1 is the firmware's per-boot counter: it surfaces as
+        // dev_seq, never as the dedup seq (that is the store row id, §4.2).
+        XCTAssertEqual(event["dev_seq"] as? UInt64, 65)
+        XCTAssertNil(event["seq"])
+        XCTAssertEqual(event["source"] as? String, "rtk_headtracker")
         XCTAssertEqual(event["t_dev_ms"] as? UInt64, 1000)
         XCTAssertEqual(event["wifi_rssi"] as? Int64, -60)
         XCTAssertEqual(event["ntrip_connected"] as? Bool, true)

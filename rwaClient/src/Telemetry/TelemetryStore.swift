@@ -10,6 +10,11 @@
 //  per row because rows can outlive the session that created them; the
 //  uploader batches only contiguous rows with identical envelopes (§4.1).
 //
+//  The row id is the event's wire `seq` (§4.2): AUTOINCREMENT makes it
+//  monotonic per install and never reused, even after rows are deleted, so
+//  (device_id, seq) identifies an event regardless of which assembly the
+//  data came from or how often the assembly rebooted.
+//
 //  Not thread-safe by design: the owning TelemetryService confines all
 //  calls to its serial queue.
 //
@@ -21,13 +26,19 @@ private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.sel
 
 final class TelemetryStore {
 
+    struct Row {
+        let id: Int64
+        let json: String
+    }
+
     struct Batch {
         let lastId: Int64
         let sessionId: String
         let soundwalkId: String
         let fwVersion: String
         let appVersion: String
-        let eventsJSON: [String]
+        /// Oldest first; `id` becomes the event's `seq`.
+        let rows: [Row]
     }
 
     // Disk cap (~a few days of 1 Hz gnss_fix); drop-oldest beyond this.
@@ -110,7 +121,8 @@ final class TelemetryStore {
     }
 
     /// Oldest rows (≤ limit) sharing one envelope: stops at the first row
-    /// whose envelope differs, so one batch never mixes sessions.
+    /// whose envelope differs, so one batch never mixes sessions. Each row
+    /// comes with its id, which the uploader writes into the event as `seq`.
     func fetchOldestBatch(limit: Int) -> Batch? {
         let sql = """
             SELECT id, session_id, soundwalk_id, fw_version, app_version, event_json
@@ -123,7 +135,7 @@ final class TelemetryStore {
 
         var lastId: Int64 = 0
         var envelope: (String, String, String, String)?
-        var events: [String] = []
+        var rows: [Row] = []
 
         while sqlite3_step(stmt) == SQLITE_ROW {
             guard let sessionC = sqlite3_column_text(stmt, 1),
@@ -140,13 +152,13 @@ final class TelemetryStore {
             } else if envelope! != row {
                 break
             }
-            events.append(String(cString: jsonC))
             lastId = sqlite3_column_int64(stmt, 0)
+            rows.append(Row(id: lastId, json: String(cString: jsonC)))
         }
 
         guard let env = envelope else { return nil }
         return Batch(lastId: lastId, sessionId: env.0, soundwalkId: env.1,
-                     fwVersion: env.2, appVersion: env.3, eventsJSON: events)
+                     fwVersion: env.2, appVersion: env.3, rows: rows)
     }
 
     func deleteThrough(id: Int64) {

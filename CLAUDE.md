@@ -148,17 +148,22 @@ Implemented end to end; the pieces are in `rwaClient/src/Telemetry/`.
 1. BLE central subscribes to the telemetry characteristic (713D0100/0101), reassembles the TX
    byte stream by its length prefix and decodes length-prefixed CBOR frames with the §5.3
    integer key table (`TelemetryKeys.swift` mirrors the firmware's `telemetry_keys.h`).
-2. Each event is stamped with wall-clock `time` and envelope context (device_id, session_id,
-   soundwalk_id, app_version, fw_version) and persisted to SQLite (`pending_events`) on receipt.
+2. Each decoded frame becomes an event with `source = rtk_headtracker`, the firmware's per-boot
+   counter as `dev_seq`, `t_dev_ms`, wall-clock `time`, and envelope context
+   (device_id, session_id, soundwalk_id, app_version, fw_version); it is persisted to SQLite
+   (`pending_events`) on receipt.
 3. App-created events (`gnss_fix`, `heading`, `heartbeat` sampled by `LiveTelemetrySource` from
    the app's positioning state — which may itself stem from the assembly, the phone's sensors or
-   the Creator — plus `app_event`s) go into the same store. Today they use the in-memory app seq
-   counter (offset 2^32); contract v3 replaces all seq handling with the SQLite row id
-   (PROJECT-PLAN.md §4.2) — the firmware counter restarts on every boot and must not be a key.
+   the Creator, plus `app_event`s) go into the same store with their own `source`.
+   **`seq` is the SQLite row id** (`pending_events.id`, AUTOINCREMENT), written into each event
+   when the batch is built (`TelemetryService.batchEvents`): monotonic per install, never reused,
+   survives relaunches. That is the dedup key (PROJECT-PLAN.md §4.2); the firmware counter
+   restarts on every boot and must never become one again.
 4. The uploader POSTs the oldest ≤ 500 events as one JSON batch to `<backend>/v1/batch` every
    15 s with the bearer token; rows are deleted only on HTTP 2xx, failures back off
    exponentially to 5 min, and retries are dedup-safe.
-5. New `session_id` (UUID) per app run.
+5. New `session_id` (UUID) per process launch; it only namespaces `seq` against a counter
+   restart after a reinstall and is never rotated on BLE (re)connect.
 
 Still open here: gzip on the batch body, and surviving background/foreground cycles (the
 uploader uses an ephemeral `URLSession` today — no background configuration, no

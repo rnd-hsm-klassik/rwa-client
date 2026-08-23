@@ -14,8 +14,8 @@
 //              | "osc_sim" (rwaCreator remote control)
 //    heading:  "headtracker_rtk" | "headtracker" | "ios_motion"
 //
-//  All events are app-origin observations, so they use the app seq range
-//  (§4.2); the device seq range stays reserved for the future CBOR feed.
+//  All events here are created by the app (no dev_seq / t_dev_ms); their
+//  `seq` is the store row id like every other event (§4.2).
 //
 
 import Foundation

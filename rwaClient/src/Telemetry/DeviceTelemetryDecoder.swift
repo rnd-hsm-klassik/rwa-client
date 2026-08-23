@@ -144,6 +144,10 @@ enum TelemetryCbor {
 // MARK: - Event mapping
 
 /// One frame payload → one §4 event dictionary, or nil if undecodable.
+/// The frame doesn't carry an identity and its counter is per boot.
+/// CBOR key 1 becomes `dev_seq` (diagnostic).
+/// Telemetry frames only ever come from the RTK headtracker's telemetry
+/// characteristic, so `source` is stamped here.
 enum DeviceTelemetryDecoder {
 
     static func event(fromFramePayload payload: Data) -> [String: Any]? {
@@ -153,8 +157,11 @@ enum DeviceTelemetryDecoder {
               let fieldNames = TelemetryKeys.fieldNames[typeRaw]
         else { return nil }  // unknown type ids are dropped (§5.3)
 
-        var event: [String: Any] = ["type": typeName]
-        if let seq = map[TelemetryKeys.keySeq] { event["seq"] = seq }
+        var event: [String: Any] = [
+            "type": typeName,
+            TelemetrySource.fieldName: TelemetrySource.rtkHeadtracker.rawValue
+        ]
+        if let seq = map[TelemetryKeys.keySeq] { event["dev_seq"] = seq }
         if let tDevMs = map[TelemetryKeys.keyTDevMs] { event["t_dev_ms"] = tDevMs }
         for (key, value) in map where key >= 10 {
             if let name = fieldNames[key] {

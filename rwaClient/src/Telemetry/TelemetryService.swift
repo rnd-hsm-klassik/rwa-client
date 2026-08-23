@@ -2,11 +2,17 @@
 //  TelemetryService.swift
 //  rwa client
 //
-//  Telemetry gateway core (PROJECT-PLAN.md §4 + §6): collects device- and
-//  app-origin events, stamps wall-clock time and envelope context, persists
-//  them to the SQLite pending_events store, and uploads them as JSON batches
-//  to POST /v1/batch. Rows are deleted only on HTTP 2xx, so events survive
-//  app relaunches; re-sends are dedup-safe on the backend.
+//  Telemetry gateway core (PROJECT-PLAN.md §4 + §6): collects events created
+//  by the RTK headtracker firmware (CBOR frames) and events created by the
+//  app, stamps wall-clock time and envelope context, persists them to the
+//  SQLite pending_events store, and uploads them as JSON batches to
+//  POST /v1/batch. Rows are deleted only on HTTP 2xx, so events survive app
+//  relaunches; re-sends are dedup-safe on the backend.
+//
+//  The gateway owns the dedup key: every event's `seq` is its SQLite row id
+//  (§4.2), assigned when the batch is built. The firmware's per-boot frame
+//  counter travels as `dev_seq` and is never a key — it restarts at 1 on
+//  every reboot of the assembly.
 //
 
 import Foundation
@@ -14,9 +20,6 @@ import os
 
 class TelemetryService {
 
-    // App-origin events use a seq range disjoint from device events (§4.2)
-    // so (device_id, session_id, seq) stays globally unique for dedup.
-    static let appSeqOffset: UInt64 = 1 << 32
     static let maxBatchSize = 500
     static let uploadInterval: TimeInterval = 15
     static let maxBackoff: TimeInterval = 300
@@ -44,7 +47,6 @@ class TelemetryService {
     private let queue = DispatchQueue(label: "ch.rwa.telemetry", qos: .utility)
     private var store: TelemetryStore?
     private var storeFailureLogged = false
-    private var appSeq: UInt64 = TelemetryService.appSeqOffset
     // "none" until a soundwalk loads (gameLoaded -> setSoundwalkId)
     private var soundwalkId = "none"
     private var fwVersion = "unknown"
@@ -97,9 +99,10 @@ class TelemetryService {
         }
     }
 
-    /// Device-origin event: caller supplies seq (device counter as-is),
-    /// type, t_dev_ms and the type-specific fields. Wall-clock time is
-    /// stamped here, on receipt (§4.2).
+    /// Event created by the RTK headtracker firmware: the decoder supplies
+    /// type, source, dev_seq, t_dev_ms and the type-specific fields.
+    /// Wall-clock time is stamped here, on receipt (§4.2); `seq` is assigned
+    /// at upload from the row id.
     func recordDeviceEvent(_ event: [String: Any]) {
         // Cache latest values for the Diagnostics tab (read-only side channel).
         DeviceHealth.shared.ingestDeviceEvent(event)
@@ -110,25 +113,21 @@ class TelemetryService {
         }
     }
 
-    /// App-origin event of any type (gnss_fix / heading / heartbeat sampled
-    /// from the app's own sensors, or app_event): seq comes from the app
-    /// counter in the offset range (§4.2), no t_dev_ms. Callers tag these
-    /// with a "source" field so the backend can tell them apart from
-    /// device-origin events of the same type.
+    /// Event created by the app (gnss_fix / heading / heartbeat sampled from
+    /// the app's positioning state, or app_event): no dev_seq / t_dev_ms.
+    /// Callers set the "source" field (TelemetrySource) to say where the
+    /// data stems from; `seq` is assigned at upload from the row id.
     func recordAppOriginEvent(type: String, fields: [String: Any] = [:]) {
         let time = TelemetryService.rfc3339.string(from: Date())
         queue.async {
-            self.appSeq += 1
             var event = fields
-            event["seq"] = self.appSeq
             event["time"] = time
             event["type"] = type
             self.append(event)
         }
     }
 
-    /// App-origin event (§4.3 app_event): seq comes from the app counter
-    /// in the offset range, no t_dev_ms.
+    /// App lifecycle event (§4.3 app_event).
     func recordAppEvent(name: String, data: [String: Any] = [:]) {
         var fields: [String: Any] = ["name": name]
         if !data.isEmpty {
@@ -149,6 +148,21 @@ class TelemetryService {
             return deviceId
         }
         return headtrackerID.isEmpty ? "unknown" : headtrackerID
+    }
+
+    /// Wire events for one batch: each stored row's JSON with `seq` set to
+    /// the row id (§4.2). Undecodable rows are skipped. Pure, so it can be
+    /// tested without a store or a network.
+    static func batchEvents(_ rows: [TelemetryStore.Row]) -> [[String: Any]] {
+        var events: [[String: Any]] = []
+        for row in rows {
+            if let data = row.json.data(using: .utf8),
+               var event = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+                event["seq"] = row.id
+                events.append(event)
+            }
+        }
+        return events
     }
 
     // MARK: - Queue-confined
@@ -186,13 +200,7 @@ class TelemetryService {
             return
         }
 
-        var events: [[String: Any]] = []
-        for json in batch.eventsJSON {
-            if let data = json.data(using: .utf8),
-               let event = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
-                events.append(event)
-            }
-        }
+        let events = TelemetryService.batchEvents(batch.rows)
         if events.isEmpty {
             // Nothing decodable in this range; clear it so we don't spin.
             store.deleteThrough(id: batch.lastId)

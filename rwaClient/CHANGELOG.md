@@ -19,6 +19,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entry covers the documentation only (`CLAUDE.md`, `README.md`,
   `ci_scripts/ci_post_clone.sh` comments); the code follows in separate steps
   listed below as they land.
+- **Telemetry `seq` is now the gateway's SQLite row id** (PROJECT-PLAN.md §4.2).
+  `TelemetryService.batchEvents` writes `pending_events.id` into every event
+  as `seq` when a batch is built; the in-memory app counter and its 2^32
+  offset are gone. The RTK headtracker's per-boot frame counter (CBOR key 1)
+  is mapped to `dev_seq` instead of `seq` by `DeviceTelemetryDecoder`, and
+  every decoded frame is stamped `source: rtk_headtracker` (new
+  `TelemetrySource` enum, `src/Telemetry/TelemetrySource.swift`).
+  `DeviceHealth` no longer uses "has no `source`" to recognise firmware fixes.
+  Rows persisted by older builds upload fine: their stored `seq` is simply
+  overwritten by the row id. New `TelemetryStoreTests` pin the properties
+  this relies on (ids strictly increase, are never reused after deletes, and
+  continue across a store reopen).
+
+### Fixed
+
+- **A headset reboot mid-session could make the backend discard real events.**
+  The firmware counter restarts at 1 on every boot and carried no boot number,
+  so post-reboot events reused `(device_id, session_id, seq)` triples; the
+  backend's unique index only tolerated this by accident (`time` is part of
+  it). With the row id as `seq` the key is unique by construction. Verified
+  against a local backend: 39 events over 10 process launches uploaded with
+  contiguous `seq` 2787–2825, a replayed batch added no rows, and two events
+  with identical `time` but different `seq` were both stored.
 
 ## [1.3.13] - 2026-08-20
 
