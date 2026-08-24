@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.14] - 2026-08-25
+
 ### Changed
 
 - **Provisioning without deploying games.** `tools/deploy_games.sh` now takes
@@ -30,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entry covers the documentation only (`CLAUDE.md`, `README.md`,
   `ci_scripts/ci_post_clone.sh` comments); the code follows in separate steps
   listed below as they land.
+
 - **Telemetry `seq` is now the gateway's SQLite row id** (PROJECT-PLAN.md §4.2).
   `TelemetryService.batchEvents` writes `pending_events.id` into every event
   as `seq` when a batch is built; the in-memory app counter and its 2^32
@@ -66,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   captured at discovery), `tracker_connected` → `assembly_connected`,
   `tracker_rssi` → `assembly_rssi`. `app_event`s carry `source: phone`. Breaking
   only for consumers of the old field names and values; none exist yet.
+
 - **The RTK-vs-fallback policy moved out of the telemetry path**: new
   `PositioningPolicy` (`src/PositioningPolicy.swift`) owns `freshnessWindow` and
   `rtkTrackerActive()`. This is main-path runtime behaviour that the hero
@@ -92,7 +96,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Telemetry, 3 new hearbeat fields: heap_min, loops_ntrip, loops_pos, new error code `gnss_pipe_stall`. Instrumentation for diagnosis of NTRIP connection issues in rtk-headtracker firmware.
+- Telemetry, 3 new hearbeat fields: heap_min, loops_ntrip, loops_pos,
+  new error code `gnss_pipe_stall`. Instrumentation for diagnosis of NTRIP
+  connection issues in rtk-headtracker firmware.
 
 ### Fixed
 
