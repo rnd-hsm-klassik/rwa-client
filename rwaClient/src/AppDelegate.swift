@@ -48,7 +48,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
     var audioController: PdAudioController?
-    var liveTelemetry: LiveTelemetrySource?
+    var liveTelemetry: AppTelemetrySampler?
     var currentSceneController: UIViewController?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool
@@ -58,7 +58,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             TelemetryService.shared = telemetry
             telemetry.start()
             telemetry.recordAppEvent(name: "app_launched")
-            let live = LiveTelemetrySource(service: telemetry)
+            let live = AppTelemetrySampler(service: telemetry)
             live.start()
             liveTelemetry = live
         }

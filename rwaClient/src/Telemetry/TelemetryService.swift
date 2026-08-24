@@ -129,7 +129,8 @@ class TelemetryService {
 
     /// App lifecycle event (§4.3 app_event).
     func recordAppEvent(name: String, data: [String: Any] = [:]) {
-        var fields: [String: Any] = ["name": name]
+        var fields: [String: Any] = ["name": name,
+                                     TelemetrySource.fieldName: TelemetrySource.phone.rawValue]
         if !data.isEmpty {
             fields["data"] = data
         }

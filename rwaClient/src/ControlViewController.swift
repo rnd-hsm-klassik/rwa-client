@@ -275,7 +275,7 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
     /// registration — same priority as CoreLocationController.
     private func updateCoordinates() {
         let rtkFresh = ubloxUpdatedAt.map {
-            Date().timeIntervalSince($0) < LiveTelemetrySource.freshnessWindow } ?? false
+            Date().timeIntervalSince($0) < AppTelemetrySampler.freshnessWindow } ?? false
         let rtkActive = useRtkGps && !registered && rtkFresh
         // %.5f ≈ 1 m resolution; enough to watch movement without the line
         // turning into a number wall.
@@ -300,10 +300,10 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
             defer { seenUbloxFixAt = at }
             return seenUbloxFixAt != nil && at != seenUbloxFixAt
         }
-        // horizontalAccuracy < 0 marks the empty CLLocation() placeholder,
-        // i.e. internal GPS has not delivered yet.
-        if hero.location.horizontalAccuracy >= 0 {
-            let at = hero.location.timestamp
+        // locationUpdatedAt is nil until CoreLocation delivers; the
+        // CLLocation() placeholder in hero.location must not count (it
+        // reports horizontalAccuracy 0, not < 0).
+        if let at = locationUpdatedAt {
             defer { seenLocationFixAt = at }
             return seenLocationFixAt != nil && at != seenLocationFixAt
         }

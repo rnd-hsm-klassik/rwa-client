@@ -54,11 +54,16 @@ struct DeviceHealthSnapshot {
     var imuCalibStatus: Int?
     var imuReportRateHz: Double?
 
-    // Live telemetry source attribution (LiveTelemetrySource): which sensor
-    // currently feeds position / heading ("rtk_tracker", "ios_gps",
-    // "osc_sim", "headtracker_rtk", "headtracker", "ios_motion"), nil = none.
+    // Source attribution (AppTelemetrySampler): which component currently
+    // feeds position / heading (TelemetrySource raw values: rtk_headtracker,
+    // headtracker, phone, creator), nil = none.
     var positionSource: String?
     var headingSource: String?
+
+    // Connected headset assembly: kind decided from GATT at connect
+    // (AssemblyKind), id = the advertised BLE name. nil while disconnected.
+    var assemblyKind: AssemblyKind?
+    var assemblyId: String?
 
     // Telemetry gateway state
     var sessionId: String?
@@ -117,6 +122,15 @@ final class DeviceHealth {
         mutate { $0.rssi = rssi }
     }
 
+    /// Connected assembly identity, from the BLE central: kind from GATT
+    /// discovery, id from the advertisement. Both nil on disconnect.
+    func setAssembly(kind: AssemblyKind?, id: String?) {
+        mutate {
+            $0.assemblyKind = kind
+            $0.assemblyId = id
+        }
+    }
+
     func setTelemetrySession(sessionId: String, soundwalkId: String) {
         mutate {
             $0.sessionId = sessionId
@@ -128,7 +142,7 @@ final class DeviceHealth {
         mutate { $0.soundwalkId = id }
     }
 
-    /// Called at 1 Hz by LiveTelemetrySource; only mutates (and notifies)
+    /// Called at 1 Hz by AppTelemetrySampler; only mutates (and notifies)
     /// when a source actually changed.
     func setLiveSources(position: String?, heading: String?) {
         lock.lock()
@@ -170,7 +184,7 @@ final class DeviceHealth {
             }
         case "gnss_fix":
             // Only firmware-created fixes own these fields; the app-created
-            // samples (LiveTelemetrySource) describe a *different* position
+            // samples (AppTelemetrySampler) describe a *different* position
             // and letting them write here made the fix display flap between
             // the RTK fix and internal GPS. That is guaranteed by the call
             // site (TelemetryService.recordDeviceEvent is the firmware path

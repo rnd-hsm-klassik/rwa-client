@@ -92,7 +92,7 @@ Player-specific facts:
 | Import | `RwaImport.swift` — `.rwa` XML → the model |
 | Service layer (a view controller by accident) | `SecondViewController.swift` — BLE central, tracker text protocol, CoreMotion, north calibration, the 10 ms game-loop timer. See [Legacy structure](#legacy-view-controller-structure-read-before-touching-tabsble) |
 | Positioning | `CoreLocationController.swift` (internal GPS fallback) + the ublox path in `SecondViewController` + `Device.swift` (GATT UUIDs, raw frame parsing) |
-| Telemetry gateway | `Telemetry/` — `TelemetryService` (envelope, seq, uploader), `TelemetryStore` (SQLite), `DeviceTelemetryDecoder` + `TelemetryKeys` (CBOR, §5.3 key table), `LiveTelemetrySource` (app-origin 1 Hz sampler), `TelemetryConfig`; `DeviceHealth.swift` is the shared snapshot the Diagnostics tab reads |
+| Telemetry gateway | `Telemetry/` — `TelemetryService` (envelope, seq, uploader), `TelemetryStore` (SQLite), `DeviceTelemetryDecoder` + `TelemetryKeys` (CBOR, §5.3 key table), `AppTelemetrySampler` (app-side 1 Hz sampler), `TelemetryConfig`; `DeviceHealth.swift` is the shared snapshot the Diagnostics tab reads |
 | UI (five tabs) | `FirstViewController` (Games), `ControlViewController` (Control), `MapViewController` (Map), `AboutViewController` (Diagnostics), `SettingsViewController` (Settings) |
 | Content delivery | `DownloadManager`, `ZipExtractor`, `GameManager` — HTTP pull of games from the Creator, see `docs/GAME-DOWNLOAD.md` |
 | DSP (C, **shared with the Creator**) | repo root: `rwa_binauralsimple~.c`, `rwa_firobject.c`, `vas_fir*.c`, `oggread~.c`, … compiled from `vas_library/` |
@@ -123,7 +123,7 @@ deliberately and in whole seams, not opportunistically file by file.
 ## Input paths (what drives the hero)
 
 Three position sources, in a strict priority order whose single definition is
-`LiveTelemetrySource.rtkTrackerActive()`:
+`AppTelemetrySampler.rtkTrackerActive()`:
 
 1. **OSC from RWA Creator** (`registered == true`) — the Creator's simulator drives
    `hero.coordinates` remotely and overrides everything else. The Player listens on port 8001 and
@@ -133,7 +133,7 @@ Three position sources, in a strict priority order whose single definition is
    `TRACKERSERVICETX` (713D0002) and the high-precision raw frame on `TRACKERRAWDATA` (713D0004,
    up to 10 Hz, lat/latHp/lon/lonHp).
 3. **Internal GPS** (CoreLocation) — the automatic fallback. `CoreLocationController` stands by
-   while tracker fixes are fresher than `LiveTelemetrySource.freshnessWindow` (8 s) and takes
+   while tracker fixes are fresher than `AppTelemetrySampler.freshnessWindow` (8 s) and takes
    over as soon as the tracker goes quiet.
 
 Heading: the headtracker's IMU (azimuth / elevation / linear acceleration on the same text
@@ -152,9 +152,14 @@ Implemented end to end; the pieces are in `rwaClient/src/Telemetry/`.
    counter as `dev_seq`, `t_dev_ms`, wall-clock `time`, and envelope context
    (device_id, session_id, soundwalk_id, app_version, fw_version); it is persisted to SQLite
    (`pending_events`) on receipt.
-3. App-created events (`gnss_fix`, `heading`, `heartbeat` sampled by `LiveTelemetrySource` from
+3. App-created events (`gnss_fix`, `heading`, `heartbeat` sampled by `AppTelemetrySampler` from
    the app's positioning state — which may itself stem from the assembly, the phone's sensors or
-   the Creator, plus `app_event`s) go into the same store with their own `source`.
+   the Creator, plus `app_event`s) go into the same store with their own `source`
+   (`TelemetrySource`: `rtk_headtracker` / `headtracker` / `phone` / `creator`). The firmware's
+   gnss_fix is the only RTK fix stream (no app-built copy); the `phone` stream (CoreLocation)
+   runs continuously alongside it. This feeds the phone-GPS-vs-RTK comparison dataset.
+   The connected assembly's kind is decided from GATT at connect
+   (`AssemblyKind`; telemetry service present ⇔ RTK) and reported as `assembly_id`.
    **`seq` is the SQLite row id** (`pending_events.id`, AUTOINCREMENT), written into each event
    when the batch is built (`TelemetryService.batchEvents`): monotonic per install, never reused,
    survives relaunches. That is the dedup key (PROJECT-PLAN.md §4.2); the firmware counter
@@ -176,7 +181,7 @@ Constraints:
   queues; never do I/O on the audio or BLE callback threads.
 - BLE delegate callback → lightweight decode → async write to SQLite. If the store is
   unavailable, drop telemetry rather than degrade playback.
-- `LiveTelemetrySource` is deliberately a *sampler*, not a set of callback hooks: it reads the
+- `AppTelemetrySampler` is deliberately a *sampler*, not a set of callback hooks: it reads the
   globals the hot paths already maintain, so those paths stay untouched.
 - The devices are kiosk-style (we own them): device_id and ingest token come from a local plist,
   not from user input.

@@ -60,7 +60,7 @@ extension MapViewController {
                 ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
             view.annotation = annotation
             view.glyphImage = UIImage(systemName: "figure.walk")
-            view.markerTintColor = LiveTelemetrySource.rtkTrackerActive() ? .systemGreen : .systemOrange
+            view.markerTintColor = AppTelemetrySampler.rtkTrackerActive() ? .systemGreen : .systemOrange
             view.displayPriority = .required
             return view
         }
@@ -213,7 +213,7 @@ class MapViewController: UIViewController, MKMapViewDelegate
     /// Follow hero.coordinates at 1 Hz and re-tint on source changes. Also
     /// re-adds the marker after redraw(), which clears all annotations.
     @objc private func updateHeroMarker() {
-        let rtkActive = LiveTelemetrySource.rtkTrackerActive()
+        let rtkActive = AppTelemetrySampler.rtkTrackerActive()
         heroAnnotation.coordinate = hero.coordinates
         heroAnnotation.title = rtkActive ? "RTK" : (registered ? "OSC" : "GPS")
         if !mapView.annotations.contains(where: { $0 === heroAnnotation }) {

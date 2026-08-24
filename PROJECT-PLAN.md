@@ -183,8 +183,12 @@ for each type; "firmware" cells are created on the RTK headtracker and carry
 | `ntrip_status`, `imu_status`, `error` | firmware | - | - | - |
 | `app_event` | - | - | app | - |
 
-There is exactly one `gnss_fix` stream per source: for the RTK headtracker the firmware record
-is the fix; the app does not build its own copy from the text protocol.
+There is exactly one `gnss_fix` stream per source: for the RTK headtracker the
+firmware record is the fix; the app does not build its own copy from the text
+protocol. The `phone` stream (CoreLocation) is continuous (even while the RTK
+headtracker drives the hero), so the two positioning systems can be compared
+over the same walk; `source` separates them. Which source *drives the hero* is a
+separate statement, reported as `position_source` in the app heartbeat.
 
 **`gnss_fix`**: emitted at 1 Hz from UBX-NAV-PVT (+ correction-age from RXM-COR/RTCM bookkeeping).
 This is the dead-zone dataset; do not thin it out.

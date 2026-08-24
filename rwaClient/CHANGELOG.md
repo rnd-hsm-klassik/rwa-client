@@ -32,6 +32,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   this relies on (ids strictly increase, are never reused after deletes, and
   continue across a store reopen).
 
+- **`source` is now the closed §4.2 enum on every event, and the app emits one
+  fix stream per source.** `LiveTelemetrySource` is renamed to
+  `AppTelemetrySampler` ("...Source" collided with the `source` field): it no
+  longer builds its own lat/lon-only `gnss_fix` from the text protocol while the
+  RTK feed delivers: the firmware record is the fix. Instead, the phone's own
+  CoreLocation fixes are now emitted **continuously** (`source: phone`), also
+  while the RTK headtracker drives the hero: `CoreLocationController` records
+  every delivered fix into telemetry globals (`lastInternalLocation` /
+  `locationUpdatedAt`) before the RTK-freshness gate, which now protects only
+  the hero. This finally creates the phone-GPS-vs-RTK comparison dataset for the first
+  time. Previously the "two streams" in the database were the same RTK receiver
+  twice (text-protocol copy + CBOR record, sub-centimeter apart), while
+  CoreLocation data was discarded whenever RTK was active. The sampler's events
+  use `rtk_headtracker` / `headtracker` / `phone` / `creator` instead of
+  `rtk_tracker` / `ios_gps` / `osc_sim` / `headtracker_rtk` / `ios_motion` /
+  `ios_app`. Heading attribution comes from the *kind* of the connected
+  assembly, decided once at connect from GATT (`AssemblyKind`: telemetry service
+  / raw-position characteristic present ⇔ RTK headtracker; RWAHT has neither)
+  instead of from positioning freshness. Wire fields renamed: `tracker_id` →
+  `assembly_id` (now the *advertised* name of the assembly actually connected,
+  captured at discovery), `tracker_connected` → `assembly_connected`,
+  `tracker_rssi` → `assembly_rssi`. `app_event`s carry `source: phone`. Breaking
+  only for consumers of the old field names and values; none exist yet.
+
 ### Fixed
 
 - **A headset reboot mid-session could make the backend discard real events.**
@@ -42,6 +66,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against a local backend: 39 events over 10 process launches uploaded with
   contiguous `seq` 2787–2825, a replayed batch added no rows, and two events
   with identical `time` but different `seq` were both stored.
+- **One bogus `gnss_fix` at lat/lon 0 was uploaded per app launch** while
+  CoreLocation had not delivered yet: the `CLLocation()` placeholder in
+  `hero.location` reports `horizontalAccuracy` 0, not < 0, and passed the
+  sampler's guard (and `ControlViewController`'s fix-blink check).
+  `CoreLocationController` now sets a `locationUpdatedAt` freshness marker on
+  every delivered fix, and both readers key on that instead.
 
 ## [1.3.13] - 2026-08-20
 

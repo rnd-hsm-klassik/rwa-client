@@ -9,6 +9,15 @@
 import Foundation
 import CoreLocation
 
+// The phone's own GPS as telemetry sees it, set on every delivered fix;
+// also while the RTK tracker or the Creator drives the hero (only the hero
+// update below is gated). AppTelemetrySampler emits the continuous `phone`
+// gnss_fix stream from these; that stream deliberately runs alongside the
+// RTK headtracker's own fixes, so the two positioning systems can be
+// compared over the same walk (PROJECT-PLAN.md §4.3).
+var lastInternalLocation: CLLocation?
+var locationUpdatedAt: Date?
+
 class CoreLocationController:NSObject, CLLocationManagerDelegate{
 
     var locationManager:CLLocationManager = CLLocationManager()
@@ -46,21 +55,26 @@ class CoreLocationController:NSObject, CLLocationManagerDelegate{
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation])
     {
+        let location = locations.last! as CLLocation
+        // Telemetry sees every fix (see the globals above); only whether the
+        // fix drives the hero is decided below.
+        lastInternalLocation = location
+        locationUpdatedAt = Date()
+
         if(!registered)
         {
-            // With RTK positioning selected and the tracker delivering,
+            // With RTK positioning selected and the headset assembly delivering,
             // internal GPS stands by; it takes over automatically when the
-            // tracker goes quiet (fallback, see Settings tab).
+            // headset assembly goes quiet (fallback, see Settings tab).
             if(useRtkGps) {
-                if let at = ubloxUpdatedAt, Date().timeIntervalSince(at) < LiveTelemetrySource.freshnessWindow {
+                if let at = ubloxUpdatedAt, Date().timeIntervalSince(at) < AppTelemetrySampler.freshnessWindow {
                     return
                 }
             }
-            let location = locations.last! as CLLocation
             hero.location = location
             hero.coordinates = location.coordinate
             hero.timeSinceLastGpsUpdate = 0.0
-            
+
             if(sendGPS2Creator)
             {
                 logger.debug("Sending to coordinates to Creator: (\(hero.coordinates.longitude), \(hero.coordinates.latitude)")

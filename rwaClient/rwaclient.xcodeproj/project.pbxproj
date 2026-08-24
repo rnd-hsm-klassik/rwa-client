@@ -13,7 +13,7 @@
 		7E7E1E1500000000000000AA /* TelemetryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0500000000000000AA /* TelemetryStore.swift */; };
 		7E7E1E1600000000000000AA /* DeviceHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0600000000000000AA /* DeviceHealth.swift */; };
 		7E7E1E1700000000000000AA /* AboutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0700000000000000AA /* AboutViewController.swift */; };
-		7E7E1E1800000000000000AA /* LiveTelemetrySource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0800000000000000AA /* LiveTelemetrySource.swift */; };
+		7E7E1E1800000000000000AA /* AppTelemetrySampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0800000000000000AA /* AppTelemetrySampler.swift */; };
 		7E7E1E1900000000000000AA /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0900000000000000AA /* SettingsViewController.swift */; };
 		7E7E1E1A00000000000000AA /* ControlViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0A00000000000000AA /* ControlViewController.swift */; };
 		7E7E1E1B00000000000000AA /* TelemetryKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7E1E0B00000000000000AA /* TelemetryKeys.swift */; };
@@ -180,7 +180,7 @@
 		7E7E1E0500000000000000AA /* TelemetryStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TelemetryStore.swift; path = src/Telemetry/TelemetryStore.swift; sourceTree = "<group>"; };
 		7E7E1E0600000000000000AA /* DeviceHealth.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = DeviceHealth.swift; path = src/DeviceHealth.swift; sourceTree = "<group>"; };
 		7E7E1E0700000000000000AA /* AboutViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AboutViewController.swift; path = src/AboutViewController.swift; sourceTree = "<group>"; };
-		7E7E1E0800000000000000AA /* LiveTelemetrySource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LiveTelemetrySource.swift; path = src/Telemetry/LiveTelemetrySource.swift; sourceTree = "<group>"; };
+		7E7E1E0800000000000000AA /* AppTelemetrySampler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AppTelemetrySampler.swift; path = src/Telemetry/AppTelemetrySampler.swift; sourceTree = "<group>"; };
 		7E7E1E0900000000000000AA /* SettingsViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = SettingsViewController.swift; path = src/SettingsViewController.swift; sourceTree = "<group>"; };
 		7E7E1E0A00000000000000AA /* ControlViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ControlViewController.swift; path = src/ControlViewController.swift; sourceTree = "<group>"; };
 		7E7E1E0B00000000000000AA /* TelemetryKeys.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TelemetryKeys.swift; path = src/Telemetry/TelemetryKeys.swift; sourceTree = "<group>"; };
@@ -330,7 +330,7 @@
 				7E7E1E0100000000000000AA /* TelemetryConfig.swift */,
 				7E7E1E0200000000000000AA /* TelemetryService.swift */,
 				7E7E1E0500000000000000AA /* TelemetryStore.swift */,
-				7E7E1E0800000000000000AA /* LiveTelemetrySource.swift */,
+				7E7E1E0800000000000000AA /* AppTelemetrySampler.swift */,
 				7E7E1E0B00000000000000AA /* TelemetryKeys.swift */,
 				7E7E1E0C00000000000000AA /* DeviceTelemetryDecoder.swift */,
 				7E7E1E0E00000000000000AA /* TelemetrySource.swift */,
@@ -792,7 +792,7 @@
 				7E7E1E1100000000000000AA /* TelemetryConfig.swift in Sources */,
 				7E7E1E1200000000000000AA /* TelemetryService.swift in Sources */,
 				7E7E1E1500000000000000AA /* TelemetryStore.swift in Sources */,
-				7E7E1E1800000000000000AA /* LiveTelemetrySource.swift in Sources */,
+				7E7E1E1800000000000000AA /* AppTelemetrySampler.swift in Sources */,
 				7E7E1E1900000000000000AA /* SettingsViewController.swift in Sources */,
 				7E7E1E1A00000000000000AA /* ControlViewController.swift in Sources */,
 				7E7E1E1D00000000000000AA /* ProvisioningLoader.swift in Sources */,

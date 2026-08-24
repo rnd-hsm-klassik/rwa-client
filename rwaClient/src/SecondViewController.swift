@@ -29,7 +29,9 @@ var gameStopInProgress = false
 var ubloxLon = Double("3.1415926536")
 var ubloxLat = Double("3.1415926536")
 // Freshness markers for telemetry source attribution (read at 1 Hz by
-// LiveTelemetrySource): when did the tracker last send GPS / heading data.
+// AppTelemetrySampler): when did the headset assembly last send GPS / heading data.
+// The CoreLocation counterparts (locationUpdatedAt, lastInternalLocation)
+// live in CoreLocationController.swift next to their writer.
 var ubloxUpdatedAt: Date?
 var trackerHeadingUpdatedAt: Date?
 var azimuth = 0
@@ -82,6 +84,9 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     var peripheral:CBPeripheral?
     var dataBuffer:NSMutableData!
     var scanAfterDisconnecting:Bool = true
+    /// Advertised BLE name of the assembly being connected (assembly_id in
+    /// telemetry); nil while disconnected.
+    var connectedAssemblyName: String?
     var motion:CMMotionManager = CMMotionManager();
     
     var showMovementData = false
@@ -324,6 +329,9 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
                 
                 // save a reference to the peripheral object so Core Bluetooth doesn't get rid of it
                 self.peripheral = peripheral
+                // What this assembly currently broadcasts (the cached GAP
+                // name may be stale); reported as assembly_id in telemetry.
+                connectedAssemblyName = advertisedName ?? peripheral.name
                 
                 // connect to the peripheral
                 logger.info("BT: Connecting to peripheral: \(peripheral)")
@@ -374,6 +382,8 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         rssiTimer?.invalidate()
         rssiTimer = nil
         DeviceHealth.shared.setBLEConnected(false)
+        DeviceHealth.shared.setAssembly(kind: nil, id: nil)
+        connectedAssemblyName = nil
         bleConnectButton.setTitle("BLE Connect", for: UIControlState())
         headTrackerConnected = false
         bleConnectButton.isEnabled = true
@@ -397,6 +407,15 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         
         if let services = peripheral.services {
             
+            // Assembly kind from GATT (PROJECT-PLAN.md §5.1): only the RTK
+            // headtracker has the telemetry service; RWAHT has just the
+            // tracker service. The BLE name says nothing about the kind, and
+            // data freshness (freshnessWindow) is a positioning concept that
+            // must not be used for it either.
+            let isRtk = services.contains { $0.uuid == CBUUID(string: Device.TelemetryService) }
+            DeviceHealth.shared.setAssembly(kind: isRtk ? .rtkHeadtracker : .headtracker,
+                                            id: connectedAssemblyName)
+
             for service in services {
                 logger.info("BT: Discovered service \(service)")
                 

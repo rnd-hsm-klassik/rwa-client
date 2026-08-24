@@ -132,7 +132,7 @@ xcrun simctl launch "iPhone 15" com.fhnw.rwa.player
 Note that BLE (rtk-rover connection) is not available in the simulator; the
 telemetry pipeline can still be exercised via the internal-GPS path — grant
 location permission and feed a simulated location (`xcrun simctl location`),
-and the live source emits `gnss_fix` events with `source: "ios_gps"`.
+and the sampler emits `gnss_fix` events with `source: "phone"`.
 
 ## Deploying
 
