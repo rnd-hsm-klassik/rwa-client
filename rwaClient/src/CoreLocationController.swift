@@ -67,7 +67,7 @@ class CoreLocationController:NSObject, CLLocationManagerDelegate{
             // internal GPS stands by; it takes over automatically when the
             // headset assembly goes quiet (fallback, see Settings tab).
             if(useRtkGps) {
-                if let at = ubloxUpdatedAt, Date().timeIntervalSince(at) < AppTelemetrySampler.freshnessWindow {
+                if let at = ubloxUpdatedAt, Date().timeIntervalSince(at) < PositioningPolicy.freshnessWindow {
                     return
                 }
             }

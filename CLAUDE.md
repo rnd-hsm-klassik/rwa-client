@@ -123,7 +123,7 @@ deliberately and in whole seams, not opportunistically file by file.
 ## Input paths (what drives the hero)
 
 Three position sources, in a strict priority order whose single definition is
-`AppTelemetrySampler.rtkTrackerActive()`:
+`PositioningPolicy.rtkTrackerActive()`:
 
 1. **OSC from RWA Creator** (`registered == true`) — the Creator's simulator drives
    `hero.coordinates` remotely and overrides everything else. The Player listens on port 8001 and
@@ -133,7 +133,7 @@ Three position sources, in a strict priority order whose single definition is
    `TRACKERSERVICETX` (713D0002) and the high-precision raw frame on `TRACKERRAWDATA` (713D0004,
    up to 10 Hz, lat/latHp/lon/lonHp).
 3. **Internal GPS** (CoreLocation) — the automatic fallback. `CoreLocationController` stands by
-   while tracker fixes are fresher than `AppTelemetrySampler.freshnessWindow` (8 s) and takes
+   while tracker fixes are fresher than `PositioningPolicy.freshnessWindow` (8 s) and takes
    over as soon as the tracker goes quiet.
 
 Heading: the headtracker's IMU (azimuth / elevation / linear acceleration on the same text

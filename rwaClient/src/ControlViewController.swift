@@ -275,7 +275,7 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
     /// registration — same priority as CoreLocationController.
     private func updateCoordinates() {
         let rtkFresh = ubloxUpdatedAt.map {
-            Date().timeIntervalSince($0) < AppTelemetrySampler.freshnessWindow } ?? false
+            Date().timeIntervalSince($0) < PositioningPolicy.freshnessWindow } ?? false
         let rtkActive = useRtkGps && !registered && rtkFresh
         // %.5f ≈ 1 m resolution; enough to watch movement without the line
         // turning into a number wall.

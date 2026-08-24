@@ -55,6 +55,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   captured at discovery), `tracker_connected` → `assembly_connected`,
   `tracker_rssi` → `assembly_rssi`. `app_event`s carry `source: phone`. Breaking
   only for consumers of the old field names and values; none exist yet.
+- **The RTK-vs-fallback policy moved out of the telemetry path**: new
+  `PositioningPolicy` (`src/PositioningPolicy.swift`) owns `freshnessWindow` and
+  `rtkTrackerActive()`. This is main-path runtime behaviour that the hero
+  fallback (`CoreLocationController`), the Control tab's "(RTK)" tag and the map
+  marker follow; `AppTelemetrySampler` now only observes it for attribution.
+  Previously the policy lived in the sampler (it had been introduced by the
+  telemetry work), so the positioning path depended on a diagnostics class.
 
 ### Fixed
 
