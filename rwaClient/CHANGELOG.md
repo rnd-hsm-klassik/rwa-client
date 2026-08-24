@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Docs: USB deployment and provisioning documented.** New `tools/README.md`
+  covers `deploy_games.sh` (game deployment, device discovery, iOS 16 vs 17+
+  paths, caveats) and the `-s` provisioning flow.
+
 - **Docs: telemetry contract v3 adopted** (`PROJECT-PLAN.md` 2026-08-23, identical
   copy in `rtk-rover` and `rwa-backend`). Glossary §1.1 fixes the vocabulary:
   *headset assembly* (RTK headtracker or plain headtracker), *board*, *phone*,
