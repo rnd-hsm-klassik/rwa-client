@@ -11,25 +11,37 @@
   next launch (ProvisioningLoader.swift), so later manual changes on the phone
   survive relaunches; push a changed entry to override them again.
 
-  All keys inside an entry are optional - omit what should stay untouched:
-    deviceId          telemetry device id shown in the backend
-    headtrackerId     BLE name of this phone's paired RTK headtracker
-    gpsSource         "rtk" (headtracker) or "internal" (phone GPS)
-    useHeadtracker    heading from the headtracker IMU (true) or CoreMotion (false)
+  Identity per the glossary (PROJECT-PLAN.md par. 1.1): the *unit* is
+  phone + headset assembly; its label (rwa-hs-N) is the telemetry device_id,
+  the phone's WiFi hotspot name, and - by convention - the assembly's BLE
+  name, so a unit normally needs only unitId.
+
+  All keys inside an entry are optional. Omit what should stay untouched:
+    unitId            unit label (rwa-hs-N): device_id in the backend
+                      = hotspot name = the assembly BLE name to connect to
+    assemblyId        override of the BLE name to connect to; set it ONLY
+                      when this phone runs with an assembly that is not its
+                      unit's own (a spare, an RWAHT, or an un-provisioned
+                      board advertising rtkrover-<chip-id>). Equal to
+                      unitId it is dropped as redundant.
+    gpsSource         "rtk" (RTK headtracker) or "internal" (phone GPS)
+    useHeadtracker    heading from the assembly IMU (true) or CoreMotion (false)
     inverseElevation  flip the elevation sign from the tracker
     calibrateOnStart  run north calibration automatically when a walk starts
     defaultGame       game to auto-load at launch: Documents-relative .rwa path
     creatorIP         IP of the machine running RWA Creator (OSC simulator)
+
+  Deprecated aliases, still applied (with a log notice): deviceId -> unitId,
+  headtrackerId -> assemblyId.
 -->
 
 <plist version="1.0">
 <dict>
-    <key>00008030-001E0F42B10702E</key>
+	<!-- The normal case: one label covers device_id, hotspot and BLE name. -->
+	<key>00008030-001E0F42B10702E</key>
 	<dict>
-		<key>deviceId</key>
-		<string>test device</string>
-		<key>headtrackerId</key>
-		<string>rwaht42</string>
+		<key>unitId</key>
+		<string>rwa-hs-1</string>
 		<key>gpsSource</key>
 		<string>rtk</string>
 		<key>useHeadtracker</key>
@@ -38,16 +50,18 @@
 		<string>rwatest.rwa</string>
 	</dict>
 
+	<!-- Unit running a stand-in assembly: telemetry stays rwa-hs-2, but the
+	     phone connects to an un-provisioned board's fallback BLE name. -->
 	<key>00008000-0000000001234567</key>
 	<dict>
-		<key>deviceId</key>
-		<string>test 2</string>
-		<key>headtrackerId</key>
+		<key>unitId</key>
+		<string>rwa-hs-2</string>
+		<key>assemblyId</key>
 		<string>rtkrover-ca0ca7</string>
 		<key>gpsSource</key>
-		<string>internal</string>
+		<string>rtk</string>
 		<key>useHeadtracker</key>
-		<false/>
+		<true/>
 	</dict>
 </dict>
 </plist>
