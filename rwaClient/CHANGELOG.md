@@ -83,6 +83,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of masquerading as the assembly. Diagnostics shows the connected
   assembly's advertised name and kind, and the resolved Unit ID.
 
+### Added
+
+- Telemetry, 3 new hearbeat fields: heap_min, loops_ntrip, loops_pos, new error code `gnss_pipe_stall`. Instrumentation for diagnosis of NTRIP connection issues in rtk-headtracker firmware.
+
 ### Fixed
 
 - **A headset reboot mid-session could make the backend discard real events.**
