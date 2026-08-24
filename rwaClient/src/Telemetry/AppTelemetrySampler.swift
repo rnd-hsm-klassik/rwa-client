@@ -188,7 +188,7 @@ final class AppTelemetrySampler {
             // has finished.
             let snapshot = DeviceHealth.shared.snapshot
             source = (snapshot.assemblyKind ?? .headtracker).telemetrySource
-            fields["assembly_id"] = snapshot.assemblyId ?? headtrackerID
+            fields["assembly_id"] = snapshot.assemblyId ?? assemblyTargetName()
         } else {
             source = .phone
         }

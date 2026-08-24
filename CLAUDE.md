@@ -244,7 +244,8 @@ the game logic, not in the renderer.
   `@testable import rwa_client` and needs the real libpd patcher pools).
 - Two gitignored files must exist before the project builds (`README.md` has the details):
   `rwaClient/.xcconfig` (`DEVELOPMENT_TEAM`) and `rwaClient/src/Telemetry/Telemetry.plist`
-  (copy `Telemetry.example.plist`; device id, backend URL, ingest token — never commit the token).
+  (copy `Telemetry.example.plist`; unit-label override, backend URL, ingest token — never
+  commit the token).
 - Xcode Cloud recreates both from workflow environment variables in
   `ci_scripts/ci_post_clone.sh`. Every submodule tree must clone over plain HTTPS with no
   credentials: Xcode Cloud resolves submodules recursively before any hook runs, so one dead
@@ -291,8 +292,9 @@ intentional and stable, don't "fix" it casually.
   the AppDelegate, then delete `SecondViewController` and its storyboard scene. Do it in one
   pass, together with whatever else needs the BLE layer touched.
 - Legacy quirk: `defaultsKeys` values are the UserDefaults *key strings*, and some are
-  misleading (the headtracker name is stored under the literal key `"rwaht01"`, the IP under
-  `"192.168.178.53"`, and the default-game key is `""`).
+  misleading (the IP is stored under the literal key `"192.168.178.53"`, the default-game key
+  is `""`). The identity keys are clean since contract v3: `unitId` / `assemblyId`, with a
+  one-time migration in `didFinishLaunching` from the old `"deviceId"` / `"rwaht01"` keys.
 
 ## Documenting development
 

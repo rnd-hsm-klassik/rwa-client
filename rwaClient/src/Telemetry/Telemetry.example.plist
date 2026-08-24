@@ -6,12 +6,12 @@
   Copy this file to Telemetry.plist (same directory) and fill in the real
   values. Telemetry.plist is gitignored — never commit the ingest token.
 
-  DeviceId is an optional dev/simulator override. Leave it out (or empty)
-  on real devices: the ID then comes from the Settings tab, falling back
-  to the headtracker name.
+  UnitId is an optional dev/simulator override of the unit label
+  (device_id, PROJECT-PLAN.md §1.1). Leave it out (or empty) on real
+  phones: the label then comes from Settings -> Unit ID.
 -->
 <dict>
-	<key>DeviceId</key>
+	<key>UnitId</key>
 	<string></string>
 	<key>BaseURL</key>
 	<string>https://TELEMETRY-BACKEND-HOST</string>

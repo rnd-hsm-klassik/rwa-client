@@ -323,7 +323,9 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
         // broadcasts right now, so match either.
         let advertisedName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
         logger.debug("BT: Discovered \(String(describing: peripheral.name)) (advertised: \(String(describing: advertisedName))) at \(RSSI)")
-        if(peripheral.name == headtrackerID || advertisedName == headtrackerID)
+        // Target: the assembly override when set, else the unit label (§1.1).
+        let target = assemblyTargetName()
+        if(!target.isEmpty && (peripheral.name == target || advertisedName == target))
         {
             if self.peripheral != peripheral {
                 
@@ -992,7 +994,7 @@ class SecondViewController: UIViewController, CBCentralManagerDelegate, CBPeriph
     {
         if(!headTrackerConnected) {
             connectHeadtracker()
-            logger.info("BT: Headtracker ID: \(headtrackerID)")
+            logger.info("BT: assembly target: \(assemblyTargetName())")
         }
         else
         {

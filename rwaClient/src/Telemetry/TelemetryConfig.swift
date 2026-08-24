@@ -3,16 +3,17 @@
 //  rwa client
 //
 //  Telemetry gateway configuration (PROJECT-PLAN.md §6).
-//  Kiosk devices: device_id and ingest token come from a bundled plist,
+//  Kiosk phones: backend URL and ingest token come from a bundled plist,
 //  not from user input or UserDefaults.
 //
 
 import Foundation
 
 struct TelemetryConfig {
-    /// Optional dev/simulator override; on real devices the ID comes from
-    /// the Settings tab (see TelemetryService.currentDeviceId).
-    let deviceId: String?
+    /// Optional dev/simulator override of the unit label (`device_id`); on
+    /// real phones it comes from Settings -> Unit ID
+    /// (TelemetryService.resolveDeviceId).
+    let unitIdOverride: String?
     let baseURL: URL
     let ingestToken: String
 
@@ -27,8 +28,11 @@ struct TelemetryConfig {
             return nil
         }
 
-        let deviceId = (plist["DeviceId"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        return TelemetryConfig(deviceId: deviceId,
+        // "UnitId" is the v3 key (§1.1); "DeviceId" accepted as the pre-v3
+        // spelling so existing local plists keep working.
+        let unitIdOverride = ((plist["UnitId"] as? String) ?? (plist["DeviceId"] as? String))
+            .flatMap { $0.isEmpty ? nil : $0 }
+        return TelemetryConfig(unitIdOverride: unitIdOverride,
                                baseURL: baseURL,
                                ingestToken: ingestToken)
     }

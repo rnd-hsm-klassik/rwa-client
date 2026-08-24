@@ -11,8 +11,8 @@
 //  used to duplicate them was replaced by the actions-only Control tab.
 //
 //  Sections:
-//    Identity      - device ID (telemetry), headtracker name
-//    Data sources  - GPS (internal / RTK headtracker), heading (internal / headtracker)
+//    Identity      - unit ID (device_id in telemetry), headset assembly override
+//    Data sources  - GPS (internal / RTK headtracker), heading (internal / assembly)
 //    Head tracking - inverse elevation, calibrate on start
 //    RWA Creator   - IP address, register/unregister, forward GPS to Creator
 //    Soundwalk     - default game (drill-in picker)
@@ -57,13 +57,13 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
 
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         if section == 0 {
-            if let override = TelemetryService.shared?.config.deviceId, !override.isEmpty {
-                return "Device ID is currently overridden by Telemetry.plist (\"\(override)\")."
+            if let override = TelemetryService.shared?.config.unitIdOverride, !override.isEmpty {
+                return "Unit ID is currently overridden by Telemetry.plist (\"\(override)\")."
             }
-            return "The Device ID identifies this device for analytics. The Headtracker name is needs to be set to the Bluetooth name of the Headtracker to connect to."
+            return "The Unit ID identifies this unit (phone + headset assembly) in telemetry; by convention it is also the assembly's Bluetooth name and the phone's hotspot name. Set Headset assembly only to connect to a different assembly (a spare, or a plain headtracker)."
         }
         if section == 1 {
-            return "With RTK selected, the app falls back to internal GPS while the tracker delivers no coordinates."
+            return "With RTK selected, the app falls back to internal GPS while the RTK headtracker delivers no coordinates."
         }
         if section == 3 {
             return "Toggle Register to listen for location data from RWA Creator. GPS forwarding sends this device's position to RWA Creator (while not registered)."
@@ -85,16 +85,16 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         switch (indexPath.section, indexPath.row) {
         case (0, 0):
-            return textFieldCell(label: "Device ID", value: deviceId,
-                                 placeholder: "e.g. hs-03", tag: .deviceId)
+            return textFieldCell(label: "Unit ID", value: deviceId,
+                                 placeholder: "e.g. rwa-hs-3", tag: .deviceId)
         case (0, 1):
-            return textFieldCell(label: "Headtracker", value: headtrackerID,
-                                 placeholder: "e.g. rwaht01", tag: .trackerName)
+            return textFieldCell(label: "Headset assembly", value: headtrackerID,
+                                 placeholder: "empty = Unit ID", tag: .trackerName)
         case (1, 0):
             return segmentedCell(label: "GPS", options: ["Internal", "RTK tracker"],
                                  selectedIndex: useRtkGps ? 1 : 0, tag: .gpsSource)
         case (1, 1):
-            return segmentedCell(label: "Heading", options: ["Internal", "Headtracker"],
+            return segmentedCell(label: "Heading", options: ["Internal", "Assembly"],
                                  selectedIndex: useHeadTracker ? 1 : 0, tag: .headingSource)
         case (2, 0):
             return switchCell(label: "Inverse elevation", isOn: inverseElevation, tag: .inverseElevation)
@@ -206,12 +206,17 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
         let text = (field.text ?? "").trimmingCharacters(in: .whitespaces)
         switch FieldTag(rawValue: field.tag) {
         case .some(.deviceId):
+            let targetChanged = headtrackerID.isEmpty && text != deviceId
             deviceId = text
-            defaults.set(text, forKey: defaultsKeys.deviceId)
+            defaults.set(text, forKey: defaultsKeys.unitId)
+            // Without an assembly override the unit label is the BLE target.
+            if targetChanged {
+                NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Connect Headtracker"), object: nil)
+            }
         case .some(.trackerName):
             if text != headtrackerID {
                 headtrackerID = text
-                defaults.set(text, forKey: defaultsKeys.headtrackerId)
+                defaults.set(text, forKey: defaultsKeys.assemblyId)
                 NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Connect Headtracker"), object: nil)
             }
         case .some(.creatorIP):

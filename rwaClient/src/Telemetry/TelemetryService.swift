@@ -137,18 +137,17 @@ class TelemetryService {
         recordAppOriginEvent(type: "app_event", fields: fields)
     }
 
-    /// Device identity, resolved at upload time so a Settings change takes
-    /// effect without reinstalling: Telemetry.plist override (dev) ->
-    /// Settings "Device ID" -> headtracker name (always provisioned,
-    /// since the app needs it to pair).
+    /// The unit label for the envelope (`device_id`, §1.1), resolved at
+    /// upload time so a Settings change takes effect without reinstalling:
+    /// Telemetry.plist override (dev) -> Settings "Unit ID" -> "unknown".
+    /// Deliberately no fallback to the assembly BLE name any more: a
+    /// missing unit label should be visible in the backend, not papered
+    /// over with the name of whatever assembly happened to be configured.
     static func resolveDeviceId(configOverride: String?) -> String {
         if let id = configOverride, !id.isEmpty {
             return id
         }
-        if !deviceId.isEmpty {
-            return deviceId
-        }
-        return headtrackerID.isEmpty ? "unknown" : headtrackerID
+        return deviceId.isEmpty ? "unknown" : deviceId
     }
 
     /// Wire events for one batch: each stored row's JSON with `seq` set to
@@ -212,7 +211,7 @@ class TelemetryService {
         // events from a previous run upload under their original session.
         let envelope: [String: Any] = [
             "schema": 1,
-            "device_id": TelemetryService.resolveDeviceId(configOverride: config.deviceId),
+            "device_id": TelemetryService.resolveDeviceId(configOverride: config.unitIdOverride),
             "session_id": batch.sessionId,
             "fw_version": batch.fwVersion,
             "app_version": batch.appVersion,

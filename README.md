@@ -54,8 +54,8 @@ Two untracked, gitignored files must be created before the project builds:
    ```
 
 2. **`rwaClient/src/Telemetry/Telemetry.plist`** — telemetry gateway config.
-   Copy the template and fill in the real values (device id, backend URL,
-   ingest token — never commit the token):
+   Copy the template and fill in the real values (optional unit-label
+   override, backend URL, ingest token — never commit the token):
 
    ```sh
    cp rwaClient/src/Telemetry/Telemetry.example.plist \

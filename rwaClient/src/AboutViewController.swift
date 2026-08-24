@@ -3,9 +3,8 @@
 //  rwa client
 //
 //  Diagnostics (About) tab. A read-only grouped table that surfaces the
-//  live DeviceHealth snapshot: connectivity, headset heartbeat + battery,
-//  head-tracker IMU, GNSS fix quality, telemetry backlog (to be revised), and app/git
-//  versions.
+//  live DeviceHealth snapshot: assembly connectivity, firmware heartbeat +
+//  battery, IMU, GNSS fix quality, and identity/versions.
 //
 
 import UIKit
@@ -53,18 +52,29 @@ class AboutViewController: UITableViewController {
         // Connectivity
         var conn: [Row] = []
         if useHeadTracker {
-            let state = h.bleConnected ? "Connected" : "Disconnected"
-            conn.append(Row(label: "Head tracker (BLE)",
+            let state: String
+            if h.bleConnected {
+                // The advertised name + kind of what is actually connected
+                // (GATT-decided, DeviceHealth.setAssembly), so a mismatch
+                // with the unit label is visible here too.
+                let kind = h.assemblyKind.map {
+                    $0 == .rtkHeadtracker ? "RTK headtracker" : "headtracker"
+                }
+                state = (h.assemblyId ?? "Connected") + (kind.map { " · \($0)" } ?? "")
+            } else {
+                state = "Disconnected"
+            }
+            conn.append(Row(label: "Headset assembly (BLE)",
                             value: state + Self.since(h.bleStateChangedAt)))
             conn.append(Row(label: "Signal (RSSI)", value: Self.dbm(h.rssi)))
         } else {
-            conn.append(Row(label: "Head tracker", value: "Device orientation"))
+            conn.append(Row(label: "Heading", value: "Phone (device orientation)"))
         }
         conn.append(Row(label: "Last heartbeat", value: Self.age(h.lastHeartbeatAt)))
         out.append(Section(title: "Connectivity", rows: conn))
 
-        // Device health
-        out.append(Section(title: "Head-tracker device", rows: [
+        // Assembly health (from the firmware heartbeat)
+        out.append(Section(title: "Headset assembly", rows: [
             Row(label: "Battery", value: Self.battery(mv: h.batteryMv)),
             Row(label: "Firmware", value: h.fwVersion ?? "—"),
             Row(label: "Uptime", value: Self.uptime(h.uptimeMs))
@@ -99,11 +109,12 @@ class AboutViewController: UITableViewController {
             Row(label: "Last fix", value: Self.age(h.lastFixAt))
         ]))
 
-        // Versions
-        out.append(Section(title: "Versions", rows: [
+        // Identity & versions
+        out.append(Section(title: "Identity & versions", rows: [
+            Row(label: "Unit ID", value: TelemetryService.resolveDeviceId(
+                configOverride: TelemetryService.shared?.config.unitIdOverride)),
             Row(label: "App", value: DeviceHealth.appVersion),
-            Row(label: "Git commit", value: DeviceHealth.gitCommitHash),
-            // Row(label: "Device ID", value: TelemetryService.fshared.config.deviceId ?? "—") // Revise telemetry implementation into app
+            Row(label: "Git commit", value: DeviceHealth.gitCommitHash)
         ]))
 
         sections = out
@@ -205,8 +216,4 @@ class AboutViewController: UITableViewController {
         return String(format: "%.6f, %.6f", lat, lon)
     }
 
-    private static func shortId(_ id: String?) -> String {
-        guard let id = id else { return "—" }
-        return String(id.prefix(8))
-    }
 }

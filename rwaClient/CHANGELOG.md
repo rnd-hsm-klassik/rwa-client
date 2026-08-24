@@ -63,6 +63,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Previously the policy lived in the sampler (it had been introduced by the
   telemetry work), so the positioning path depended on a diagnostics class.
 
+- **Identity settings follow the §1.1 glossary: Unit ID + optional assembly
+  override.** Settings -> Identity is now "Unit ID" (the unit label `rwa-hs-N`,
+  = `device_id`) and "Headset assembly" (BLE-name override; empty = connect to
+  the assembly advertising the unit label, the BLE target is
+  `assemblyTargetName()`). UserDefaults keys `unitId` / `assemblyId` with a
+  one-time migration from the legacy `deviceId` / `"rwaht01"` keys (an assembly
+  value equal to the unit label migrates to "derived"); the magic BLE-name
+  default `"rwaht00"` is gone. `player-settings.plist` provisioning accepts
+  `unitId` / `assemblyId`, keeps `deviceId` / `headtrackerId` as deprecated
+  aliases, and drops a redundant assembly override equal to the unit label.
+  `Telemetry.plist` key `UnitId` (old `DeviceId` still read); `ci_post_clone.sh`
+  writes the new key (env var name unchanged). `resolveDeviceId` no longer falls
+  back to the assembly BLE name. A missing unit label uploads as `unknown`
+  instead of masquerading as the assembly. Diagnostics shows the connected
+  assembly's advertised name and kind, and the resolved Unit ID.
+
 ### Fixed
 
 - **A headset reboot mid-session could make the backend discard real events.**

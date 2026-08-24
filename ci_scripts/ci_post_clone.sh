@@ -15,7 +15,9 @@
 # Required environment variables:
 #   DEVELOPMENT_TEAM         Apple Developer Team ID (plain)
 #   TELEMETRY_BASE_URL       backend base URL, no trailing slash (plain)
-#   TELEMETRY_DEVICE_ID      (optional) unit label override, e.g. rwa-hs-1 (plain)
+#   TELEMETRY_DEVICE_ID      (optional) unit label override (plist key UnitId),
+#                            e.g. rwa-hs-1 (plain); env var name kept for the
+#                            existing Xcode Cloud workflow config
 #   TELEMETRY_INGEST_TOKEN   bearer token for /v1/batch (SECRET)
 
 set -eu
@@ -76,14 +78,14 @@ cp "$TEMPLATE" "$PLIST"
 
 # plutil takes each value as its own argument, so tokens containing spaces or
 # shell metacharacters survive intact (PlistBuddy -c would re-split them).
-plutil -replace DeviceId               -string "$DEVICE_ID"              "$PLIST"
+plutil -replace UnitId                 -string "$DEVICE_ID"              "$PLIST"
 plutil -replace BaseURL                -string "$TELEMETRY_BASE_URL"     "$PLIST"
 plutil -replace IngestToken            -string "$TELEMETRY_INGEST_TOKEN" "$PLIST"
 
 # Verify what actually landed. TelemetryConfig.loadFromBundle() returns nil on
 # any missing key and never validates the token, so catch it here instead.
 plutil -lint "$PLIST" >/dev/null || fail "generated $PLIST is not a valid plist"
-for key in DeviceId BaseURL IngestToken; do
+for key in UnitId BaseURL IngestToken; do
     plutil -extract "$key" raw -o - "$PLIST" >/dev/null 2>&1 || \
         fail "generated plist is missing key '$key'"
 done
@@ -91,6 +93,6 @@ token_len=$(plutil -extract IngestToken raw -o - "$PLIST" | tr -d '\n' | wc -c |
 [ "$token_len" -gt 0 ] || fail "generated plist has an empty IngestToken"
 
 log "wrote $PLIST"
-log "  DeviceId=$DEVICE_ID BaseURL=$TELEMETRY_BASE_URL"
+log "  UnitId=$DEVICE_ID BaseURL=$TELEMETRY_BASE_URL"
 log "  IngestToken=<$token_len chars>"
 log "done"

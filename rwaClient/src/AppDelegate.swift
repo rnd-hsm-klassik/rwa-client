@@ -13,10 +13,23 @@ let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "RWA Player", cat
 
 var coreLocationController:CoreLocationController?
 var registered = false;
+// Optional assembly override (Settings -> "Headset assembly", §1.1): BLE name
+// to connect to when the phone runs with an assembly that is not its unit's
+// own; empty = connect to the assembly advertising the unit label.
+// (Swift name predates the glossary)
 var headtrackerID = ""
 var rwaCreatorIP = ""
-// Telemetry device identity (Settings tab); empty = fall back to headtrackerID
+// The unit label (Settings -> "Unit ID", §1.1): `device_id` in telemetry; by
+// convention also the assembly's BLE name and the phone's hotspot SSID.
+// (Swift name predates the glossary)
 var deviceId = ""
+
+/// BLE name the central connects to: the assembly override when set, the
+/// unit label otherwise (§1.1). Empty when neither is configured. Then
+/// scanning matches nothing until Settings/provisioning fill it in.
+func assemblyTargetName() -> String {
+    return headtrackerID.isEmpty ? deviceId : headtrackerID
+}
 // Position from the RTK headtracker instead of internal GPS (Settings tab)
 var useRtkGps = false
 var inverseElevation = false;
@@ -26,7 +39,13 @@ var oscClient = F53OSCClient.init()
 var oscServer = F53OSCServer.init()
 
 struct defaultsKeys {
-    static let headtrackerId = "rwaht01"
+    static let unitId = "unitId"
+    static let assemblyId = "assemblyId"
+    // Legacy identity keys, kept only for the one-time migration in
+    // didFinishLaunching: the unit label was stored under "deviceId", the
+    // assembly BLE name under the literal key "rwaht01" (historical quirk).
+    static let legacyDeviceId = "deviceId"
+    static let legacyHeadtrackerId = "rwaht01"
     static let rwaCreatorIP = "192.168.178.53"
     static let inverseElevation = "inverseElevation";
     static let useHeadtracker = "useHeadtracker";
@@ -38,7 +57,6 @@ struct defaultsKeys {
     static let legacySharedHeadingKey = "true"
     static let defaultGame = ""
     static let calibrateOnStart = "false"
-    static let deviceId = "deviceId"
     static let gpsSource = "gpsSource"   // "internal" | "rtk"
 }
 
@@ -87,6 +105,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             defaults.removeObject(forKey: defaultsKeys.legacySharedHeadingKey)
         }
 
+        // One-time identity migration (contract v3, §1.1): the unit label
+        // moves from "deviceId" to "unitId"; the assembly BLE name moves
+        // from the literal key "rwaht01" to "assemblyId" and becomes an
+        // override: kept only when it differs from the unit label
+        // (identical values were the old convention's redundancy).
+        if defaults.string(forKey: defaultsKeys.unitId) == nil {
+            let legacyUnit = defaults.string(forKey: defaultsKeys.legacyDeviceId) ?? ""
+            let legacyAssembly = defaults.string(forKey: defaultsKeys.legacyHeadtrackerId) ?? ""
+            let unit = legacyUnit.isEmpty ? legacyAssembly : legacyUnit
+            if !unit.isEmpty {
+                defaults.set(unit, forKey: defaultsKeys.unitId)
+                if !legacyAssembly.isEmpty && legacyAssembly != unit {
+                    defaults.set(legacyAssembly, forKey: defaultsKeys.assemblyId)
+                }
+                defaults.removeObject(forKey: defaultsKeys.legacyDeviceId)
+                defaults.removeObject(forKey: defaultsKeys.legacyHeadtrackerId)
+                logger.info("identity migration: unitId=\(unit) assemblyId=\(defaults.string(forKey: defaultsKeys.assemblyId) ?? "(derived)")")
+            }
+        }
+
         // Operator settings pushed over USB (tools/deploy_games.sh -s) win over
         // whatever is stored, so this must run before the reads below.
         ProvisioningLoader.applyIfNeeded(defaults: defaults)
@@ -105,12 +143,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             rwaCreatorIP = "192.168.178.53"
         }
         
-        if let headtracker = defaults.string(forKey: defaultsKeys.headtrackerId) {
-            headtrackerID = headtracker
-        }
-        else {
-            headtrackerID = "rwaht00"
-        }
+        // Empty = derive the BLE target from the unit label
+        // (assemblyTargetName). The old magic default "rwaht00" is gone.
+        headtrackerID = defaults.string(forKey: defaultsKeys.assemblyId) ?? ""
         
         if let eleInv = defaults.string(forKey: defaultsKeys.inverseElevation) {
             if eleInv == "true" {
@@ -150,7 +185,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         configureAudio(audioController!)
 
-        deviceId = defaults.string(forKey: defaultsKeys.deviceId) ?? ""
+        deviceId = defaults.string(forKey: defaultsKeys.unitId) ?? ""
         useRtkGps = defaults.string(forKey: defaultsKeys.gpsSource) == "rtk"
 
         hideCurrentSceneTab()
