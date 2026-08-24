@@ -10,10 +10,13 @@
 # com.fhnw.rwa.player, where GameManager picks it up on the next Games-tab scan.
 #
 # Usage:
-#   ./deploy_games.sh [-an] [-s <settings-dir>] <games-folder> [device ...]
+#   ./deploy_games.sh [-an] [-s <settings-plist>] <games-folder> [device ...]
+#   ./deploy_games.sh [-an] -s <settings-plist> [device ...]
 #
 #   <games-folder>  either a single game folder, or a folder whose immediate
-#                   subdirectories are game folders (all are deployed)
+#                   subdirectories are game folders (all are deployed).
+#                   Omit it (second form) for a settings-only run: no game is
+#                   copied, only each phone's provisioning entry is pushed.
 #   [device ...]    device names or UDIDs; default: every paired USB-connected
 #                   device (iOS 17+ via devicectl, iOS 16 via pymobiledevice3)
 #   -a              also target Wi-Fi-connected (network) devices (iOS 17+
@@ -62,7 +65,7 @@ if [ -n "$PMD3_BIN" ]; then
     fi
 fi
 
-usage() { sed -n '2,34p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,37p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 include_network=false
 dry_run=false
@@ -76,11 +79,23 @@ while getopts "ans:h" opt; do
     esac
 done
 shift $((OPTIND - 1))
-[ $# -ge 1 ] || usage
 
-src=$1
-shift
-[ -d "$src" ] || { echo "error: '$src' is not a directory" >&2; exit 1; }
+# The games folder is optional when -s is given (settings-only run): with no
+# games folder every positional argument is a device. Tell the two apart by
+# whether the first argument is a directory, and refuse anything that looks
+# like a mistyped path so a typo never silently becomes a device name.
+src=""
+if [ -n "$settings_plist" ] && { [ $# -eq 0 ] || [ ! -d "$1" ]; }; then
+    if [ $# -ge 1 ] && case $1 in */*|.*|~*) true ;; *) false ;; esac; then
+        echo "error: '$1' is not a directory" >&2
+        exit 1
+    fi
+else
+    [ $# -ge 1 ] || usage
+    src=$1
+    shift
+    [ -d "$src" ] || { echo "error: '$src' is not a directory" >&2; exit 1; }
+fi
 if [ -n "$settings_plist" ]; then
     plutil -lint "$settings_plist" >/dev/null || { echo "error: settings file '$settings_plist' is not a valid plist" >&2; exit 1; }
 fi
@@ -90,25 +105,27 @@ trap 'rm -rf "$workdir"' EXIT
 
 # --- collect game folders -----------------------------------------------------
 
-games=()   # absolute paths of game folders to deploy
-shopt -s nullglob
-rwa_here=("$src"/*.rwa)
-if [ ${#rwa_here[@]} -gt 0 ]; then
-    games=("$src")
-else
-    for d in "$src"/*/; do
-        d=${d%/}
-        inner=("$d"/*.rwa)
-        if [ ${#inner[@]} -gt 0 ]; then
-            games+=("$d")
-        else
-            echo "warning: skipping '$(basename "$d")' — no .rwa file in it" >&2
-        fi
-    done
-fi
-shopt -u nullglob
+games=()   # absolute paths of game folders to deploy (empty on a settings-only run)
+if [ -n "$src" ]; then
+    shopt -s nullglob
+    rwa_here=("$src"/*.rwa)
+    if [ ${#rwa_here[@]} -gt 0 ]; then
+        games=("$src")
+    else
+        for d in "$src"/*/; do
+            d=${d%/}
+            inner=("$d"/*.rwa)
+            if [ ${#inner[@]} -gt 0 ]; then
+                games+=("$d")
+            else
+                echo "warning: skipping '$(basename "$d")': no .rwa file in it" >&2
+            fi
+        done
+    fi
+    shopt -u nullglob
 
-[ ${#games[@]} -gt 0 ] || { echo "error: no game folders (with a .rwa) found under '$src'" >&2; exit 1; }
+    [ ${#games[@]} -gt 0 ] || { echo "error: no game folders (with a .rwa) found under '$src'" >&2; exit 1; }
+fi
 
 # --- collect target devices ---------------------------------------------------
 # iOS 17+ phones come from devicectl (CoreDevice); iOS 16 phones are invisible
@@ -189,7 +206,7 @@ done
 # devicectl's skip-unmodified behaviour intact.
 
 mkdir -p "$workdir/stage"
-for game in "${games[@]}"; do
+for game in ${games[@]+"${games[@]}"}; do
     stage="$workdir/stage/$(basename "$game")"
     cp -Rc "$game" "$stage"
     rm -rf "$stage/tilecache" "$stage/tmp" "$stage/undo" \
@@ -199,11 +216,16 @@ done
 
 # --- deploy -------------------------------------------------------------------
 
-echo "Games:   ${games[*]/#*\//}"
+if [ ${#games[@]} -gt 0 ]; then
+    echo "Games:   ${games[*]/#*\//}"
+else
+    echo "Games:   none (settings-only run)"
+fi
 echo "Devices: $(printf '%s' "${devices[*]}" | cut -f2 | tr '\n' ' ')"
 echo
 
 failures=0
+settings_pushed=0
 
 # push <tool> <udid> <name> <local-path> <container-relative-destination>
 push() {
@@ -237,7 +259,7 @@ for entry in "${devices[@]}"; do
     name=$(printf '%s' "$entry" | cut -f2)
     tool=${entry##*	}
 
-    for game in "${games[@]}"; do
+    for game in ${games[@]+"${games[@]}"}; do
         gname=$(basename "$game")
         if $dry_run; then
             echo "[dry run] $gname -> $name ($udid, $tool) Documents/$gname"
@@ -253,12 +275,22 @@ for entry in "${devices[@]}"; do
             echo "warning: no settings entry for '$name' ($udid) in $settings_plist, skipping settings push" >&2
         elif $dry_run; then
             echo "[dry run] settings entry $udid -> $name Documents/player-settings.plist"
+            settings_pushed=$((settings_pushed + 1))
         else
             echo "==> settings -> $name"
             push "$tool" "$udid" "$name" "$entry" "Documents/player-settings.plist"
+            settings_pushed=$((settings_pushed + 1))
         fi
     fi
 done
+
+# A settings-only run that matched no phone did nothing at all.
+if [ ${#games[@]} -eq 0 ] && [ $settings_pushed -eq 0 ]; then
+    echo
+    echo "error: no connected phone has an entry in $settings_plist, nothing was pushed." >&2
+    echo "note: entries are keyed by hardware UDID (pymobiledevice3 usbmux list)." >&2
+    exit 1
+fi
 
 $dry_run && exit 0
 echo
@@ -266,4 +298,8 @@ if [ $failures -gt 0 ]; then
     echo "$failures deployment(s) failed." >&2
     exit 1
 fi
-echo "Done. Relaunch RWA Player on each phone so it rescans Documents and applies pushed settings."
+if [ ${#games[@]} -gt 0 ]; then
+    echo "Done. Relaunch RWA Player on each phone so it rescans Documents and applies pushed settings."
+else
+    echo "Done. Relaunch RWA Player on each phone so it applies the pushed settings."
+fi

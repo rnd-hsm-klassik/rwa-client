@@ -39,7 +39,8 @@ on the next Games-tab scan (relaunch the app after deploying).
 
 - `<games-folder>`: either a single game folder, or a folder whose immediate
   subdirectories are game folders (all are deployed; subdirectories without a
-  `.rwa` are skipped with a warning).
+  `.rwa` are skipped with a warning). It may be omitted for a settings-only
+  run, see [Provisioning without deploying games](#provisioning-without-deploying-games).
 - `[device ...]`: device names or UDIDs. Default: every paired USB-connected
   phone.
 - `-a`: also target Wi-Fi-connected phones (iOS 17+ only; the iOS 16 path is
@@ -116,6 +117,26 @@ written as plist `<true/>`/`<false/>` or strings.
 See [`provisioning.example.plist`](./provisioning.example.plist) for a complete
 annotated example, including the stand-in-assembly case.
 
+### Provisioning without deploying games
+
+Games and settings are pushed independently, so re-provisioning a batch of
+phones does not mean re-pushing their games. Leave the games folder out:
+
+```sh
+./deploy_games.sh -s settings.plist [device ...]
+```
+
+Nothing is copied but each phone's `Documents/player-settings.plist`; the games
+already on the phones are untouched. Everything else works as above: `-n` dry
+runs, `-a`, and an explicit device list.
+
+Since there is no games folder to name, every positional argument is a device
+name or UDID. An argument that looks like a path (contains a `/`, or starts
+with `.` or `~`) but is not a directory is rejected, so a mistyped games folder
+cannot silently become a device name. And because a settings-only run that
+matches no phone does nothing at all, that case exits non-zero instead of
+reporting success.
+
 ### Finding a phone's UDID
 
 The plist is keyed by the *hardware* UDID (`00008030-...`), not the CoreDevice identifier:
@@ -140,3 +161,5 @@ to which phone without copying anything.
 4. Run it without `-n`.
 5. Relaunch RWA Player on each phone: it rescans Documents for games and
    applies the pushed settings.
+6. Later settings changes need no game deploy: edit the plist and run
+   `./deploy_games.sh -s settings.plist`, then relaunch the app on each phone.

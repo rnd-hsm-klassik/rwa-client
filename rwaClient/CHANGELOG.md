@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Provisioning without deploying games.** `tools/deploy_games.sh` now takes
+  the games folder as an optional argument when `-s <settings-plist>` is given.
+  With no games folder every positional argument is a device; an argument that
+  looks like a path but is not a directory is rejected rather than taken as a
+  device name, and a settings-only run that matches no connected phone exits
+  non-zero instead of reporting success.
+
 - **Docs: USB deployment and provisioning documented.** New `tools/README.md`
   covers `deploy_games.sh` (game deployment, device discovery, iOS 16 vs 17+
   paths, caveats) and the `-s` provisioning flow.

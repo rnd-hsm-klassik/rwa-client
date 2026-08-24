@@ -142,7 +142,9 @@ and the sampler emits `gnss_fix` events with `source: "phone"`.
 Documents directory on every connected phone, and with `-s <plist>` also
 provisions each phone's operator settings (unit identity, GPS source, default
 game, ...) from a single per-phone plist, applied at next launch by
-`ProvisioningLoader`. Full documentation, plist key reference and caveats:
+`ProvisioningLoader`. Omit the games folder (`./deploy_games.sh -s
+settings.plist`) to re-provision phones without touching the games on them.
+Full documentation, plist key reference and caveats:
 [`tools/README.md`](tools/README.md).
 
 ### Signing requirements
