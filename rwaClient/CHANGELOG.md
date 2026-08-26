@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `RwaScene.getState` returned a new empty `RwaState` when the requested
+  name was not found in the scene, so a hint or next state that does not
+  exist in the current scene silently produced a bogus state. It now returns
+  `nil`; the two call sites in `RwaGameLoop` (hint state on unmet required
+  states, automatic next state) unwrap it and log a warning on a miss.
+  Mirrors the same-day Creator fix to `RwaScene::getState()` (returned the
+  last state on a miss there).
+
 ## [1.3.15] - 2026-08-26
 
 ### Fixed

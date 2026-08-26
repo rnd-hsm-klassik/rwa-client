@@ -987,7 +987,12 @@ class RwaGameLoop:NSObject, PdListener
                             {
                                 enterConditionsFulfilled = false
                                 if(state.hintState != "") {
-                                    hint = (hero.currentScene?.getState(state.hintState))!
+                                    if let hintState = hero.currentScene?.getState(state.hintState) {
+                                        hint = hintState
+                                    }
+                                    else {
+                                        self.logger.warning("Hint state '\(state.hintState)' not found in current scene")
+                                    }
                                     state.blockUntilRadiusHasBeenLeft = true
                                 }
                                 
@@ -1133,10 +1138,14 @@ class RwaGameLoop:NSObject, PdListener
               
             else if(state.nextState != "")
             {
-                let nextState:RwaState = (hero.currentScene?.getState(state.nextState))!
-                unblockAssets(state: nextState)
-                hero.currentState = nextState
-                hero.timeInCurrentState = 0
+                if let nextState = hero.currentScene?.getState(state.nextState) {
+                    unblockAssets(state: nextState)
+                    hero.currentState = nextState
+                    hero.timeInCurrentState = 0
+                }
+                else {
+                    self.logger.warning("Next state '\(state.nextState)' not found in current scene")
+                }
             }
             else
             {

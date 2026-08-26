@@ -59,7 +59,7 @@ class RwaScene:RwaArea {
         
     }
     
-    func getState(_ name:String) ->RwaState
+    func getState(_ name:String) ->RwaState?
     {
         for state in states
         {
@@ -68,7 +68,7 @@ class RwaScene:RwaArea {
                 return state
             }
         }
-        return RwaState()
+        return nil
     }
 
     func resetAssets()
