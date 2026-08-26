@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **BLE auto-reconnect.** A dropped headtracker-assembly link now reconnects on
+  its own, including while the app is backgrounded or the phone is locked;
+  previously the operator had to unlock the phone and revisit the Control tab.
+  Mechanism: one long-lived `CBCentralManager` (no longer recreated on every
+  connect request), the peripheral is retained across a drop, and any
+  unintentional disconnect immediately re-issues `connect()`. A pending connect
+  never times out and completes when the assembly is back in range or powered
+  on. Scanning is the fallback for first contact / retarget only and is now
+  filtered on the transfer service UUID so it also works in background
+  (unfiltered scans deliver nothing there; `allowDuplicates` dropped).
+  `didFailToConnect` retries up to 3 times then falls back to scanning (it used
+  to strand the connecting state), and Bluetooth power-off now clears the stale
+  connected state (flags, DeviceHealth, RSSI) it used to leave behind.
+  Operator/settings-driven teardowns are distinguished from radio drops via an
+  `intentionalDisconnect` flag; retargeting the assembly in Settings mid-
+  session disconnects cleanly and scans for the new name.
+
+- **GPS source `rtk` with internal heading now connects BLE at all.** The BLE
+  lifecycle is gated on "any BLE source active" (`bleAssemblyNeeded()`: heading
+  = headtracker OR position = rtk) instead of the heading source alone, and
+  changing the GPS source in Settings now (re)asserts the connection like the
+  heading-source control already did. CoreMotion heading and BLE RTK positioning
+  run simultaneously in that mode; heading/step frames from the headset assembly
+  stay ignored while internal heading is selected (as before).
+
 ### Changed
 
 - **`HeadtrackerManager` extracted from `SecondViewController`** (first slice of
@@ -18,7 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   notifications. `SecondViewController` keeps CoreMotion (heading axis), the
   game-loop timer and the legacy hidden-tab UI. Step detection, shared by the
   tracker's acceleration frames and the phone's accelerometer, moved to
-  `StepDetector` (same file). The dead state-restoration
+  `StepDetector` (same file). `connectHeadtracker` is now idempotent: a healthy
+  connection survives unrelated settings changes. The dead state-restoration
   follow-up block (never reachable, the central was built without a restore
   identifier) was removed; proper CoreBluetooth state restoration remains a
   follow-up.

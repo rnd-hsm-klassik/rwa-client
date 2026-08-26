@@ -69,12 +69,28 @@ class StepDetector {
     }
 }
 
+/// True while any BLE source is active: the headtracker as heading source
+/// and/or the RTK tracker as position source. As long as this holds, the
+/// central keeps trying to connect/reconnect to the assembly.
+func bleAssemblyNeeded() -> Bool {
+    return useHeadTracker || useRtkGps
+}
+
 class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
 
     var centralManager:CBCentralManager!
     var peripheral:CBPeripheral?
     var dataBuffer:NSMutableData = NSMutableData()
-    var scanAfterDisconnecting:Bool = true
+    /// Set on operator/settings-driven teardowns (disconnect(), retarget) so
+    /// didDisconnectPeripheral can tell them apart from radio drops, which
+    /// trigger an automatic reconnect. Consumed (reset) in didDisconnect.
+    var intentionalDisconnect = false
+    /// Consecutive didFailToConnect count; after 3 the retained peripheral is
+    /// dropped and scanning takes over.
+    var connectRetryCount = 0
+    /// assemblyTargetName() captured when the connect was issued; a mismatch
+    /// later means the operator retargeted in Settings mid-session.
+    var targetNameAtConnect: String?
     /// Advertised BLE name of the assembly being connected (assembly_id in
     /// telemetry); nil while disconnected.
     var connectedAssemblyName: String?
@@ -88,16 +104,50 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         NotificationCenter.default.addObserver(self, selector: #selector(self.connectHeadtracker), name: NSNotification.Name(rawValue: "Game Loaded"), object: nil)
     }
 
-    @objc func connectHeadtracker() {
-        if(useHeadTracker) {
-            headTrackerConnected = false
+    /// The central is long-lived: created once, reused for every (re)connect.
+    /// Recreating it per request (the pre-extraction behavior) dropped the
+    /// retained peripheral and any pending connect with it.
+    func ensureCentralManager() {
+        if centralManager == nil {
             centralManager = CBCentralManager(delegate: self, queue: nil)
+        }
+    }
+
+    /// Idempotent: asserts the desired state instead of tearing down and
+    /// rebuilding. A healthy connection survives unrelated settings changes;
+    /// only a retarget or "no BLE source active" disconnects.
+    @objc func connectHeadtracker() {
+        if(bleAssemblyNeeded()) {
+            ensureCentralManager()
+            if let p = peripheral {
+                if targetNameAtConnect == assemblyTargetName() && (p.state == .connected || p.state == .connecting) {
+                    return
+                }
+                // Retargeted in Settings (or the reference is stale): drop
+                // it and find the current target by scanning.
+                if p.state == .connected {
+                    // didDisconnect will fire and, with peripheral already
+                    // nil, fall through to startScanning().
+                    intentionalDisconnect = false
+                    peripheral = nil
+                    centralManager.cancelPeripheralConnection(p)
+                    return
+                }
+                // A pending connect is cancelled without any delegate
+                // callback, so fall through to the scan below.
+                peripheral = nil
+                centralManager.cancelPeripheralConnection(p)
+            }
+            if centralManager.state == .poweredOn {
+                startScanning()
+            }
+            // else: centralManagerDidUpdateState starts scanning on poweredOn.
         }
         else {
             headTrackerConnecting = false
             disconnect()
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
         }
-        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
     }
 
     func stopScanning() {
@@ -107,17 +157,24 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
     }
 
     func startScanning() {
+        if centralManager == nil || centralManager.state != .poweredOn {
+            return
+        }
         if centralManager.isScanning {
             logger.info("BT: Central Manager is already scanning.")
             return;
         }
 
-        if(!useHeadTracker) {
-            logger.info("BT: App is set to use device orientation.")
+        if(!bleAssemblyNeeded()) {
+            logger.info("BT: No BLE source active (heading and position are internal).")
             return;
         }
         else {
-            centralManager.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey:true])
+            // Filtered on the transfer service (both assembly kinds expose it)
+            // so discovery also works while the app is backgrounded or the
+            // phone is locked (iOS silently delivers nothing there for an
+            // unfiltered scan).
+            centralManager.scanForPeripherals(withServices: [CBUUID(string: Device.TransferService)], options: nil)
             logger.info("BT: Scanning Started.")
             headTrackerConnecting = true
             NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
@@ -133,8 +190,16 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         if peripheral.state != .connected {
             logger.warning("BT: Peripheral exists but is not connected.")
             self.peripheral = nil
+            // Cancels a pending connect; no delegate callback fires for a
+            // connection that was never established.
+            centralManager.cancelPeripheralConnection(peripheral)
             return
         }
+
+        // From here on a real teardown happens. didDisconnect shouldn't
+        // auto-reconnect. The flag survives the setNotifyValue(false) ->
+        // didUpdateNotificationState -> cancelPeripheralConnection hop.
+        intentionalDisconnect = true
 
         guard let services = peripheral.services else {
             centralManager.cancelPeripheralConnection(peripheral)
@@ -177,8 +242,19 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         logger.info("BT: Central Manager State Updated: \(String(describing: central.state))")
 
         if central.state != .poweredOn {
+            // Bluetooth off invalidates the peripherals without a reliable
+            // didDisconnect, so the link state must be cleared here or it
+            // goes stale (connected flag, DeviceHealth, RSSI).
             self.peripheral = nil
-            headTrackerConnecting = false
+            rssiTimer?.invalidate()
+            rssiTimer = nil
+            DeviceTelemetryReceiver.shared.connectionReset()
+            headTrackerConnected = false
+            DeviceHealth.shared.setBLEConnected(false)
+            DeviceHealth.shared.setAssembly(kind: nil, id: nil)
+            connectedAssemblyName = nil
+            // "We still want a connection": power-on resumes via scanning.
+            headTrackerConnecting = bleAssemblyNeeded()
             NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
             return
         }
@@ -204,6 +280,10 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                 // What this assembly currently broadcasts (the cached GAP
                 // name may be stale); reported as assembly_id in telemetry.
                 connectedAssemblyName = advertisedName ?? peripheral.name
+                // Stamped when the connect is issued (not only in didConnect)
+                // so the idempotence check in connectHeadtracker recognises a
+                // pending connect to the current target and leaves it alone.
+                targetNameAtConnect = target
 
                 // connect to the peripheral
                 logger.info("BT: Connecting to peripheral: \(peripheral)")
@@ -217,6 +297,13 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
 
         centralManager.stopScan()
         logger.info("BT: Scanning Stopped!")
+        connectRetryCount = 0
+        targetNameAtConnect = assemblyTargetName()
+        // Set by didDiscover on the scan path; on the direct reconnect path
+        // only the (possibly cached) GAP name is available.
+        if connectedAssemblyName == nil {
+            connectedAssemblyName = peripheral.name
+        }
         headTrackerConnected = true
         headTrackerConnecting = false
         DeviceHealth.shared.setBLEConnected(true)
@@ -238,12 +325,21 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         logger.info("BT: Failed to connect to \(peripheral) (\(String(describing: error?.localizedDescription)))")
-        self.disconnect()
+        connectRetryCount += 1
+        if connectRetryCount < 3, let p = self.peripheral {
+            // Immediate re-issue, no timers: connect failures are rare and
+            // non-bursty, and timers don't fire while the app is suspended.
+            centralManager.connect(p, options: nil)
+        }
+        else {
+            connectRetryCount = 0
+            self.peripheral = nil
+            startScanning()
+        }
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        logger.info("BT: Disconnected from Peripheral")
-        self.peripheral = nil
+        logger.info("BT: Disconnected from Peripheral (\(String(describing: error?.localizedDescription)))")
         // A partially received telemetry frame must not be glued to bytes
         // from the next connection (the device also restarts its stream).
         DeviceTelemetryReceiver.shared.connectionReset()
@@ -254,11 +350,28 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         connectedAssemblyName = nil
         headTrackerConnected = false
         hero.disconnectedFromHeadtrackerSince = 0.0;
-        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
 
-        if scanAfterDisconnecting {
+        if intentionalDisconnect || !bleAssemblyNeeded() {
+            // Operator/settings-driven teardown: stay disconnected.
+            intentionalDisconnect = false
+            self.peripheral = nil
+            headTrackerConnecting = false
+        }
+        else if let p = self.peripheral, targetNameAtConnect == assemblyTargetName() {
+            // Radio drop: re-issue the connect on the retained peripheral.
+            // The pending connect never times out and survives backgrounding
+            // and the lock screen. It completes the moment the assembly is
+            // back in range / powered on.
+            headTrackerConnecting = true
+            logger.info("BT: Reconnecting to \(String(describing: p.name))")
+            centralManager.connect(p, options: nil)
+        }
+        else {
+            // No usable peripheral, or the target changed: scan again.
+            self.peripheral = nil
             startScanning()
         }
+        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
     }
 
     // MARK: - CBPeripheralDelegate
@@ -269,7 +382,11 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
 
         if error != nil {
             logger.error("BT: Error discovering services: \(String(describing: error?.localizedDescription))")
-            disconnect()
+            // Not disconnect(): this is a link problem, not an operator
+            // teardown. cancel and let didDisconnect auto-reconnect.
+            if let p = self.peripheral {
+                centralManager.cancelPeripheralConnection(p)
+            }
             return
         }
 

@@ -236,6 +236,9 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
         case .some(.gpsSource):
             useRtkGps = segmented.selectedSegmentIndex == 1
             defaults.set(useRtkGps ? "rtk" : "internal", forKey: defaultsKeys.gpsSource)
+            // BLE is needed (or no longer needed) depending on this too:
+            // rtk positioning works with Internal heading selected.
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Connect Headtracker"), object: nil)
         case .some(.headingSource):
             useHeadTracker = segmented.selectedSegmentIndex == 1
             // Legacy string format, matches the existing readers
