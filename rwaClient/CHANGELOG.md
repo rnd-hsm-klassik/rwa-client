@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.15] - 2026-08-26
+
 ### Fixed
 
 - **BLE auto-reconnect.** A dropped headtracker-assembly link now reconnects on
