@@ -59,6 +59,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   && headTrackerConnected`, which was wrong in the new
   rtk-position-with-internal-heading mode.
 
+- **Control tab shows "Reconnecting..."** (instead of "Connecting...") while
+  re-establishing a link that existed before.
+
 ## [1.3.14] - 2026-08-25
 
 ### Changed

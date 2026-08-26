@@ -76,6 +76,10 @@ func bleAssemblyNeeded() -> Bool {
     return useHeadTracker || useRtkGps
 }
 
+/// True once a connection has existed since the last intentional teardown.
+/// lets the Control tab say "Reconnecting..." instead of "Connecting...".
+var headTrackerEverConnected = false
+
 class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
 
     var centralManager:CBCentralManager!
@@ -125,6 +129,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                 }
                 // Retargeted in Settings (or the reference is stale): drop
                 // it and find the current target by scanning.
+                headTrackerEverConnected = false
                 if p.state == .connected {
                     // didDisconnect will fire and, with peripheral already
                     // nil, fall through to startScanning().
@@ -145,6 +150,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         }
         else {
             headTrackerConnecting = false
+            headTrackerEverConnected = false
             disconnect()
             NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
         }
@@ -306,6 +312,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         }
         headTrackerConnected = true
         headTrackerConnecting = false
+        headTrackerEverConnected = true
         DeviceHealth.shared.setBLEConnected(true)
         TelemetryService.shared?.recordAppEvent(name: "assembly_connected",
                                                 data: ["assembly_id": connectedAssemblyName ?? ""])
