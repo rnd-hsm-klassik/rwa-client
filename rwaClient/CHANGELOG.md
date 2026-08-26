@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.16] - 2026-08-27
+
 ### Fixed
 
 - `RwaScene.getState` returned a new empty `RwaState` when the requested
