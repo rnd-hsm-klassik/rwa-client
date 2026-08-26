@@ -201,7 +201,11 @@ final class AppTelemetrySampler {
         var fields: [String: Any] = [
             TelemetrySource.fieldName: TelemetrySource.phone.rawValue,
             "uptime_ms": UInt32(truncatingIfNeeded: Int(Date().timeIntervalSince(startDate) * 1000)),
-            "assembly_connected": useHeadTracker && headTrackerConnected,
+            // The actual BLE link state, not the heading source: with GPS
+            // source rtk + Internal heading the assembly is connected while
+            // useHeadTracker is false. (headTrackerConnected doubles as
+            // "CoreMotion started" in that mode and can't be used here.)
+            "assembly_connected": snapshot.bleConnected,
             "walk_running": rwagameloop.isRunning,
             "position_source": lastPositionSource?.rawValue ?? "none",
             "heading_source": lastHeadingSource?.rawValue ?? "none"

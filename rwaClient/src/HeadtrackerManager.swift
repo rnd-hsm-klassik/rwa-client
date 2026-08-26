@@ -307,6 +307,8 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         headTrackerConnected = true
         headTrackerConnecting = false
         DeviceHealth.shared.setBLEConnected(true)
+        TelemetryService.shared?.recordAppEvent(name: "assembly_connected",
+                                                data: ["assembly_id": connectedAssemblyName ?? ""])
         rssiTimer?.invalidate()
         rssiTimer = Timer.scheduledTimer(timeInterval: 2.0, target: self,
                                          selector: #selector(pollRSSI),
@@ -340,6 +342,12 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         logger.info("BT: Disconnected from Peripheral (\(String(describing: error?.localizedDescription)))")
+        // Only on a real transition, not on failed reconnect attempts.
+        if headTrackerConnected {
+            TelemetryService.shared?.recordAppEvent(name: "assembly_disconnected",
+                                                    data: ["assembly_id": connectedAssemblyName ?? "",
+                                                           "reason": error?.localizedDescription ?? "requested"])
+        }
         // A partially received telemetry frame must not be glued to bytes
         // from the next connection (the device also restarts its stream).
         DeviceTelemetryReceiver.shared.connectionReset()

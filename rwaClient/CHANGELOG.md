@@ -51,6 +51,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   identifier) was removed; proper CoreBluetooth state restoration remains a
   follow-up.
 
+- **Telemetry: `assembly_connected` / `assembly_disconnected` app_events.**
+  Emitted on every real link transition (`assembly_id`, and `reason` = CB error
+  or "requested" on disconnects), giving ops exact drop/recover timestamps
+  between heartbeats. The heartbeat's `assembly_connected` field now reports the
+  actual BLE link state (`DeviceHealth.bleConnected`) instead of `useHeadTracker
+  && headTrackerConnected`, which was wrong in the new
+  rtk-position-with-internal-heading mode.
+
 ## [1.3.14] - 2026-08-25
 
 ### Changed
