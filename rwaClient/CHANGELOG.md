@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`HeadtrackerManager` extracted from `SecondViewController`** (first slice of
+  the planned service-layer cleanup, together with the BLE rework above): the
+  BLE central, connection lifecycle, tracker text-protocol / raw-RTK /
+  telemetry-CBOR parsing and RSSI polling now live in
+  `src/HeadtrackerManager.swift`, a plain UIKit-free object owned by the
+  AppDelegate that observes the same "Connect Headtracker" / "Game Loaded"
+  notifications. `SecondViewController` keeps CoreMotion (heading axis), the
+  game-loop timer and the legacy hidden-tab UI. Step detection, shared by the
+  tracker's acceleration frames and the phone's accelerometer, moved to
+  `StepDetector` (same file). The dead state-restoration
+  follow-up block (never reachable, the central was built without a restore
+  identifier) was removed; proper CoreBluetooth state restoration remains a
+  follow-up.
+
 ## [1.3.14] - 2026-08-25
 
 ### Changed

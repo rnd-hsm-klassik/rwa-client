@@ -20,7 +20,7 @@
 //  ControlDataViewController: while it is visible it is the
 //  F53OSCPacketDestination for rwaCreator's /step, /lon, /lat and
 //  /currentscene messages. That is service work living in a view
-//  controller, exactly like SecondViewController's BLE ownership — it is
+//  controller, exactly like HeadtrackerManager's BLE ownership — it is
 //  kept as-is here and belongs to the planned service extraction, not to
 //  this migration.
 //

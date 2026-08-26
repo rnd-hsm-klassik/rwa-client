@@ -68,6 +68,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var audioController: PdAudioController?
     var liveTelemetry: AppTelemetrySampler?
     var currentSceneController: UIViewController?
+    /// BLE central for the headset assembly (extracted from
+    /// SecondViewController); created in didFinishLaunching after the
+    /// UserDefaults reads it depends on (useHeadTracker, useRtkGps, deviceId).
+    var headtrackerManager: HeadtrackerManager?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool
     {
@@ -188,6 +192,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         deviceId = defaults.string(forKey: defaultsKeys.unitId) ?? ""
         useRtkGps = defaults.string(forKey: defaultsKeys.gpsSource) == "rtk"
 
+        // Must exist before anything posts "Connect Headtracker"/"Game Loaded"
+        // (its init registers the observers for the BLE axis).
+        headtrackerManager = HeadtrackerManager()
+
         hideCurrentSceneTab()
         hideControlDataTab()
         installControlTab()
@@ -265,11 +273,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     /// Hides the "Current Scene" tab from the tab bar. That view controller
-    /// (SecondViewController) still owns the BLE central manager, motion
-    /// updates, and the game loop start/stop logic, so it must stay
+    /// (SecondViewController) still owns the motion
+    /// updates and the game loop start/stop logic, so it must stay
     /// instantiated and loaded even though its tab is no longer shown —
     /// only the tab bar entry is removed. loadViewIfNeeded() forces its
-    /// viewDidLoad (BLE setup, notification observers) to run immediately
+    /// viewDidLoad (notification observers) to run immediately
     /// instead of waiting for the tab to be selected, and the strong
     /// reference in currentSceneController keeps it alive after it leaves
     /// the tab bar (otherwise it would deallocate and its notification

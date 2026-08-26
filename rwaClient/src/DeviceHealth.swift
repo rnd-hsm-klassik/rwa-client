@@ -11,7 +11,7 @@
 //
 //  Both the Diagnostics tab and the future Map badge
 //  read DeviceHealth.shared.snapshot. Writers come from three places:
-//    - SecondViewController: BLE connect/disconnect + headset RSSI
+//    - HeadtrackerManager: BLE connect/disconnect + headset RSSI
 //    - TelemetryService.recordDeviceEvent: heartbeat / gnss_fix / imu_status
 //    - TelemetryService uploader: pending backlog + upload result
 //

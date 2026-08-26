@@ -179,7 +179,7 @@ enum DeviceTelemetryDecoder {
 
 // MARK: - Receiver
 
-/// Singleton fed by the BLE delegate (SecondViewController). Cheap on the
+/// Singleton fed by the BLE delegate (HeadtrackerManager). Cheap on the
 /// delegate queue: reassemble, decode, hand off — TelemetryService moves
 /// every event to its own serial queue immediately.
 final class DeviceTelemetryReceiver {
