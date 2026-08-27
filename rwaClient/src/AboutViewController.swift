@@ -88,6 +88,21 @@ class AboutViewController: UITableViewController {
         ]
         if let c = h.imuCalibStatus { imu.append(Row(label: "Calibration", value: "\(c)")) }
         if let r = h.imuReportRateHz { imu.append(Row(label: "Report rate", value: String(format: "%.0f Hz", r))) }
+        // Heading-feed arrival stats (HeadingStats, fed per BLE frame): the
+        // latency/staleness view. "Changed" well below 100 % with the head
+        // moving means stale or quantized frames, not a still head.
+        let hs = HeadingStats.shared.snapshot()
+        if let format = hs.format {
+            imu.append(Row(label: "Heading feed", value: format.rawValue))
+            imu.append(Row(label: "Arrival rate", value: String(format: "%.0f Hz", hs.rateHz)))
+            imu.append(Row(label: "Interval mean / max",
+                           value: String(format: "%.1f / %.0f ms", hs.meanIntervalMs, hs.maxIntervalMs)))
+            imu.append(Row(label: "Changed frames", value: String(format: "%.0f %%", hs.changedRatio * 100)))
+            if hs.format == .binary {
+                imu.append(Row(label: "Dropped frames", value: "\(hs.dropCount) of \(hs.frameCount)"))
+                imu.append(Row(label: "Delay jitter", value: String(format: "%.0f ms", hs.delayJitterMs)))
+            }
+        }
         out.append(Section(title: "Motion data", rows: imu))
 
         // Correction link (ESP32 -> hotspot -> NTRIP caster).

@@ -239,3 +239,120 @@ final class DeviceHealth {
         return (any as? NSNumber)?.doubleValue
     }
 }
+
+/// Head-tracking arrival statistics for the Diagnostics tab: rate,
+/// inter-arrival jitter, staleness evidence (frames whose azimuth actually
+/// changed vs frames received), plus drop count and device -> phone delay
+/// jitter when the binary format's seq / t_dev_ms are available.
+///
+/// Fed by HeadtrackerManager on every heading frame (either wire format). Not
+/// part of DeviceHealth: its mutate() posts a notification per write, which at
+/// ~100 Hz would flood the main run loop. This class just accumulates under a
+/// lock over 5s windows.
+final class HeadingStats {
+
+    static let shared = HeadingStats()
+
+    enum WireFormat: String {
+        case ascii = "ASCII (713D0002)"
+        case binary = "binary (713D0005)"
+    }
+
+    struct Snapshot {
+        var format: WireFormat?
+        var rateHz: Double = 0
+        var meanIntervalMs: Double = 0
+        var maxIntervalMs: Double = 0
+        var changedRatio: Double = 0     // azimuth-changed frames / frames, last window
+        var frameCount = 0               // cumulative since connect
+        var dropCount = 0                // cumulative seq gaps (binary only)
+        var delayJitterMs: Double = 0    // spread of (arrival - t_dev_ms), last window
+    }
+
+    private let lock = NSLock()
+    private var published = Snapshot()
+    private var lastArrival: CFAbsoluteTime = 0
+    private var windowStart: CFAbsoluteTime = 0
+    private var windowFrames = 0
+    private var windowChanged = 0
+    private var windowIntervalSum = 0.0
+    private var windowIntervalMax = 0.0
+    private var windowSkewMin = Double.infinity   // arrival - t_dev, ms
+    private var windowSkewMax = -Double.infinity
+    private var lastSeq: UInt16?
+
+    private init() {}
+
+    /// New connection (or decoder switch): drop everything.
+    func reset() {
+        lock.lock(); defer { lock.unlock() }
+        published = Snapshot()
+        lastArrival = 0; windowStart = 0
+        resetWindowLocked()
+        lastSeq = nil
+    }
+
+    func record(format: WireFormat, azimuthChanged: Bool, seq: UInt16?, tDevMs: UInt32?) {
+        let now = CFAbsoluteTimeGetCurrent()
+        lock.lock(); defer { lock.unlock() }
+
+        published.format = format
+        published.frameCount += 1
+        if let seq = seq {
+            if let last = lastSeq {
+                // Wrapping distance; a device reboot (seq restart) shows up as
+                // a huge "gap" - ignore anything implausible for one interval.
+                let gap = Int(seq &- last) - 1
+                if gap > 0 && gap < 1000 { published.dropCount += gap }
+            }
+            lastSeq = seq
+        }
+
+        if windowStart == 0 { windowStart = now }
+        windowFrames += 1
+        if azimuthChanged { windowChanged += 1 }
+        if lastArrival > 0 {
+            let dt = (now - lastArrival) * 1000
+            windowIntervalSum += dt
+            if dt > windowIntervalMax { windowIntervalMax = dt }
+        }
+        lastArrival = now
+        if let t = tDevMs {
+            let skew = now * 1000 - Double(t)
+            if skew < windowSkewMin { windowSkewMin = skew }
+            if skew > windowSkewMax { windowSkewMax = skew }
+        }
+
+        // Tumbling 5 s window: publish and start over.
+        let age = now - windowStart
+        if age >= 5.0 {
+            published.rateHz = Double(windowFrames) / age
+            published.meanIntervalMs = windowFrames > 1
+                ? windowIntervalSum / Double(windowFrames - 1) : 0
+            published.maxIntervalMs = windowIntervalMax
+            published.changedRatio = Double(windowChanged) / Double(windowFrames)
+            published.delayJitterMs = windowSkewMax > windowSkewMin
+                ? windowSkewMax - windowSkewMin : 0
+            resetWindowLocked()
+            windowStart = now
+        }
+    }
+
+    /// For the Diagnostics refresh (0.5 s). Stats are those of the last
+    /// completed 5 s window; the rate is zeroed once the stream stops.
+    func snapshot() -> Snapshot {
+        let now = CFAbsoluteTimeGetCurrent()
+        lock.lock(); defer { lock.unlock() }
+        var out = published
+        if lastArrival == 0 || now - lastArrival > 2.0 {
+            out.rateHz = 0
+        }
+        return out
+    }
+
+    private func resetWindowLocked() {
+        windowFrames = 0; windowChanged = 0
+        windowIntervalSum = 0; windowIntervalMax = 0
+        windowSkewMin = .infinity; windowSkewMax = -.infinity
+    }
+}

@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import os.signpost
 
 let RWA_MAXNUMBEROFPATCHERS = 30
 let RWA_MAXNUMBEROFSTEREOPATCHERS = 15;
@@ -1350,7 +1351,14 @@ class RwaGameLoop:NSObject, PdListener
         if(hero.currentState == nil) {
             return
         }
-        
+
+        // Instruments interval per game-tick Pd flush: every PdBase.send in
+        // here takes libpd's sys_lock, which the render callback holds for a
+        // whole audio buffer. Contention shows up as long intervals here.
+        let spid = OSSignpostID(log: headtrackingSignpostLog)
+        os_signpost(.begin, log: headtrackingSignpostLog, name: "pd_flush", signpostID: spid)
+        defer { os_signpost(.end, log: headtrackingSignpostLog, name: "pd_flush", signpostID: spid) }
+
         if(!hero.activeAssets.isEmpty) {
             for mapItem in hero.activeAssets
             {
@@ -1358,7 +1366,7 @@ class RwaGameLoop:NSObject, PdListener
             }
             step = 0;
         }
-        
+
         if(!hero.backgroundAssets.isEmpty) {
             for mapItem in hero.backgroundAssets
             {
