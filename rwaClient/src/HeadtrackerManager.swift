@@ -114,12 +114,19 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         NotificationCenter.default.addObserver(self, selector: #selector(self.connectHeadtracker), name: NSNotification.Name(rawValue: "Game Loaded"), object: nil)
     }
 
+    /// All CoreBluetooth delegate callbacks run here, NOT on the main queue.
+    /// Measured 2026-08-27 (radio-idle assembly, so not coex): main-queue
+    /// delivery stalled heading frames 90–240 ms behind UI work (Diagnostics
+    /// table reloads, map/UI timers), then flushed them as a burst. UI side
+    /// effects and Timers hop back to main explicitly below.
+    private let bleQueue = DispatchQueue(label: "ch.rwa.ble", qos: .userInitiated)
+
     /// The central is long-lived: created once, reused for every (re)connect.
     /// Recreating it per request (the pre-extraction behavior) dropped the
     /// retained peripheral and any pending connect with it.
     func ensureCentralManager() {
         if centralManager == nil {
-            centralManager = CBCentralManager(delegate: self, queue: nil)
+            centralManager = CBCentralManager(delegate: self, queue: bleQueue)
         }
     }
 
@@ -158,7 +165,15 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
             headTrackerConnecting = false
             headTrackerEverConnected = false
             disconnect()
-            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
+            HeadtrackerManager.postOnMain("Update Buttons")
+        }
+    }
+
+    /// UI-facing notifications must be posted on the main queue: observers
+    /// touch UIKit, and delegate callbacks arrive on bleQueue.
+    private static func postOnMain(_ name: String) {
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: name), object: nil)
         }
     }
 
@@ -189,7 +204,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
             centralManager.scanForPeripherals(withServices: [CBUUID(string: Device.TransferService)], options: nil)
             logger.info("BT: Scanning Started.")
             headTrackerConnecting = true
-            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
+            HeadtrackerManager.postOnMain("Update Buttons")
         }
     }
 
@@ -258,8 +273,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
             // didDisconnect, so the link state must be cleared here or it
             // goes stale (connected flag, DeviceHealth, RSSI).
             self.peripheral = nil
-            rssiTimer?.invalidate()
-            rssiTimer = nil
+            stopRSSITimerOnMain()
             DeviceTelemetryReceiver.shared.connectionReset()
             headTrackerConnected = false
             DeviceHealth.shared.setBLEConnected(false)
@@ -267,7 +281,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
             connectedAssemblyName = nil
             // "We still want a connection": power-on resumes via scanning.
             headTrackerConnecting = bleAssemblyNeeded()
-            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
+            HeadtrackerManager.postOnMain("Update Buttons")
             return
         }
 
@@ -322,13 +336,17 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         DeviceHealth.shared.setBLEConnected(true)
         TelemetryService.shared?.recordAppEvent(name: "assembly_connected",
                                                 data: ["assembly_id": connectedAssemblyName ?? ""])
-        rssiTimer?.invalidate()
-        rssiTimer = Timer.scheduledTimer(timeInterval: 2.0, target: self,
-                                         selector: #selector(pollRSSI),
-                                         userInfo: nil, repeats: true)
-        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Headtracker Connected"), object: nil)
+        // Timers need the main run loop (and invalidate must happen on the
+        // scheduling thread), so the RSSI poll lives on main.
+        DispatchQueue.main.async {
+            self.rssiTimer?.invalidate()
+            self.rssiTimer = Timer.scheduledTimer(timeInterval: 2.0, target: self,
+                                                  selector: #selector(self.pollRSSI),
+                                                  userInfo: nil, repeats: true)
+        }
+        HeadtrackerManager.postOnMain("Headtracker Connected")
         // Let the Control tab (which hosts the Connect button) refresh its title
-        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
+        HeadtrackerManager.postOnMain("Update Buttons")
         dataBuffer.length = 0
         HeadingStats.shared.reset()
 
@@ -365,8 +383,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         // A partially received telemetry frame must not be glued to bytes
         // from the next connection (the device also restarts its stream).
         DeviceTelemetryReceiver.shared.connectionReset()
-        rssiTimer?.invalidate()
-        rssiTimer = nil
+        stopRSSITimerOnMain()
         DeviceHealth.shared.setBLEConnected(false)
         DeviceHealth.shared.setAssembly(kind: nil, id: nil)
         connectedAssemblyName = nil
@@ -393,7 +410,14 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
             self.peripheral = nil
             startScanning()
         }
-        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
+        HeadtrackerManager.postOnMain("Update Buttons")
+    }
+
+    private func stopRSSITimerOnMain() {
+        DispatchQueue.main.async {
+            self.rssiTimer?.invalidate()
+            self.rssiTimer = nil
+        }
     }
 
     // MARK: - CBPeripheralDelegate
@@ -545,16 +569,20 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                 logger.debug("BT: malformed raw RTK position frame")
                 return
             }
-            ubloxLat = position.lat
-            ubloxLon = position.lon
-            ubloxUpdatedAt = Date()
+            // Coordinates are multi-word values read by the main-thread game loop.
+            // Apply on main (<= 10 Hz, cheap) rather than risk a torn lat/lon pair from the BLE queue.
+            DispatchQueue.main.async {
+                ubloxLat = position.lat
+                ubloxLon = position.lon
+                ubloxUpdatedAt = Date()
 
-            // RTK positioning (Settings tab): tracker coordinates drive
-            // the walk. OSC-registered mode still overrides everything.
-            if(useRtkGps && !registered) {
-                hero.coordinates = CLLocationCoordinate2D(latitude: position.lat,
-                                                          longitude: position.lon)
-                hero.timeSinceLastGpsUpdate = 0.0
+                // RTK positioning (Settings tab): tracker coordinates drive
+                // the walk. OSC-registered mode still overrides everything.
+                if(useRtkGps && !registered) {
+                    hero.coordinates = CLLocationCoordinate2D(latitude: position.lat,
+                                                              longitude: position.lon)
+                    hero.timeSinceLastGpsUpdate = 0.0
+                }
             }
             return
         }
@@ -574,15 +602,18 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
 
             else if words[0] == "l"
             {
-                ubloxLat = Double(words[1])! * (1/10000000)
-                ubloxLon = Double(words[2])! * (1/10000000)
-                ubloxUpdatedAt = Date()
+                guard let lat = Double(words[1]), let lon = Double(words[2]) else { return }
+                DispatchQueue.main.async {
+                    ubloxLat = lat * (1/10000000)
+                    ubloxLon = lon * (1/10000000)
+                    ubloxUpdatedAt = Date()
 
-                // RTK positioning (Settings tab): tracker coordinates drive
-                // the walk. OSC-registered mode still overrides everything.
-                if(useRtkGps && !registered) {
-                    hero.coordinates = CLLocationCoordinate2D(latitude: ubloxLat!, longitude: ubloxLon!)
-                    hero.timeSinceLastGpsUpdate = 0.0
+                    // RTK positioning (Settings tab): tracker coordinates drive
+                    // the walk. OSC-registered mode still overrides everything.
+                    if(useRtkGps && !registered) {
+                        hero.coordinates = CLLocationCoordinate2D(latitude: ubloxLat!, longitude: ubloxLon!)
+                        hero.timeSinceLastGpsUpdate = 0.0
+                    }
                 }
             }
             // Heading frames only count while the headtracker is the heading
@@ -626,6 +657,12 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
     /// formats (binary 713D0005 and ASCII 713D0002) land here, so calibration
     /// offsets, step detection and the hero update behave identically.
     /// Callers gate on useHeadTracker.
+    ///
+    /// Runs on bleQueue, writing the globals off-main on purpose: hopping to
+    /// main would re-queue the sample behind the very UI work the dedicated
+    /// queue exists to bypass. The globals are word-sized Int/Float, and the
+    /// CoreMotion heading path (SecondViewController.startQueuedUpdates)
+    /// already writes them from a background OperationQueue the same way.
     private func applyHeadingSample(azimuthOrgNew: Int, elevationOrgNew: Int, linAccelNew: Float) {
         azimuthOrg = azimuthOrgNew
         azimuth = azimuthOrg - azimuthOffset
