@@ -11,6 +11,12 @@
 import Foundation
 import CoreBluetooth
 import CoreLocation
+import os.signpost
+
+/// Instruments timeline for the head-tracking path: one .event per received
+/// heading frame here, one interval per game-loop Pd flush (RwaGameLoop).
+let headtrackingSignpostLog = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "RWA Player",
+                                    category: "headtracking")
 
 /// Step detection shared by both acceleration sources: the headtracker's
 /// linear-acceleration frames (HeadtrackerManager) and the phone's
@@ -324,6 +330,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         // Let the Control tab (which hosts the Connect button) refresh its title
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "Update Buttons"), object: nil)
         dataBuffer.length = 0
+        HeadingStats.shared.reset()
 
         // IMPORTANT: Set the delegate property, otherwise we won't receive the discovery callbacks, like peripheral(_:didDiscoverServices)
         peripheral.delegate = self
@@ -426,6 +433,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                 if (service.uuid == CBUUID(string: Device.TransferService)) {
                     peripheral.discoverCharacteristics([
                         CBUUID(string: Device.TransferCharacteristic),
+                        CBUUID(string: Device.TRACKERBINARYHEADING),
                         CBUUID(string: Device.TRACKERRAWDATA)
                     ], for: service)
                 }
@@ -451,6 +459,14 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                 if characteristic.uuid == CBUUID(string: Device.TransferCharacteristic) {
                     // subscribe to dynamic changes
                     logger.info("BT: Found RWA Headtracker")
+                    peripheral.setNotifyValue(true, for: characteristic)
+                }
+
+                // Binary heading (rtk-rover >= 0.46.0). Such firmware sends no
+                // ASCII heading at all, so no double-decode can happen even
+                // though 713D0002 is subscribed too when present.
+                if characteristic.uuid == CBUUID(string: Device.TRACKERBINARYHEADING) {
+                    logger.info("BT: Found binary heading characteristic, subscribing")
                     peripheral.setNotifyValue(true, for: characteristic)
                 }
 
@@ -494,6 +510,29 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         // handle them before the UTF-8 text decode below.
         if characteristic.uuid == CBUUID(string: Device.TelemetryTxCharacteristic) {
             DeviceTelemetryReceiver.shared.ingest(value)
+            return
+        }
+
+        // Binary heading frames (713D0005, rtk-rover >= 0.46.0): the RTK
+        // assembly's only heading feed. RWAHT keeps the ASCII path below.
+        if characteristic.uuid == CBUUID(string: Device.TRACKERBINARYHEADING) {
+            guard let frame = Device.parseBinaryHeadingFrame(value) else {
+                logger.debug("BT: malformed binary heading frame (\(value.count) B)")
+                return
+            }
+            // Same gate as the ASCII heading branch: with Internal heading
+            // selected, a tracker connected for RTK positioning must not
+            // overwrite the CoreMotion heading or double-count steps.
+            if useHeadTracker {
+                os_signpost(.event, log: headtrackingSignpostLog, name: "heading_frame")
+                let azimuthOrgNew = Int(frame.azimuthDeg.rounded()) % 360
+                HeadingStats.shared.record(format: .binary,
+                                           azimuthChanged: azimuthOrgNew != azimuthOrg,
+                                           seq: frame.seq, tDevMs: frame.tDevMs)
+                applyHeadingSample(azimuthOrgNew: azimuthOrgNew,
+                                   elevationOrgNew: Int(frame.elevationDeg.rounded()),
+                                   linAccelNew: frame.linAccelZ)
+            }
             return
         }
 
@@ -558,27 +597,14 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
 
                 azimuthTmp = azimuthTmp.digits
 
-                azimuthOrg = Int(NSString(string: azimuthTmp).intValue)
-                azimuth = azimuthOrg-azimuthOffset
-                if(azimuth < 0) {
-                        azimuth += 360 }
-
-                elevationOrg = Int(NSString(string: elevationTmp).intValue)
-                elevation = elevationOrg-elevationOffset
-
-                if(inverseElevation) {
-                    elevation = -elevation;
-                }
-
-                linAccel = NSString(string: linAccTmp).floatValue
-
-                linAccelAverage = Float(averageAccel.average(value: Double(linAccel)))
-                StepDetector.shared.process();
-
-                hero.azimuth = azimuth
-                hero.elevation = elevation
-                hero.stepCount = stepCount
-                trackerHeadingUpdatedAt = Date()
+                os_signpost(.event, log: headtrackingSignpostLog, name: "heading_frame")
+                let azimuthOrgNew = Int(NSString(string: azimuthTmp).intValue)
+                HeadingStats.shared.record(format: .ascii,
+                                           azimuthChanged: azimuthOrgNew != azimuthOrg,
+                                           seq: nil, tDevMs: nil)
+                applyHeadingSample(azimuthOrgNew: azimuthOrgNew,
+                                   elevationOrgNew: Int(NSString(string: elevationTmp).intValue),
+                                   linAccelNew: NSString(string: linAccTmp).floatValue)
             }
         }
         else {
@@ -594,6 +620,33 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                 dataBuffer.length = 0
             }
         }
+    }
+
+    /// Apply one decoded heading sample to the module globals; both wire
+    /// formats (binary 713D0005 and ASCII 713D0002) land here, so calibration
+    /// offsets, step detection and the hero update behave identically.
+    /// Callers gate on useHeadTracker.
+    private func applyHeadingSample(azimuthOrgNew: Int, elevationOrgNew: Int, linAccelNew: Float) {
+        azimuthOrg = azimuthOrgNew
+        azimuth = azimuthOrg - azimuthOffset
+        if(azimuth < 0) {
+            azimuth += 360
+        }
+
+        elevationOrg = elevationOrgNew
+        elevation = elevationOrg - elevationOffset
+        if(inverseElevation) {
+            elevation = -elevation;
+        }
+
+        linAccel = linAccelNew
+        linAccelAverage = Float(averageAccel.average(value: Double(linAccel)))
+        StepDetector.shared.process();
+
+        hero.azimuth = azimuth
+        hero.elevation = elevation
+        hero.stepCount = stepCount
+        trackerHeadingUpdatedAt = Date()
     }
 
     /*
