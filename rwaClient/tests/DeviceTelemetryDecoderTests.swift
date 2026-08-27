@@ -144,3 +144,64 @@ final class TrackerPositionParserTests: XCTestCase {
         XCTAssertNil(Device.parseRawTrackerPosition(""))
     }
 }
+
+/// The binary heading frames on TRACKERBINARYHEADING (713D0005),
+/// PROJECT-PLAN.md §5.5: 16 B little-endian, Q14 quaternion.
+/// The angle checks pin the §5.5 canonical conversion that rwa-creator must mirror.
+final class BinaryHeadingFrameTests: XCTestCase {
+
+    /// [seq u16][t_dev_ms u32][qi qj qk qw i16 Q14][linAccelZ i16 cm/s²], LE.
+    private func frame(seq: UInt16, tDevMs: UInt32,
+                       qi: Int16, qj: Int16, qk: Int16, qw: Int16,
+                       linAccelZ: Int16) -> Data {
+        var b = [UInt8]()
+        func le16(_ v: UInt16) { b.append(UInt8(v & 0xFF)); b.append(UInt8(v >> 8)) }
+        le16(seq)
+        le16(UInt16(tDevMs & 0xFFFF)); le16(UInt16(tDevMs >> 16))
+        for q in [qi, qj, qk, qw, linAccelZ] { le16(UInt16(bitPattern: q)) }
+        return Data(b)
+    }
+
+    func testDecodesFields() throws {
+        let f = try XCTUnwrap(Device.parseBinaryHeadingFrame(
+            frame(seq: 4711, tDevMs: 123_456_789,
+                  qi: 16384, qj: -16384, qk: 0, qw: 8192, linAccelZ: -123)))
+        XCTAssertEqual(f.seq, 4711)
+        XCTAssertEqual(f.tDevMs, 123_456_789)
+        XCTAssertEqual(f.qi, 1.0)
+        XCTAssertEqual(f.qj, -1.0)
+        XCTAssertEqual(f.qk, 0.0)
+        XCTAssertEqual(f.qw, 0.5)
+        XCTAssertEqual(f.linAccelZ, -1.23, accuracy: 1e-6)
+    }
+
+    func testRejectsWrongLength() {
+        XCTAssertNil(Device.parseBinaryHeadingFrame(Data()))
+        XCTAssertNil(Device.parseBinaryHeadingFrame(Data(repeating: 0, count: 15)))
+        XCTAssertNil(Device.parseBinaryHeadingFrame(Data(repeating: 0, count: 17)))
+    }
+
+    func testIdentityQuaternionIsZeroAzimuthElevation() throws {
+        let f = try XCTUnwrap(Device.parseBinaryHeadingFrame(
+            frame(seq: 1, tDevMs: 0, qi: 0, qj: 0, qk: 0, qw: 16384, linAccelZ: 0)))
+        XCTAssertEqual(f.azimuthDeg, 0.0, accuracy: 0.01)
+        XCTAssertEqual(f.elevationDeg, 0.0, accuracy: 0.01)
+    }
+
+    /// +90° about z (q = (0,0,sin45,cos45)): §5.5 negates and wraps → 270°.
+    func testYawQuarterTurn() throws {
+        let s45 = Int16(11585) // round(sin(45°) · 16384)
+        let f = try XCTUnwrap(Device.parseBinaryHeadingFrame(
+            frame(seq: 1, tDevMs: 0, qi: 0, qj: 0, qk: s45, qw: s45, linAccelZ: 0)))
+        XCTAssertEqual(f.azimuthDeg, 270.0, accuracy: 0.05)
+        XCTAssertEqual(f.elevationDeg, 0.0, accuracy: 0.05)
+    }
+
+    /// +30° about x (q = (sin15,0,0,cos15)) → elevation −30°.
+    func testElevationSign() throws {
+        let f = try XCTUnwrap(Device.parseBinaryHeadingFrame(
+            frame(seq: 1, tDevMs: 0, qi: 4241, qj: 0, qk: 0, qw: 15826, linAccelZ: 0)))
+        XCTAssertEqual(f.elevationDeg, -30.0, accuracy: 0.05)
+        XCTAssertEqual(f.azimuthDeg, 0.0, accuracy: 0.05)
+    }
+}
