@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.17] - 2026-08-28
+
+### Added
+
+- Binary heading characteristic (713D0005) decoded: rtk-rover >= 0.46.0 sends
+  head orientation as a compact 16-byte binary frame (seq, device time, Q14
+  quaternion, linear acceleration) instead of ASCII text (PROJECT-PLAN.md §5.5).
+  Both wire formats feed the same heading pipeline, so calibration, step
+  detection and the hero update behave identically; RWAHT assemblies keep the
+  ASCII path. The quaternion -> azimuth/elevation conversion is pinned by unit
+  tests (the Creator must mirror it).
+
+- Head-tracking arrival statistics (`HeadingStats`): arrival rate, interval
+  jitter, azimuth-changed ratio, and dropped-frame
+  and device-to-phone delay-jitter metrics. Shown in the Diagnostics tab's
+  Motion-data section as evidence for stale or lagging heading streams. An
+  Instruments signpost around the game loop's per-tick Pd flush helps profile
+  audio-thread contention.
+
+### Fixed
+
+- Heading jitter caused by CoreBluetooth on the main queue: BLE delegate
+  callbacks were delivered on the main queue, where UI work (Diagnostics table
+  reloads, timers) stalled them and then flushed heading frames in bursts
+  (89–243 ms observed). The BLE central now runs on its own serial queue;
+  heading samples apply there directly, while position updates and UI
+  notifications still hop to the main queue.
+
 ## [1.3.16] - 2026-08-27
 
 ### Fixed
