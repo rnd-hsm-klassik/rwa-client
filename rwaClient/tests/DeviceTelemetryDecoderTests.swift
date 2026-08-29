@@ -10,6 +10,7 @@
 //
 
 import XCTest
+import CoreBluetooth
 @testable import rwa_client
 
 final class DeviceTelemetryDecoderTests: XCTestCase {
@@ -203,5 +204,48 @@ final class BinaryHeadingFrameTests: XCTestCase {
             frame(seq: 1, tDevMs: 0, qi: 4241, qj: 0, qk: 0, qw: 15826, linAccelZ: 0)))
         XCTAssertEqual(f.elevationDeg, -30.0, accuracy: 0.05)
         XCTAssertEqual(f.azimuthDeg, 0.0, accuracy: 0.05)
+    }
+}
+
+/// Assembly-kind detection from GATT: keyed on the RTK-only attributes
+/// (telemetry service 713D0100, raw position 713D0004). Since RWAHT 0.3.0 both
+/// kinds expose the binary heading characteristic 713D0005, so its presence
+/// must not make an assembly "RTK".
+final class AssemblyKindDetectionTests: XCTestCase {
+
+    private let tracker = CBUUID(string: Device.TransferService)
+    private let telemetry = CBUUID(string: Device.TelemetryService)
+    private let ascii = CBUUID(string: Device.TRACKERSERVICETX)
+    private let binaryHeading = CBUUID(string: Device.TRACKERBINARYHEADING)
+    private let rawPosition = CBUUID(string: Device.TRACKERRAWDATA)
+
+    /// RWAHT <= 0.2.x: tracker service with the ASCII characteristic only.
+    func testLegacyRwahtIsPlainHeadtracker() {
+        XCTAssertEqual(Device.assemblyKind(serviceUUIDs: [tracker],
+                                           trackerCharacteristicUUIDs: [ascii]),
+                       .headtracker)
+    }
+
+    /// RWAHT >= 0.3.0: adds 713D0005. still a plain headtracker.
+    func testRwaht030StaysPlainHeadtrackerDespiteBinaryHeading() {
+        XCTAssertEqual(Device.assemblyKind(serviceUUIDs: [tracker],
+                                           trackerCharacteristicUUIDs: [ascii, binaryHeading]),
+                       .headtracker)
+    }
+
+    /// rtk-rover >= 0.46.0: no ASCII characteristic, telemetry service and
+    /// raw position present. Each RTK-only attribute is sufficient alone.
+    func testRtkHeadtrackerDetectedByEitherRtkOnlyAttribute() {
+        XCTAssertEqual(Device.assemblyKind(serviceUUIDs: [tracker, telemetry],
+                                           trackerCharacteristicUUIDs: [binaryHeading, rawPosition]),
+                       .rtkHeadtracker)
+        // Kind is decided at service discovery, before characteristics arrive.
+        XCTAssertEqual(Device.assemblyKind(serviceUUIDs: [tracker, telemetry],
+                                           trackerCharacteristicUUIDs: []),
+                       .rtkHeadtracker)
+        // The 713D0004 fallback settles it even without the telemetry service.
+        XCTAssertEqual(Device.assemblyKind(serviceUUIDs: [tracker],
+                                           trackerCharacteristicUUIDs: [binaryHeading, rawPosition]),
+                       .rtkHeadtracker)
     }
 }

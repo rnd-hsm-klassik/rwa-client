@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Assembly-kind detection updated for rwa-headtracker 0.3.0: since
+  rwa-headtracker 0.3.0 exposes the binary heading characteristic 713D0005 too,
+  the kind is keyed exclusively on the RTK-only attributes: the telemetry
+  service 713D0100 (as before) with the raw position characteristic 713D0004 as
+  a new fallback. Detection is now a pure function (`Device.assemblyKind`) with
+  unit tests covering RWAHT <= 0.2.x, rwa-headtracker >= 0.3.0 and rtk-rover
+  assemblies.
+
 ## [1.3.17] - 2026-08-28
 
 ### Added

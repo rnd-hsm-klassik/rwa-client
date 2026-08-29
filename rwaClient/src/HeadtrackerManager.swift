@@ -104,6 +104,11 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
     /// Advertised BLE name of the assembly being connected (assembly_id in
     /// telemetry); nil while disconnected.
     var connectedAssemblyName: String?
+    /// True once 713D0005 was discovered on this connection. Gates the ASCII
+    /// heading branch: RWAHT >= 0.3.0 keeps sending ASCII for one connection-
+    /// event round-trip after we subscribe to the binary characteristic, and
+    /// those stray frames must be dropped, not double-applied.
+    var binaryHeadingPresent = false
     var rssiTimer:Timer?
 
     override init() {
@@ -348,6 +353,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         // Let the Control tab (which hosts the Connect button) refresh its title
         HeadtrackerManager.postOnMain("Update Buttons")
         dataBuffer.length = 0
+        binaryHeadingPresent = false
         HeadingStats.shared.reset()
 
         // IMPORTANT: Set the delegate property, otherwise we won't receive the discovery callbacks, like peripheral(_:didDiscoverServices)
@@ -438,14 +444,12 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
 
         if let services = peripheral.services {
 
-            // Assembly kind from GATT: only the RTK headtracker has the
-            // telemetry service; RWAHT has just the tracker service. The BLE
-            // name says nothing about the kind, and data freshness
-            // (freshnessWindow) is a positioning concept that must not be used
-            // for it either.
-            let isRtk = services.contains { $0.uuid == CBUUID(string: Device.TelemetryService) }
-            DeviceHealth.shared.setAssembly(kind: isRtk ? .rtkHeadtracker : .headtracker,
-                                            id: connectedAssemblyName)
+            // Assembly kind from GATT: keyed on the RTK-only attributes, plus
+            // the raw position characteristic (713D0004) as a fallback once
+            // characteristics arrive.
+            let kind = Device.assemblyKind(serviceUUIDs: services.map { $0.uuid },
+                                           trackerCharacteristicUUIDs: [])
+            DeviceHealth.shared.setAssembly(kind: kind, id: connectedAssemblyName)
 
             for service in services {
                 logger.info("BT: Discovered service \(service)")
@@ -486,16 +490,22 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                     peripheral.setNotifyValue(true, for: characteristic)
                 }
 
-                // Binary heading (rtk-rover >= 0.46.0). Such firmware sends no
-                // ASCII heading at all, so no double-decode can happen even
-                // though 713D0002 is subscribed too when present.
+                // Binary heading (rtk-rover >= 0.46.0, RWAHT >= 0.3.0).
+                // rtk-headtracker sends no ASCII; RWAHT silences its
+                // ASCII path once this subscription activates.
                 if characteristic.uuid == CBUUID(string: Device.TRACKERBINARYHEADING) {
                     logger.info("BT: Found binary heading characteristic, subscribing")
+                    binaryHeadingPresent = true
                     peripheral.setNotifyValue(true, for: characteristic)
                 }
 
                 if characteristic.uuid == CBUUID(string: Device.TRACKERRAWDATA) {
                     logger.info("BT: Found RTK raw position, subscribing")
+                    // Kind fallback: raw position is RTK-only, so its
+                    // presence settles the kind even if the telemetry service
+                    // was missed during service discovery.
+                    DeviceHealth.shared.setAssembly(kind: .rtkHeadtracker,
+                                                    id: connectedAssemblyName)
                     peripheral.setNotifyValue(true, for: characteristic)
                 }
 
@@ -537,8 +547,9 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
             return
         }
 
-        // Binary heading frames (713D0005, rtk-rover >= 0.46.0): the RTK
-        // assembly's only heading feed. RWAHT keeps the ASCII path below.
+        // Binary heading frames (713D0005, rtk-rover >= 0.46.0 and RWAHT >=0.3.0):
+        // the active heading feed whenever the characteristic exists;
+        // only pre-0.3.0 RWAHT keeps the ASCII path below.
         if characteristic.uuid == CBUUID(string: Device.TRACKERBINARYHEADING) {
             guard let frame = Device.parseBinaryHeadingFrame(value) else {
                 logger.debug("BT: malformed binary heading frame (\(value.count) B)")
@@ -615,6 +626,14 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                         hero.timeSinceLastGpsUpdate = 0.0
                     }
                 }
+            }
+            // RWAHT >= 0.3.0 selects one heading path per connection by CCCD
+            // subscription, but the switchover to binary takes one
+            // connection-event round-trip, so a few ASCII heading frames can
+            // still arrive right after we subscribe to 713D0005. Drop them so
+            // they don't double-count steps against the binary feed.
+            else if binaryHeadingPresent {
+                logger.debug("BT: dropping ASCII heading frame (binary heading active)")
             }
             // Heading frames only count while the headtracker is the heading
             // source: with Internal selected a tracker connected for RTK

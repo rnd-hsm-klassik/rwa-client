@@ -30,10 +30,12 @@ enum TelemetrySource: String {
 }
 
 /// Kind of the headset assembly currently connected over BLE. Decided once
-/// at connect from GATT discovery (§5.1): the plain headtracker exposes only
-/// the tracker characteristic 713D0002, the RTK headtracker additionally
-/// exposes the raw position characteristic 713D0004 and the telemetry
-/// service 713D0100. Not derivable from the BLE name or from data freshness.
+/// at connect from GATT discovery (§5.1, Device.assemblyKind): the RTK
+/// headtracker exposes the RTK-only attributes: the raw position
+/// characteristic 713D0004 and the telemetry service 713D0100, the plain
+/// headtracker (RWAHT) does not. The binary heading characteristic 713D0005
+/// is exposed by both kinds since RWAHT 0.3.0 and says nothing about the
+/// kind. Not derivable from the BLE name or from data freshness either.
 enum AssemblyKind {
     case rtkHeadtracker
     case headtracker

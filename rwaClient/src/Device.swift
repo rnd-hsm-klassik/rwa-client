@@ -16,22 +16,37 @@ struct Device {
     static let TRACKERSERVICETX = "713D0002-503E-4C75-BA94-3148F18D941E"
     static let TRACKERSERVICERX = "713D0003-503E-4C75-BA94-3148F18D941E"
     static let TRACKERRAWDATA = "713D0004-503E-4C75-BA94-3148F18D941E"
-    /// Binary heading frames (PROJECT-PLAN.md §5.5), rtk-rover ≥ 0.46.0.
-    /// RWAHT assemblies don't have it and keep sending ASCII on ..0002.
+    /// Binary heading, rtk-rover >= 0.46.0 and RWAHT >= 0.3.0.
+    /// Exposed by both assembly kinds.
     static let TRACKERBINARYHEADING = "713D0005-503E-4C75-BA94-3148F18D941E"
 
     // Telemetry GATT service (PROJECT-PLAN.md §5.1) — cross-repo contract
     static let TelemetryService = "713D0100-503E-4C75-BA94-3148F18D941E"
     static let TelemetryTxCharacteristic = "713D0101-503E-4C75-BA94-3148F18D941E"
     static let TelemetryCtrlCharacteristic = "713D0102-503E-4C75-BA94-3148F18D941E"
-    
+
     // Tags
     static let EOM = "{{{EOM}}}"
-    
+
     // We have a 20-byte limit for data transfer
     static let notifyMTU = 20
     static let centralRestoreIdentifier = "io.cloudcity.BLEConnect.CentralManager"
     static let peripheralRestoreIdentifier = "io.cloudcity.BLEConnect.PeripheralManager"
+
+    /// Assembly-kind detection: the RTK headtracker
+    /// is told apart by its RTK-only attributes: the telemetry service
+    /// (713D0100, not advertised, discovered after connect) and the raw
+    /// position characteristic (713D0004). Since RWAHT 0.3.0 both kinds
+    /// expose the binary heading characteristic (713D0005), so it must not
+    /// enter this decision. Either RTK-only attribute alone is sufficient.
+    static func assemblyKind(serviceUUIDs: [CBUUID],
+                             trackerCharacteristicUUIDs: [CBUUID]) -> AssemblyKind {
+        if serviceUUIDs.contains(CBUUID(string: TelemetryService))
+            || trackerCharacteristicUUIDs.contains(CBUUID(string: TRACKERRAWDATA)) {
+            return .rtkHeadtracker
+        }
+        return .headtracker
+    }
 
     /// Parse the tracker's raw position frame (TRACKERRAWDATA, 713D0004):
     /// "lat latHp lon lonHp" — UBX high-precision integers, 1e-7 degrees
