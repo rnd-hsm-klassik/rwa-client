@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.18] - 2026-08-29
+
 ### Changed
 
 - Assembly-kind detection updated for rwa-headtracker 0.3.0: since
