@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The `.rwa` importer corrupted text elements containing an XML entity (`&amp;`
+  for example). Foundation's `XMLParser` splits character data at entity
+  references, so `<requiredstate>A&amp;B_performance</requiredstate>` arrived as
+  three `foundCharacters` chunks (`A`, `&`, `B_performance`) that were applied
+  one by one: the state got three bogus required states instead of one, and
+  `<hintstate>` kept only the last chunk. State names come from attributes,
+  which are decoded correctly, so `visitedStates` never matched the mangled
+  requirements and a state such as "A&B_Lorenz B_composition" stayed locked
+  forever while its hint state was not found. Text is now accumulated in
+  `foundCharacters` and applied in `didEndElement` for `requiredstate`,
+  `hintstate`, `nextstate`, `nextscene` and the polygon `lon`/`lat` values. This
+  is now covered by `RwaImportTests`.
+
 ## [1.3.18] - 2026-08-29
 
 ### Changed

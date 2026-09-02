@@ -24,7 +24,11 @@ class RwaImport:NSObject, XMLParserDelegate
     var readChannelCoordinates:Bool = false;
     var currentChannelCoordinate: CLLocationCoordinate2D = CLLocationCoordinate2D();
     var currentCorner: CLLocationCoordinate2D = CLLocationCoordinate2D();
-    
+    // Text of the element being parsed. XMLParser delivers character data in
+    // chunks and splits at every entity reference ("A&amp;B" arrives as "A",
+    // "&", "B"), so text is accumulated here and applied in didEndElement.
+    private var textBuffer = ""
+
     func readRwa(_ name:String)
     {
         scenes.removeAll()
@@ -47,92 +51,76 @@ class RwaImport:NSObject, XMLParserDelegate
 
         hero.loadGameScript()
     }
-    
+
     func parser(_ parser: XMLParser, foundCharacters string: String)
     {
-        if(string.isEmptyOrWhitespace()) {
-            return }
-        
-        if(currentElement == "requiredstate")
-        {
-            statePtr?.requiredStates.append(string)
-            //print("Found requiredState \(string)")
-        }
-        
-        if(currentElement == "nextstate")
-        {
-            statePtr?.nextState = string
-            //print("Found nextstate \(string) \(string.characters.count)")
-        }
-        
-        if(currentElement == "nextscene")
-        {
-            statePtr?.nextScene = string
-            //print("Found nextscene \(string)")
-        }
-        
-        if(currentElement == "hintstate")
-        {
-            statePtr?.hintState = string
-            //print("Found hintstate \(string)")
-        }
-        
-        if( (currentElement == "lon") && readPolygonCorners)
-        {
-            let lon:Double = Double(string)!;
-            currentCorner.longitude = lon
-            // var latd:Double = Double(lat)!
-        }
-        
-        if( (currentElement == "lat") && readPolygonCorners)
-        {
-            let lat:Double = Double(string)!;
-            currentCorner.latitude = lat
-            areaPtr?.corners!.append(currentCorner)
+        textBuffer += string
+    }
 
-        }
-        
-        if( (currentElement == "lon") && readExitOffsetCorners)
-        {
-            let lon:Double = Double(string)!;
-            currentCorner.longitude = lon
-            // var latd:Double = Double(lat)!
-        }
-        
-        if( (currentElement == "lat") && readExitOffsetCorners)
-        {
-            let lat:Double = Double(string)!;
-            currentCorner.latitude = lat
-            areaPtr?.exitOffsetCorners!.append(currentCorner)
-            logger.debug("Read Exit Offset Corner");
-            
-        }
-    }
-    
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
-        
+
+        let text = textBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
+        textBuffer = ""
         currentElement = ""
-        if(elementName == "corners")
+
+        switch elementName
         {
+        case "requiredstate":
+            if(!text.isEmpty) {
+                statePtr?.requiredStates.append(text)
+                //print("Found requiredState \(string)")
+            }
+
+        case "nextstate":
+            statePtr?.nextState = text
+            //print("Found nextstate \(string) \(string.characters.count)")
+
+        case "nextscene":
+            statePtr?.nextScene = text
+            //print("Found nextscene \(string)")
+
+        case "hintstate":
+            statePtr?.hintState = text
+            //print("Found hintstate \(string)")
+
+        case "lon":
+            if(readPolygonCorners || readExitOffsetCorners) {
+                currentCorner.longitude = Double(text)!
+            }
+
+        case "lat":
+            if(readPolygonCorners)
+            {
+                currentCorner.latitude = Double(text)!
+                areaPtr?.corners!.append(currentCorner)
+            }
+            else if(readExitOffsetCorners)
+            {
+                currentCorner.latitude = Double(text)!
+                areaPtr?.exitOffsetCorners!.append(currentCorner)
+                logger.debug("Read Exit Offset Corner");
+            }
+
+        case "corners":
             readPolygonCorners = false;
-        }
-        
-        if(elementName == "exitoffsetcorners")
-        {
+
+        case "exitoffsetcorners":
             readExitOffsetCorners = false;
-        }
-        
-        if(elementName == "channelpositions")
-        {
+
+        case "channelpositions":
             readChannelCoordinates = false;
+
+        default:
+            break
         }
     }
-    
+
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String])
     {
         var attributeDict = attributeDict
         currentElement = elementName
-        
+        textBuffer = ""
+
         if(elementName == "scene")
         {
             let newScene = RwaScene(name:"")
