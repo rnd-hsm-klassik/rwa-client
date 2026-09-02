@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.19] - 2026-09-02
+
+### Changed
+
+- Updated libpd to version 0.16.1 (Pd 0.56-5).
+
 ### Fixed
 
 - The `.rwa` importer corrupted text elements containing an XML entity (`&amp;`
