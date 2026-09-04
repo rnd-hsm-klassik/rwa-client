@@ -100,7 +100,10 @@ Player-specific facts:
 Pd patches live in `pd-patches/` (the playback patchers, one per playback type, plus
 `fabian_dir256.txt` — the 38 MB FABIAN HRTF set). A build phase rsyncs everything under
 `rwaGames/` **flat** into the app bundle, so a game's `.rwa` and its assets end up side by side
-in `Resources/`.
+in `Resources/`. `rwaGames/` therefore means "ships on the phone": the first launch copies those
+games into `Documents/` and they stay there for good, so nothing test-only belongs in it — parity
+fixtures live in `rwaClient/tests/fixtures/` and are copied into the **test** bundle instead (a
+separate build phase on `rwaclientTests`, nested one directory per game).
 
 **Vendored / submodule directories — do not edit, and exclude them from searches:**
 `libpd/`, `vas_library/`, `F53OSC/`, `libogg/`, `vorbis/`, `pd-extra/`. Never run
@@ -250,7 +253,9 @@ the game logic, not in the renderer.
   `ci_scripts/ci_post_clone.sh`. Every submodule tree must clone over plain HTTPS with no
   credentials: Xcode Cloud resolves submodules recursively before any hook runs, so one dead
   nested `git://` or SSH URL fails the whole build.
-- Test games live in `rwaGames/` (`rwatest`, `test_moving-asset`). Real authored games are at
+- `rwaGames/` holds the games that ship with the app (`rwatest`); parity-test fixture games
+  (`pdmodes`, `spatial`) live in `rwaClient/tests/fixtures/`, mirroring
+  `../rwa-creator/tools/trace/<name>/`. Real authored games are at
   `/Users/cedric.spindler@fhnw.ch/Projects/h.e.i.-campus/shared/examples`, audio material at
   `.../shared/audio/` — outside the repos.
 

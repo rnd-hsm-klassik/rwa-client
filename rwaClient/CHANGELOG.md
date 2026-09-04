@@ -35,10 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Channel placement of rotating multichannel assets no longer truncates the
   rotation angle to whole degrees every tick.
 
-- New parity test `testSpatialEdgeScenario` (`spatial-edge.scenario.json`,
-  fixture `rwaGames/spatial/`, both copied from rwa-creator/tools/trace).
-  `ScenarioRunner` accepts fractional `azimuth`/`elevation` inputs and wraps
-  them like the production path.
+- Parity-test game fixture moved out of `rwaGames/` into
+  `rwaClient/tests/fixtures/` (`pdmodes`). Everything under
+  `rwaGames/` is rsynced into the app bundle and copied to `Documents/` on first
+  launch, so the fixtures were showing up in the operator's game list on real
+  devices. A new "Copy game fixtures" build phase on `rwaclientTests` copies
+  them into the test bundle, nested one directory per game so asset basenames
+  cannot collide between fixtures; `EngineParityTests` resolves games from the
+  test bundle instead of the host app bundle. `rwaGames/` now ships only `rwatest`.
 
 ### Fixed
 

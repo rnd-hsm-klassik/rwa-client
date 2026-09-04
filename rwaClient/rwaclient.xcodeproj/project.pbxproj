@@ -293,6 +293,7 @@
 		BEEF00000000000000000019 /* TeardownTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeardownTests.swift; sourceTree = "<group>"; };
 		BEEF0000000000000000001B /* TelemetryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryStoreTests.swift; sourceTree = "<group>"; };
 		BEEF0000000000000000001D /* RwaImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RwaImportTests.swift; sourceTree = "<group>"; };
+		BEEF00000000000000000041 /* fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = fixtures; sourceTree = "<group>"; };
 		E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "rwa_binauralsimple~.c"; path = "../vas_library/examples/PureData/rwa_binauralsimple~.c"; sourceTree = "<group>"; };
 		E4232CB623D9C12B00E44DE3 /* vas_firobject.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_firobject.c; path = ../vas_library/source/vas_firobject.c; sourceTree = "<group>"; };
 		E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_fir_list.c; path = ../vas_library/source/vas_fir_list.c; sourceTree = "<group>"; };
@@ -509,6 +510,7 @@
 				BEEF0000000000000000000F /* rwaclientTests-Bridging-Header.h */,
 				BEEF00000000000000000010 /* smoke-background.scenario.json */,
 				BEEF00000000000000000017 /* pdmodes.scenario.json */,
+				BEEF00000000000000000041 /* fixtures */,
 			);
 			path = tests;
 			sourceTree = "<group>";
@@ -545,6 +547,7 @@
 				BEEF00000000000000000003 /* Sources */,
 				BEEF00000000000000000004 /* Frameworks */,
 				BEEF00000000000000000005 /* Resources */,
+				BEEF00000000000000000040 /* Copy game fixtures */,
 			);
 			buildRules = (
 			);
@@ -711,6 +714,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "find -L \"${PROJECT_DIR}/../rwaGames\" \\\n-type f -not -name \".*\" \\\n| xargs -t -I {} \\\nrsync -auv {} ${CONFIGURATION_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/\n";
+		};
+		BEEF00000000000000000040 /* Copy game fixtures */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Copy game fixtures";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n# Game fixtures for the parity tests live in the TEST bundle, not the app\n# bundle: everything under rwaGames/ is copied to the phone on install (and\n# from there into Documents), so a fixture shipped with the app shows up in\n# the operator's game list forever. Copied nested (one directory per game,\n# keeping its own assets/) rather than flat like the app phase, so asset\n# basenames cannot collide between fixtures.\n# TARGET_BUILD_DIR, not CONFIGURATION_BUILD_DIR: a test bundle hosted in the\n# app is built into rwa-client.app/PlugIns/, and only the former points there.\nDEST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/games\"\nrm -rf \"${DEST}\"\nmkdir -p \"${DEST}\"\nrsync -a --exclude=\".*\" --exclude=\"tilecache\" \"${PROJECT_DIR}/tests/fixtures/\" \"${DEST}/\"\n# rwatest is a real game and stays in rwaGames/ (it ships with the app); the\n# smoke-background scenario replays it, so the test bundle gets a copy too.\nrsync -a --exclude=\".*\" \"${PROJECT_DIR}/../rwaGames/rwatest\" \"${DEST}/\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

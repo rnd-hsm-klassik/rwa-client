@@ -26,23 +26,30 @@ final class EngineParityTests: XCTestCase {
         return try RwaScenario(contentsOf: url)
     }
 
-    /// The .rwa games ship flat in the app bundle (the rwaGames rsync build
-    /// phase); resolve a scenario's "rwatest/rwatest.rwa" style reference by
-    /// basename, like the Player itself does.
-    private func gamePath(forBasename basename: String) throws -> String {
-        let name = (basename as NSString).deletingPathExtension
-        return try XCTUnwrap(Bundle.main.path(forResource: name, ofType: "rwa"),
-                             "game \(basename) missing from host app bundle")
+    /// Fixture games live in the TEST bundle, not the app bundle: the
+    /// rwaclientTests "Copy game fixtures" build phase copies each one
+    /// nested into Resources/games/<name>/ (keeping its own assets/ folder,
+    /// unlike the app's flat rwaGames rsync, so basenames cannot collide
+    /// between fixtures). A game directory is named after its .rwa.
+    private func gameFixture(named name: String) throws -> (game: String, assets: String) {
+        let bundle = Bundle(for: EngineParityTests.self)
+        let dir = try XCTUnwrap(bundle.resourcePath, "test bundle has no resources")
+            + "/games/" + name
+        let game = dir + "/" + name + ".rwa"
+        XCTAssertTrue(FileManager.default.fileExists(atPath: game),
+                      "game fixture \(name) missing from test bundle")
+        return (game, dir + "/assets")
     }
 
     @discardableResult
-    private func runAndExport(scenarioName: String, gameBasename: String) throws -> [String] {
+    private func runAndExport(scenarioName: String, gameFixture name: String) throws -> [String] {
         let scenario = try loadScenario(named: scenarioName)
         XCTAssertEqual(scenario.schema, "rwa-scenario/1", "unknown scenario schema")
 
+        let fixture = try gameFixture(named: name)
         let runner = ScenarioTraceRunner()
-        let trace = runner.run(gamePath: try gamePath(forBasename: gameBasename),
-                               assetPath: Bundle.main.resourcePath!,
+        let trace = runner.run(gamePath: fixture.game,
+                               assetPath: fixture.assets,
                                scenario: scenario)
 
         let text = trace.joined(separator: "\n") + "\n"
@@ -67,7 +74,7 @@ final class EngineParityTests: XCTestCase {
 
     func testSmokeBackgroundScenario() throws {
         let trace = try runAndExport(scenarioName: "smoke-background.scenario",
-                                     gameBasename: "rwatest.rwa")
+                                     gameFixture: "rwatest")
 
         // Initial state event (after the setScene init messages): start scene
         // with its front (fallback) state.
@@ -104,7 +111,7 @@ final class EngineParityTests: XCTestCase {
     /// 7 channel → 7 at distinct angular offsets.
     func testPdModesScenario() throws {
         let trace = try runAndExport(scenarioName: "pdmodes.scenario",
-                                     gameBasename: "pdmodes.rwa")
+                                     gameFixture: "pdmodes")
 
         let expectations: [(asset: String, channels: Int)] = [
             ("stereopatch.pd", 2),
@@ -173,11 +180,14 @@ final class EngineParityTests: XCTestCase {
     /// column and receiver suffix.)
     func testScenarioReplayIsDeterministic() throws {
         let scenario = try loadScenario(named: "smoke-background.scenario")
-        let game = try gamePath(forBasename: "rwatest.rwa")
-        let assetPath = Bundle.main.resourcePath!
+        let fixture = try gameFixture(named: "rwatest")
 
-        let first = ScenarioTraceRunner().run(gamePath: game, assetPath: assetPath, scenario: scenario)
-        let second = ScenarioTraceRunner().run(gamePath: game, assetPath: assetPath, scenario: scenario)
+        let first = ScenarioTraceRunner().run(gamePath: fixture.game,
+                                              assetPath: fixture.assets,
+                                              scenario: scenario)
+        let second = ScenarioTraceRunner().run(gamePath: fixture.game,
+                                               assetPath: fixture.assets,
+                                               scenario: scenario)
 
         XCTAssertEqual(first.map(canonicalized), second.map(canonicalized))
     }

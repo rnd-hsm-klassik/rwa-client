@@ -21,9 +21,11 @@ rwaClient/tests/
 ├── ScenarioRunner.swift        # scenario replay + JSONL trace writer
 ├── EngineParityTests.swift     # XCTest entry points
 ├── rwaclientTests-Bridging-Header.h
-└── scenarios/
-    ├── smoke-background.scenario.json   # mirror of rwa-creator/tools/trace/scenarios/
-    └── pdmodes.scenario.json            # mirror; game fixture in rwaGames/pdmodes/
+├── scenarios/
+│   ├── smoke-background.scenario.json   # mirror of rwa-creator/tools/trace/scenarios/
+│   ├── pdmodes.scenario.json            # mirror
+└── fixtures/                            # game fixtures, mirror of rwa-creator/tools/trace/<name>/
+    ├── pdmodes/{pdmodes.rwa,assets/}
 ```
 
 The `rwaclientTests` unit-test target is **hosted in rwa-client.app** (the
@@ -98,8 +100,9 @@ xcrun xcresulttool export attachments \
 
 Scenarios in the test bundle: `smoke-background`, `pdmodes` and
 `spatial-edge` (float distance / azimuth / elevation chain; fixture
-`rwaGames/spatial/`, expectations in rwa-creator/tools/trace/spatial/README.md,
-the C++ side is checked by `check_trace.py` there).
+`rwaClient/tests/fixtures/spatial/`, expectations in
+rwa-creator/tools/trace/spatial/README.md, the C++ side is checked by
+`check_trace.py` there).
 
 Each test attaches its `<scenario>.player.trace.jsonl` to the result bundle
 (`lifetime = .keepAlways`); the `xcresulttool export attachments` step dumps
@@ -112,7 +115,7 @@ via the scheme's test action if you want direct file output. The attachment
 route always works. The C++ counterpart:
 
 ```
-./build/cmake-debug/rwatrace --game rwa-client/rwaGames/rwatest/rwatest.rwa \
+./build/cmake-debug/rwatrace --game rwa-player/rwaGames/rwatest/rwatest.rwa \
     --scenario tools/trace/scenarios/smoke-background.scenario.json \
     --out smoke-background.creator.trace.jsonl
 ```
@@ -152,10 +155,26 @@ Until Phase D adds a checksum guard to CI, keep them in sync by hand:
 shasum -a 256 rwaClient/tests/scenarios/*.json ../rwa-creator/tools/trace/scenarios/*.json
 ```
 
-The `.rwa` games referenced by scenarios need no mirroring: the app's rsync
-build phase already ships everything under `rwaGames/` **flat** into the app
-bundle (`rwatest.rwa` and its assets sit next to each other in
-`Resources/`), and the tests resolve games by basename from the host bundle.
+The `.rwa` games the scenarios reference **are** mirrored, into
+`rwaClient/tests/fixtures/<name>/` — one directory per game, keeping its own
+`assets/`. They must not go into `rwaGames/`: everything there is rsynced into
+the app bundle and copied to `Documents/` on first launch, so a fixture put
+there shows up in the operator's game list on real devices, permanently.
+
+The `rwaclientTests` target has its own "Copy game fixtures" build phase which
+copies `tests/fixtures/*` **and** `rwaGames/rwatest` (a real game, shipped with
+the app, that `smoke-background` replays) into
+`rwaclientTests.xctest/games/<name>/`. Unlike the app's flat rsync this keeps
+the per-game directories, so asset basenames cannot collide between fixtures —
+which they would as more scenarios are ported (`gainhierarchy`, `scenechange`).
+`EngineParityTests.gameFixture(named:)` resolves both the `.rwa` and its
+`assets/` from there; no test reads the host app bundle for game content.
+
+The phase writes to `${TARGET_BUILD_DIR}`, not `${CONFIGURATION_BUILD_DIR}`:
+a test bundle hosted in the app is built into `rwa-client.app/PlugIns/`, and
+only the former points there.
+
+`tilecache/` is excluded when mirroring — those are Creator map tiles.
 
 ## Findings made while building this (Phase C notes)
 
