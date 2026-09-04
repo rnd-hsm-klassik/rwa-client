@@ -24,8 +24,10 @@ rwaClient/tests/
 ├── scenarios/
 │   ├── smoke-background.scenario.json   # mirror of rwa-creator/tools/trace/scenarios/
 │   ├── pdmodes.scenario.json            # mirror
+│   └── spatial-edge.scenario.json       # mirror
 └── fixtures/                            # game fixtures, mirror of rwa-creator/tools/trace/<name>/
     ├── pdmodes/{pdmodes.rwa,assets/}
+    └── spatial/{spatial.rwa,assets/}
 ```
 
 The `rwaclientTests` unit-test target is **hosted in rwa-client.app** (the

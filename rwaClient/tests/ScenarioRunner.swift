@@ -160,14 +160,16 @@ final class ScenarioTraceRunner {
             hero.timeSinceLastGpsUpdate = 0
             writeEvent(["ev": "input", "kind": "pos", "lon": lon, "lat": lat])
         }
-        if let value = (input["azimuth"] as? NSNumber)?.intValue {
-            hero.azimuth = value
-            azimuth = value    // module global, read for non-source-relative PD assets
+        // Wrapped like the production path (applyHeadingSample) and the Creator's
+        // RwaEntity::setAzimuth/setElevation; the echo carries the raw scenario value.
+        if let value = (input["azimuth"] as? NSNumber)?.doubleValue {
+            hero.azimuth = wrap360(value)
+            azimuth = hero.azimuth    // module global, read for non-source-relative PD assets
             writeEvent(["ev": "input", "kind": "azimuth", "value": value])
         }
-        if let value = (input["elevation"] as? NSNumber)?.intValue {
-            hero.elevation = value
-            elevation = value
+        if let value = (input["elevation"] as? NSNumber)?.doubleValue {
+            hero.elevation = wrap180(value)
+            elevation = hero.elevation
             writeEvent(["ev": "input", "kind": "elevation", "value": value])
         }
         if (input["step"] as? NSNumber)?.boolValue == true {

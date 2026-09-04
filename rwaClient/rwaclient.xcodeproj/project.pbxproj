@@ -119,6 +119,7 @@
 		BEEF0000000000000000001A /* TeardownTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000019 /* TeardownTests.swift */; };
 		BEEF0000000000000000001C /* TelemetryStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF0000000000000000001B /* TelemetryStoreTests.swift */; };
 		BEEF0000000000000000001E /* RwaImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEF0000000000000000001D /* RwaImportTests.swift */; };
+		BEEF00000000000000000031 /* spatial-edge.scenario.json in Resources */ = {isa = PBXBuildFile; fileRef = BEEF00000000000000000030 /* spatial-edge.scenario.json */; };
 		E4232CB523D9C09D00E44DE3 /* rwa_binauralsimple~.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */; };
 		E4232CB723D9C12B00E44DE3 /* vas_firobject.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB623D9C12B00E44DE3 /* vas_firobject.c */; };
 		E4232CB923D9C16D00E44DE3 /* vas_fir_list.c in Sources */ = {isa = PBXBuildFile; fileRef = E4232CB823D9C16C00E44DE3 /* vas_fir_list.c */; };
@@ -293,6 +294,7 @@
 		BEEF00000000000000000019 /* TeardownTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeardownTests.swift; sourceTree = "<group>"; };
 		BEEF0000000000000000001B /* TelemetryStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryStoreTests.swift; sourceTree = "<group>"; };
 		BEEF0000000000000000001D /* RwaImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RwaImportTests.swift; sourceTree = "<group>"; };
+		BEEF00000000000000000030 /* spatial-edge.scenario.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = "spatial-edge.scenario.json"; path = "scenarios/spatial-edge.scenario.json"; sourceTree = "<group>"; };
 		BEEF00000000000000000041 /* fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = fixtures; sourceTree = "<group>"; };
 		E4232CB423D9C09D00E44DE3 /* rwa_binauralsimple~.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "rwa_binauralsimple~.c"; path = "../vas_library/examples/PureData/rwa_binauralsimple~.c"; sourceTree = "<group>"; };
 		E4232CB623D9C12B00E44DE3 /* vas_firobject.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vas_firobject.c; path = ../vas_library/source/vas_firobject.c; sourceTree = "<group>"; };
@@ -510,6 +512,7 @@
 				BEEF0000000000000000000F /* rwaclientTests-Bridging-Header.h */,
 				BEEF00000000000000000010 /* smoke-background.scenario.json */,
 				BEEF00000000000000000017 /* pdmodes.scenario.json */,
+				BEEF00000000000000000030 /* spatial-edge.scenario.json */,
 				BEEF00000000000000000041 /* fixtures */,
 			);
 			path = tests;
@@ -682,6 +685,7 @@
 			files = (
 				BEEF00000000000000000014 /* smoke-background.scenario.json in Resources */,
 				BEEF00000000000000000018 /* pdmodes.scenario.json in Resources */,
+				BEEF00000000000000000031 /* spatial-edge.scenario.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

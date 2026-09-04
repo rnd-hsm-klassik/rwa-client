@@ -109,6 +109,85 @@ final class EngineParityTests: XCTestCase {
     /// binaural stereo → 2 channels, binaural mono → 1, binaural stereo with
     /// "headtracker relative to source" off → 1 (raw head data), binaural
     /// 7 channel → 7 at distinct angular offsets.
+    /// Float distance / azimuth / elevation chain (mirrored from the Creator's
+    /// `calculateRelativeDirection` change). Fixture and expectations:
+    /// rwa-creator/tools/trace/spatial/README.md; the C++ trace is checked by
+    /// tools/trace/spatial/check_trace.py, this test asserts the same
+    /// invariants on the Swift trace.
+    func testSpatialEdgeScenario() throws {
+        let trace = try runAndExport(scenarioName: "spatial-edge.scenario",
+                                     gameFixture: "spatial")
+
+        func tagFor(_ asset: String) throws -> Int {
+            let playLine = try XCTUnwrap(trace.first { $0.contains("-play\"") && $0.contains(asset) },
+                                         "\(asset) was never started")
+            return try XCTUnwrap(tag(ofLine: playLine), "no tag in: \(playLine)")
+        }
+        /// (t, value) of every `<tag>-<param>` float event; nil value = JSON null (NaN/inf).
+        func values(_ tag: Int, _ param: String) -> [(t: Int, val: Double?)] {
+            trace.compactMap { line in
+                guard line.contains("\"recv\":\"\(tag)-\(param)\""),
+                      let tRange = line.range(of: #""t":(\d+)"#, options: .regularExpression),
+                      let t = Int(line[tRange].dropFirst(4)) else { return nil }
+                guard let vRange = line.range(of: #""val":(null|-?[\d.eE+-]+)"#, options: .regularExpression) else { return nil }
+                let raw = String(line[vRange].dropFirst(6))
+                return (t, raw == "null" ? nil : Double(raw))
+            }
+        }
+        func wrap(_ x: Double) -> Double { let r = fmod(x, 360); return r < 0 ? r + 360 : r }
+
+        let relative = ["horizon.pd", "elevated.pd", "onspot0.pd", "onspot5.pd",
+                        "mindist.pd", "fixedazi.pd", "fixeddist.pd"]
+        for asset in relative + ["rawhead.pd"] {
+            let tag = try tagFor(asset)
+            for param in ["distance1", "azimuth1", "elevation1"] {
+                let vals = values(tag, param)
+                XCTAssertFalse(vals.isEmpty, "\(asset): \(param) never sent")
+                XCTAssertFalse(vals.contains { $0.val == nil || !$0.val!.isFinite },
+                               "\(asset): non-finite \(param) on the wire")
+            }
+            XCTAssertTrue(values(tag, "azimuth1").allSatisfy { $0.val! >= 0 && $0.val! < 360 },
+                          "\(asset): azimuth outside [0, 360)")
+            XCTAssertTrue(values(tag, "distance1").allSatisfy { $0.val! >= 0 }, "\(asset): negative distance")
+        }
+        for asset in relative {
+            XCTAssertTrue(values(try tagFor(asset), "elevation1").allSatisfy { abs($0.val!) <= 90 },
+                          "\(asset): relative elevation outside [-90, 90]")
+        }
+
+        // Raw-head patch echoes the wrapped yaw (12.5, -45 -> 315, 725 -> 5) and the
+        // unclamped, wrapped pitch (90, -95, 120, -150).
+        let raw = try tagFor("rawhead.pd")
+        for expected in [12.5, 315.0, 5.0] {
+            XCTAssertTrue(values(raw, "azimuth1").contains { abs($0.val! - expected) < 1e-3 },
+                          "rawhead.pd: head yaw \(expected) never echoed")
+        }
+        for expected in [90.0, -95.0, 120.0, -150.0] {
+            XCTAssertTrue(values(raw, "elevation1").contains { abs($0.val! - expected) < 1e-3 },
+                          "rawhead.pd: head pitch \(expected) never echoed")
+        }
+
+        // Horizon source dead ahead: azimuth 180 at pitch 0 (t < 1000), flipped by
+        // 180 at pitch 120 (6000 <= t < 7000) and -150 (7000 <= t < 8000).
+        let horizon = try tagFor("horizon.pd")
+        let ahead = try XCTUnwrap(values(horizon, "azimuth1").first { $0.t < 1000 }?.val)
+        XCTAssertEqual(ahead, 180, accuracy: 1e-3)
+        for (lo, hi) in [(6000, 7000), (7000, 8000)] {
+            let flipped = try XCTUnwrap(values(horizon, "azimuth1").first { $0.t >= lo && $0.t < hi }?.val)
+            XCTAssertEqual(wrap(flipped - ahead), 180, accuracy: 1e-3, "horizon.pd: no 180 flip past vertical")
+        }
+        XCTAssertEqual(try XCTUnwrap(values(horizon, "elevation1").first { $0.t >= 6000 && $0.t < 7000 }?.val),
+                       -60, accuracy: 1e-3)
+
+        // Sub-metre distance after the 0.5 m move at t=8000, and the fixed / min values.
+        XCTAssertEqual(try XCTUnwrap(values(try tagFor("onspot0.pd"), "distance1").last?.val), 0.5, accuracy: 0.01)
+        XCTAssertEqual(try XCTUnwrap(values(try tagFor("mindist.pd"), "distance1").first?.val), 3, accuracy: 1e-3)
+        XCTAssertEqual(try XCTUnwrap(values(try tagFor("fixeddist.pd"), "distance1").first?.val), 2.5, accuracy: 1e-3)
+        XCTAssertTrue(values(try tagFor("fixedazi.pd"), "azimuth1").allSatisfy { abs($0.val! - 45.5) < 1e-3 },
+                      "fixedazi.pd: fixed orientation must ignore the head")
+        XCTAssertEqual(try XCTUnwrap(values(try tagFor("onspot5.pd"), "elevation1").first?.val), 90, accuracy: 1e-3)
+    }
+
     func testPdModesScenario() throws {
         let trace = try runAndExport(scenarioName: "pdmodes.scenario",
                                      gameFixture: "pdmodes")
