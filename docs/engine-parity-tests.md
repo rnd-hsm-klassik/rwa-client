@@ -96,6 +96,11 @@ xcrun xcresulttool export attachments \
     --path /tmp/parity.xcresult --output-path /tmp/rwa-traces
 ```
 
+Scenarios in the test bundle: `smoke-background`, `pdmodes` and
+`spatial-edge` (float distance / azimuth / elevation chain; fixture
+`rwaGames/spatial/`, expectations in rwa-creator/tools/trace/spatial/README.md,
+the C++ side is checked by `check_trace.py` there).
+
 Each test attaches its `<scenario>.player.trace.jsonl` to the result bundle
 (`lifetime = .keepAlways`); the `xcresulttool export attachments` step dumps
 them to plain files (see `manifest.json` there for the human-readable

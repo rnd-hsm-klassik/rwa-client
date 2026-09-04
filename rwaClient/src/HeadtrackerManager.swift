@@ -560,12 +560,14 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
             // overwrite the CoreMotion heading or double-count steps.
             if useHeadTracker {
                 os_signpost(.event, log: headtrackingSignpostLog, name: "heading_frame")
-                let azimuthOrgNew = Int(frame.azimuthDeg.rounded()) % 360
+                // Full float precision from the wire (Q14 quaternion, sub-0.01 deg);
+                // rounding happens only where degrees are displayed.
+                let azimuthOrgNew = wrap360(Double(frame.azimuthDeg))
                 HeadingStats.shared.record(format: .binary,
-                                           azimuthChanged: azimuthOrgNew != azimuthOrg,
+                                           azimuthChanged: Int(azimuthOrgNew.rounded()) != Int(azimuthOrg.rounded()),
                                            seq: frame.seq, tDevMs: frame.tDevMs)
                 applyHeadingSample(azimuthOrgNew: azimuthOrgNew,
-                                   elevationOrgNew: Int(frame.elevationDeg.rounded()),
+                                   elevationOrgNew: Double(frame.elevationDeg),
                                    linAccelNew: frame.linAccelZ)
             }
             return
@@ -641,19 +643,23 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
             // (and double-count steps) on every frame.
             else if(useHeadTracker)
             {
-                var azimuthTmp = words[0]
-                let elevationTmp = words[1]
+                // Parsed as decimals (the old `.digits` + intValue path dropped the
+                // fraction and the sign of a negative pitch).
+                let trim = CharacterSet.whitespacesAndNewlines
+                guard let azimuthParsed = Double(words[0].trimmingCharacters(in: trim)),
+                      let elevationParsed = Double(words[1].trimmingCharacters(in: trim)) else {
+                    logger.debug("BT: malformed ASCII heading frame")
+                    return
+                }
                 let linAccTmp = words[2]
 
-                azimuthTmp = azimuthTmp.digits
-
                 os_signpost(.event, log: headtrackingSignpostLog, name: "heading_frame")
-                let azimuthOrgNew = Int(NSString(string: azimuthTmp).intValue)
+                let azimuthOrgNew = wrap360(azimuthParsed)
                 HeadingStats.shared.record(format: .ascii,
-                                           azimuthChanged: azimuthOrgNew != azimuthOrg,
+                                           azimuthChanged: Int(azimuthOrgNew.rounded()) != Int(azimuthOrg.rounded()),
                                            seq: nil, tDevMs: nil)
                 applyHeadingSample(azimuthOrgNew: azimuthOrgNew,
-                                   elevationOrgNew: Int(NSString(string: elevationTmp).intValue),
+                                   elevationOrgNew: elevationParsed,
                                    linAccelNew: NSString(string: linAccTmp).floatValue)
             }
         }
@@ -682,18 +688,19 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
     /// queue exists to bypass. The globals are word-sized Int/Float, and the
     /// CoreMotion heading path (SecondViewController.startQueuedUpdates)
     /// already writes them from a background OperationQueue the same way.
-    private func applyHeadingSample(azimuthOrgNew: Int, elevationOrgNew: Int, linAccelNew: Float) {
+    private func applyHeadingSample(azimuthOrgNew: Double, elevationOrgNew: Double, linAccelNew: Float) {
+        guard azimuthOrgNew.isFinite, elevationOrgNew.isFinite else { return }
         azimuthOrg = azimuthOrgNew
-        azimuth = azimuthOrg - azimuthOffset
-        if(azimuth < 0) {
-            azimuth += 360
-        }
+        azimuth = wrap360(azimuthOrg - azimuthOffset)
 
         elevationOrg = elevationOrgNew
-        elevation = elevationOrg - elevationOffset
+        var pitch = elevationOrg - elevationOffset
         if(inverseElevation) {
-            elevation = -elevation;
+            pitch = -pitch;
         }
+        // No clamp: pitch past vertical is a valid pose (mirrors RwaEntity::setElevation in
+        // the Creator); the source-relative elevation comes out of calculateRelativeDirection.
+        elevation = wrap180(pitch)
 
         linAccel = linAccelNew
         linAccelAverage = Float(averageAccel.average(value: Double(linAccel)))

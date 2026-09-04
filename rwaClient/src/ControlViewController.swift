@@ -264,7 +264,7 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
             let scene = hero.currentScene?.name ?? "—"
             let state = hero.currentState?.stateName ?? "—"
             self.sceneLabel.text = "\(scene) · \(state)"
-            self.motionLabel.text = "az \(hero.azimuth)°   el \(hero.elevation)°   \(hero.stepCount) steps"
+            self.motionLabel.text = "az \(Int(hero.azimuth.rounded()))°   el \(Int(hero.elevation.rounded()))°   \(hero.stepCount) steps"
             self.updateCoordinates()
         }
     }

@@ -28,8 +28,8 @@ class RwaEntity:NSObject
     var coordinates:CLLocationCoordinate2D = CLLocationCoordinate2D()
     var timeSinceLastGpsUpdate:Double = 0.0;
     var disconnectedFromHeadtrackerSince = 0.0
-    var azimuth:Int = 0
-    var elevation:Int = 0
+    var azimuth:Double = 0     // head yaw, degrees clockwise from north, [0, 360)
+    var elevation:Double = 0   // head pitch, degrees, positive up, (-180, 180] - not clamped
     var stepCount:Int = 0
     var currentScene:RwaScene?
     var currentState:RwaState?

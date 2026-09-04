@@ -93,44 +93,94 @@ func calculateDistanceWithAltitude(_ p1:Double, p2:Double) -> Double
     return d;
 }
 
-func calculateElevationEasy(_ p1:CLLocationCoordinate2D, p2:CLLocationCoordinate2D, elevation:Double, headDirection:Double) -> Double
+// Angle normalisation, mirrors RwaUtilities::wrap360 / wrap180 in RWA Creator.
+
+func wrap360(_ degrees: Double) -> Double   // -> [0, 360)
 {
-    let d = calculateDistanceInMeters(p1, p2: p2)
-    let vd = elevation
-    var relativeElevation = atan(vd/d)
-    relativeElevation = radians2degrees(relativeElevation)
-    relativeElevation -= headDirection;
-    return relativeElevation
+    var wrapped = fmod(degrees, 360.0)
+    if wrapped < 0 {
+        wrapped += 360.0
+    }
+    if wrapped >= 360.0 {   // fmod rounding (e.g. -1e-17 + 360)
+        wrapped = 0.0
+    }
+    return wrapped + 0.0    // normalise -0.0
 }
 
-// calculates bearing between p1 and p2
+func wrap180(_ degrees: Double) -> Double   // -> (-180, 180]
+{
+    var wrapped = fmod(degrees, 360.0)
+    if wrapped > 180.0 {
+        wrapped -= 360.0
+    }
+    else if wrapped <= -180.0 {
+        wrapped += 360.0
+    }
+    return wrapped + 0.0
+}
+
+// world bearing from p1 to p2, clockwise from north, [0, 360)
+// (RwaUtilities::calculateWorldBearing).
+
+func calculateWorldBearing(_ p1:CLLocationCoordinate2D, p2:CLLocationCoordinate2D) -> Double
+{
+    let phi1 = degrees2radians(p1.latitude);
+    let phi2 = degrees2radians(p2.latitude);
+    let lam1 = degrees2radians(p1.longitude);
+    let lam2 = degrees2radians(p2.longitude);
+    
+    let radians = atan2(sin(lam2-lam1)*cos(phi2),cos(phi1)*sin(phi2) - sin(phi1)*cos(phi2)*cos(lam2-lam1));
+    return wrap360(radians2degrees(radians))
+}
+
+// bearing with the engine +180 convention (180 = "ahead"),
+// kept for the moving-asset direction (RwaUtilities::calculateBearing1).
 
 func calculateBearing(_ p1:CLLocationCoordinate2D, p2:CLLocationCoordinate2D) -> Double
 {
-    let phi1 = degrees2radians(p1.latitude);
-    let phi2 = degrees2radians(p2.latitude);
-    let lam1 = degrees2radians(p1.longitude);
-    let lam2 = degrees2radians(p2.longitude);
-    
-    let radians = atan2(sin(lam2-lam1)*cos(phi2),cos(phi1)*sin(phi2) - sin(phi1)*cos(phi2)*cos(lam2-lam1));
-    let degrees = radians2degrees(radians);
-    return (degrees+180).truncatingRemainder(dividingBy: 360);
+    return wrap360(calculateWorldBearing(p1, p2: p2) + 180.0)
 }
 
-// calculates bearing between p1 and p2 with head orientation
+// Source direction relative to the head, from one rotation (yaw + pitch, roll
+// ignored). All angles in degrees.
+// 
+// bearing: world bearing of the source, clockwise from north
+// elevation: world elevation of the source (atan2(altitude, horizontal distance))
+// headYaw: clockwise from north
+// headPitch: positive up
+//
+// mirrors RwaUtilities::calculateRelativeDirection in RWA Creator.
+// keep the operation order identical so both engines produce the same numbers.
 
-func calculateBearing(_ p1:CLLocationCoordinate2D, p2:CLLocationCoordinate2D, headDirection: Double) -> Double
+func calculateRelativeDirection(bearing: Double, elevation: Double, headYaw: Double, headPitch: Double) -> (azimuth: Double, elevation: Double)
 {
-    let phi1 = degrees2radians(p1.latitude);
-    let phi2 = degrees2radians(p2.latitude);
-    let lam1 = degrees2radians(p1.longitude);
-    let lam2 = degrees2radians(p2.longitude);
-    
-    let radians = atan2(sin(lam2-lam1)*cos(phi2),cos(phi1)*sin(phi2) - sin(phi1)*cos(phi2)*cos(lam2-lam1));
-    var degrees = radians2degrees(radians);
-    degrees -= headDirection
-    degrees += 360
-    return (degrees+180).truncatingRemainder(dividingBy: 360);
+    let b = degrees2radians(bearing)
+    let e = degrees2radians(elevation)
+    let psi = degrees2radians(headYaw)
+    let theta = degrees2radians(headPitch)
+
+    // source unit vector (east, north, up)
+    let vx = cos(e) * sin(b)
+    let vy = cos(e) * cos(b)
+    let vz = sin(e)
+
+    // head axes: forward, up, right
+    let fx = cos(theta) * sin(psi)
+    let fy = cos(theta) * cos(psi)
+    let fz = sin(theta)
+    let ux = -sin(theta) * sin(psi)
+    let uy = -sin(theta) * cos(psi)
+    let uz = cos(theta)
+    let rx = cos(psi)
+    let ry = -sin(psi)
+
+    let xf = vx * fx + vy * fy + vz * fz
+    let xr = vx * rx + vy * ry
+    let xu = vx * ux + vy * uy + vz * uz
+
+    let azimuth = wrap360(radians2degrees(atan2(xr, xf)) + 180.0)
+    let relativeElevation = radians2degrees(atan2(xu, hypot(xf, xr)))
+    return (azimuth, relativeElevation)
 }
 
 // checks whether coordinate p is within polygon consisting of corners

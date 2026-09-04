@@ -82,8 +82,8 @@ class AboutViewController: UITableViewController {
 
         // IMU (live orientation read straight from the head-tracker globals)
         var imu: [Row] = [
-            Row(label: "Azimuth", value: "\(hero.azimuth)°"),
-            Row(label: "Elevation", value: "\(hero.elevation)°"),
+            Row(label: "Azimuth", value: "\(Int(hero.azimuth.rounded()))°"),
+            Row(label: "Elevation", value: "\(Int(hero.elevation.rounded()))°"),
             Row(label: "Steps", value: "\(hero.stepCount)")
         ]
         if let c = h.imuCalibStatus { imu.append(Row(label: "Calibration", value: "\(c)")) }

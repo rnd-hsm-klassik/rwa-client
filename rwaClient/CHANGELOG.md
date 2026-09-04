@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Head yaw and pitch are `Double` end to end (`hero.azimuth/elevation`, the
+  heading globals, the BLE and CoreMotion paths); rounding to whole degrees
+  happens only in the labels. The binary headtracker frame carries sub-0.01°
+  resolution that was rounded away in `HeadtrackerManager`. Mirrors the
+  Creator's float-chain change.
+
+- Source-relative azimuth and elevation come from one head rotation
+  (`calculateRelativeDirection`, yaw + pitch, roll ignored; mirrored verbatim
+  from `RwaUtilities::calculateRelativeDirection`) instead of `bearing - yaw`
+  and `elevation - pitch`. Identical at pitch 0; with a pitched head the
+  source stays where it is in the world, and pitch past vertical flips the
+  azimuth by 180°. Relative elevation is in $[-90, 90]$ by construction. Head
+  pitch is wrapped to $(-180, 180]$ (it was never clamped here; the Creator now
+  matches).
+
+- Distance uses `calculateDistanceInMeters` with the `minDistance` clamp
+  applied in `Double` before the `Float` narrowing (it was scaled after
+  narrowing); `minDistance >= 0` enables the floor, as in the Creator.
+
+- Fixed orientation (`fixedazimuth`) assets: neither yaw nor pitch is applied;
+  their elevation is the geometric world elevation (the pitch used to be
+  subtracted while the yaw was ignored). The value is wrapped to $[0, 360)$.
+
+- Channel placement of rotating multichannel assets no longer truncates the
+  rotation angle to whole degrees every tick.
+
+- New parity test `testSpatialEdgeScenario` (`spatial-edge.scenario.json`,
+  fixture `rwaGames/spatial/`, both copied from rwa-creator/tools/trace).
+  `ScenarioRunner` accepts fractional `azimuth`/`elevation` inputs and wraps
+  them like the production path.
+
+### Fixed
+
+- Elevation `NaN` / rare ±90° when the listener stood exactly on a source
+  (`atan(altitude / 0)`); now `atan2`, and `sendDistance/Bearing/Elevation`
+  drop non-finite values (the binaural external casts to `int`, where `NaN`
+  is undefined behaviour).
+
+- Bearing wrap for a head yaw above 540° could go negative
+  (`truncatingRemainder`); all angles now go through `wrap360`.
+
+- The ASCII headtracker path parsed the pitch with `.digits` + `intValue`,
+  dropping the sign and the fraction of a negative pitch.
+
 ## [1.3.19] - 2026-09-02
 
 ### Changed

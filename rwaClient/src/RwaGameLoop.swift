@@ -1179,6 +1179,7 @@ class RwaGameLoop:NSObject, PdListener
     
     func sendDistance(_ channel:Int,_ patcherTag:Int, _ distance: Float)
     {
+        guard distance.isFinite else { return }   // the binaural external casts to int: NaN is undefined behaviour
         let pdChannel:Int = channel+1
         let distance2Pd:String = "\(patcherTag)-distance\(pdChannel)"
         PdBase.send(distance, toReceiver: distance2Pd)
@@ -1186,6 +1187,7 @@ class RwaGameLoop:NSObject, PdListener
     
     func sendBearing(_ channel:Int,_ patcherTag:Int, _ bearing: Float)
     {
+        guard bearing.isFinite else { return }
         let pdChannel:Int = channel+1
         let bearing2Pd:String = "\(patcherTag)-azimuth\(pdChannel)"
         PdBase.send(bearing, toReceiver: bearing2Pd)
@@ -1193,6 +1195,7 @@ class RwaGameLoop:NSObject, PdListener
     
     func sendElevation(_ channel:Int,_ patcherTag:Int, _ elevation: Float)
     {
+        guard elevation.isFinite else { return }
         let pdChannel:Int = channel+1
         let elevation2Pd:String = "\(patcherTag)-elevation\(pdChannel)"
         PdBase.send(elevation, toReceiver: elevation2Pd)
@@ -1208,29 +1211,29 @@ class RwaGameLoop:NSObject, PdListener
             if asset.playbackType == RWAPLAYBACKTYPE_MONO || asset.playbackType == RWAPLAYBACKTYPE_STEREO {
                 channelRadius = 0
             }
-            asset.channelCoordinates[channel] = calculateDestination(asset.currentPosition, channelRadius, Double(Int(Float(offset)+asset.currentRotateAngleOffset)%360)) }
+            asset.channelCoordinates[channel] = calculateDestination(asset.currentPosition, channelRadius, wrap360(Double(offset) + Double(asset.currentRotateAngleOffset))) }
 
-        if(asset.fixedAzimuth < 0) {
-            asset.channelBearing[channel] = Float(calculateBearing(hero.coordinates, p2: asset.channelCoordinates[channel], headDirection: Double(hero.azimuth)))
-        }
-        else {
-            asset.channelBearing[channel] = Float(asset.fixedAzimuth + Double(offset))
-        }
-        
         if(asset.fixedDistance < 0)
         {
-            if(asset.minDistance == -1) {
-                asset.channelDistance[channel] = Float(calculateDistance(hero.coordinates, p2: asset.channelCoordinates[channel])) * 1000}
-            else
-            {
-                asset.channelDistance[channel] = Float(calculateDistance(hero.coordinates, p2: asset.channelCoordinates[channel])) * 1000
-                if(asset.channelDistance[channel] < Float(asset.minDistance)) {
-                    asset.channelDistance[channel] = Float(asset.minDistance)
-                 }
+            var distance = calculateDistanceInMeters(hero.coordinates, p2: asset.channelCoordinates[channel])
+            if(asset.minDistance >= 0 && distance < asset.minDistance) {
+                distance = asset.minDistance   // keeps the listener from walking "through" the source
             }
+            asset.channelDistance[channel] = Float(distance)
         }
         else {
             asset.channelDistance[channel] = Float(asset.fixedDistance)
+        }
+
+        // channelBearing holds the world bearing of the channel as seen from the listener; the
+        // head rotation is applied in sendData2Asset. A fixed azimuth is already listener-relative
+        // and is stored as the final value (no head rotation is applied to it, see sendData2Asset).
+        // mirrors RwaRuntime::calculateChannelBearingAndDistance.
+        if(asset.fixedAzimuth < 0) {
+            asset.channelBearing[channel] = Float(calculateWorldBearing(hero.coordinates, p2: asset.channelCoordinates[channel]))
+        }
+        else {
+            asset.channelBearing[channel] = Float(wrap360(asset.fixedAzimuth + Double(offset)))
         }
     }
     
@@ -1272,10 +1275,29 @@ class RwaGameLoop:NSObject, PdListener
             for i in 0 ..< numChannels
             {
                 calculateChannelBearingAndDistance(i, asset)
-                let channelElevation = calculateElevationEasy(hero.coordinates, p2: asset.channelCoordinates[i], elevation: Double(asset.elevation), headDirection: Double(hero.elevation))
-                let totalDistance = calculateDistanceWithAltitude(Double(asset.channelDistance[i]), p2: Double(asset.elevation))
+                let horizontalDistance = max(Double(asset.channelDistance[i]), 0.0)
+                let altitude = Double(asset.elevation)
+                // atan2 is finite at horizontalDistance == 0 (0 or +-90), unlike atan(altitude / d).
+                let worldElevation = radians2degrees(atan2(altitude, horizontalDistance))
+                let totalDistance = calculateDistanceWithAltitude(horizontalDistance, p2: altitude)
+
+                let relAzimuth: Double
+                let channelElevation: Double
+                if(asset.fixedAzimuth < 0) {
+                    let rel = calculateRelativeDirection(bearing: Double(asset.channelBearing[i]), elevation: worldElevation,
+                                                         headYaw: hero.azimuth, headPitch: hero.elevation)
+                    relAzimuth = rel.azimuth
+                    channelElevation = rel.elevation
+                }
+                else {
+                    // Fixed orientation: the source keeps its place relative to the head, so
+                    // neither yaw nor pitch is applied.
+                    relAzimuth = Double(asset.channelBearing[i])
+                    channelElevation = worldElevation
+                }
+
                 sendDistance(i, intPatcherTag , Float(totalDistance))
-                sendBearing(i, intPatcherTag , asset.channelBearing[i])
+                sendBearing(i, intPatcherTag , Float(relAzimuth))
                 sendElevation(i, intPatcherTag , Float(channelElevation))
             }
         }

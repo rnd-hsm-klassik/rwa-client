@@ -33,16 +33,16 @@ var ubloxLat = Double("3.1415926536")
 // live in CoreLocationController.swift next to their writer.
 var ubloxUpdatedAt: Date?
 var trackerHeadingUpdatedAt: Date?
-var azimuth = 0
-var elevation = 0
+var azimuth = 0.0     // head yaw, degrees, [0, 360)
+var elevation = 0.0   // head pitch, degrees, (-180, 180]
 var step = 0;
 var lastStep = -1;
 var currentScene = ""
 var currentState = ""
-var azimuthOffset = 0
-var elevationOffset = 0
-var azimuthOrg = 0
-var elevationOrg = 0
+var azimuthOffset = 0.0
+var elevationOffset = 0.0
+var azimuthOrg = 0.0
+var elevationOrg = 0.0
 var pdGainVal:Float = 2.0
 var stepThresh = 0.6
 var useHeadTracker = true
@@ -108,7 +108,7 @@ class SecondViewController: UIViewController
                  let roll = validData.attitude.roll * (180/Double.pi);
                  let yaw = validData.attitude.yaw * (180/Double.pi);
                  
-                 var azi = Int(yaw)
+                 var azi = yaw
                  if azi <= 0 {
                      azi = -azi
                  }
@@ -116,21 +116,21 @@ class SecondViewController: UIViewController
                      azi = 360 - azi
                  }
                  
-                 var ele = -Int(roll)
+                 var ele = -roll
                  if inverseElevation {
-                    ele = Int(roll)
+                    ele = roll
                  }
                  
-                 hero.azimuth = azi
-                 hero.elevation = ele
+                 hero.azimuth = wrap360(azi)
+                 hero.elevation = wrap180(ele)
                  // The engine's non-headtracker-relative Pd path
                  // (RwaGameLoop.sendData2Asset) sends the raw azimuth/
                  // elevation globals, which only the BLE parser filled —
                  // internal heading never reached those receivers. Mirror
                  // the tracker path. (ele already has inverseElevation
                  // applied, matching the parser.)
-                 azimuth = azi
-                 elevation = ele
+                 azimuth = hero.azimuth
+                 elevation = hero.elevation
              }
           })
            headTrackerConnected = true
@@ -378,7 +378,7 @@ class SecondViewController: UIViewController
     
     @objc func updateDisplay() {
         DispatchQueue.main.async() {
-            self.headTrackerData.text = String("\(hero.azimuth)  \(hero.elevation) \(stepCount)")
+            self.headTrackerData.text = String("\(Int(hero.azimuth.rounded()))  \(Int(hero.elevation.rounded())) \(stepCount)")
         }
     }
     
