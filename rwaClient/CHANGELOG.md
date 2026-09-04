@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.20] - 2026-09-04
+
+### Added
+
+- New parity test `testSpatialEdgeScenario` (`spatial-edge.scenario.json`,
+  fixture `rwaClient/tests/fixtures/spatial/`, both copied from
+  rwa-creator/tools/trace). `ScenarioRunner` accepts fractional
+  `azimuth`/`elevation` inputs and wraps them like the production path.
+
 ### Changed
 
 - Head yaw and pitch are `Double` end to end (`hero.azimuth/elevation`, the
@@ -34,11 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Channel placement of rotating multichannel assets no longer truncates the
   rotation angle to whole degrees every tick.
-
-- New parity test `testSpatialEdgeScenario` (`spatial-edge.scenario.json`,
-  fixture `rwaClient/tests/fixtures/spatial/`, both copied from
-  rwa-creator/tools/trace). `ScenarioRunner` accepts fractional
-  `azimuth`/`elevation` inputs and wraps them like the production path.
 
 - Parity-test game fixtures moved out of `rwaGames/` into
   `rwaClient/tests/fixtures/` (`pdmodes`, `spatial`). Everything under
