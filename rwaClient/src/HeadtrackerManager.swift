@@ -124,6 +124,16 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
     /// the receiver has no fix, not a broken link (§5.6).
     private(set) var latestAssemblyGga: String?
     private(set) var latestAssemblyGgaAt: Date?
+    /// The caster session (NtripClient), alive while the connected assembly
+    /// offers the RTCM downlink and the caster settings are complete; the
+    /// assembly is its only consumer, so it dies with the connection. Keyed
+    /// on 713D0006 rather than on the assembly kind on purpose: a ≤ 0.47
+    /// unit runs its own client on the same single-session username, and a
+    /// second session from the phone would starve it.
+    private var ntripClient: NtripClient?
+    /// Settings edits arrive one field at a time; the restart is debounced
+    /// so a full re-entry of the caster is one session, not five.
+    private var pendingNtripRestart: DispatchWorkItem?
 
     override init() {
         super.init()
@@ -131,6 +141,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         // the same names for the heading axis (CoreMotion start/stop).
         NotificationCenter.default.addObserver(self, selector: #selector(self.connectHeadtracker), name: NSNotification.Name(rawValue: "Connect Headtracker"), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(self.connectHeadtracker), name: NSNotification.Name(rawValue: "Game Loaded"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(self.casterSettingsChanged), name: CasterSettings.didChange, object: nil)
     }
 
     /// All CoreBluetooth delegate callbacks run here, NOT on the main queue.
@@ -539,7 +550,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                     logger.info("BT: Found RTCM downlink")
                     rtcmCharacteristic = characteristic
                     DeviceHealth.shared.setRtcmDownlink(present: true)
-                    pumpRtcm()
+                    startNtripClientIfPossible()
                 }
 
                 if characteristic.uuid == CBUUID(string: Device.TRACKERGGA) {
@@ -585,13 +596,86 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
 
     /// Connect and disconnect: the downlink and the GGA belong to one
     /// connection, and queued corrections are stale by the time a new one
-    /// exists.
+    /// exists. The caster session ends with its only consumer.
     private func resetCorrectionsLink() {
+        stopNtripClient()
         rtcmCharacteristic = nil
         rtcmQueue.removeAll()
         latestAssemblyGga = nil
         latestAssemblyGgaAt = nil
         DeviceHealth.shared.setRtcmDownlink(present: false)
+    }
+
+    // MARK: - NTRIP client lifecycle (bleQueue)
+
+    /// Opens the caster session once the RTCM downlink exists and the
+    /// settings are complete. Called on discovery of 713D0006 and after a
+    /// settings change; a no-op while a session is already running.
+    private func startNtripClientIfPossible() {
+        guard ntripClient == nil, rtcmCharacteristic != nil else { return }
+        let settings = CasterSettings.load()
+        guard settings.isComplete else {
+            logger.info("ntrip: caster settings incomplete, no session (Settings ▸ Caster)")
+            DeviceHealth.shared.setNtrip(state: nil, caster: nil)
+            return
+        }
+        let client = NtripClient(settings: settings, appVersion: DeviceHealth.appVersionShort)
+        client.onRtcm = { [weak self] data in
+            self?.writeRtcm(data)   // hops to bleQueue itself
+        }
+        client.ggaSeed = {
+            // The phone's own fix, until the assembly delivers a GGA
+            // (ADR-001 §2, the cold-boot fix: a VRS streams nothing
+            // without a position). nil until CoreLocation has delivered.
+            guard let location = lastInternalLocation else { return nil }
+            return Ntrip.gga(latitude: location.coordinate.latitude,
+                             longitude: location.coordinate.longitude,
+                             altitude: location.verticalAccuracy >= 0 ? location.altitude : 0,
+                             at: location.timestamp)
+        }
+        client.onStatus = { status in
+            DeviceHealth.shared.setNtrip(state: status.state.rawValue,
+                                         reconnects: status.reconnects,
+                                         bytesRx: status.bytesRx)
+        }
+        client.onProgress = { bytesRx in
+            DeviceHealth.shared.setNtripBytesRx(bytesRx)
+        }
+        client.onError = { reason in
+            DeviceHealth.shared.setNtripError(reason)
+        }
+        ntripClient = client
+        DeviceHealth.shared.setNtrip(state: "connecting", caster: settings.endpointDescription)
+        // A GGA that arrived before the client existed is still the best
+        // position for the VRS.
+        if let gga = latestAssemblyGga {
+            client.updateAssemblyGga(gga)
+        }
+        client.start()
+    }
+
+    private func stopNtripClient() {
+        guard let client = ntripClient else { return }
+        ntripClient = nil
+        client.stop()
+        DeviceHealth.shared.setNtrip(state: nil, caster: nil)
+    }
+
+    /// Settings ▸ Caster edited (posted on main). Restart the session with
+    /// the new settings, debounced; the bookkeeping lives on bleQueue like
+    /// the rest of the corrections state.
+    @objc private func casterSettingsChanged() {
+        bleQueue.async {
+            self.pendingNtripRestart?.cancel()
+            let restart = DispatchWorkItem { [weak self] in
+                guard let self = self else { return }
+                self.pendingNtripRestart = nil
+                self.stopNtripClient()
+                self.startNtripClientIfPossible()
+            }
+            self.pendingNtripRestart = restart
+            self.bleQueue.asyncAfter(deadline: .now() + 2, execute: restart)
+        }
     }
 
     @objc func pollRSSI() {
@@ -635,6 +719,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
             latestAssemblyGga = sentence
             latestAssemblyGgaAt = Date()
             DeviceHealth.shared.setAssemblyGgaReceived()
+            ntripClient?.updateAssemblyGga(sentence)
             return
         }
 

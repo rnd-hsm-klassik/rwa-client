@@ -105,15 +105,23 @@ class AboutViewController: UITableViewController {
         }
         out.append(Section(title: "Motion data", rows: imu))
 
-        // Correction link (caster -> app -> BLE -> assembly -> receiver,
-        // ADR-001): the app's side of the BLE leg next to what the assembly
-        // reports, so a gap between the two is visible.
-        out.append(Section(title: "Correction link", rows: [
-            Row(label: "RTCM to assembly (BLE)", value: Self.rtcmWritten(h)),
-            Row(label: "RTCM to receiver", value: Self.bytesPerSecond(h.rtcmBytesPerInterval)),
+        // Correction link (ADR-001). The same RTCM stream at its three hops,
+        // Caster → iOS (cellular) → MCU (BLE) → F9P (I²C), each as rate over
+        // the assembly's heartbeat interval plus the total, so a loss shows
+        // as a gap between two neighbouring rows; then the GGA leg back.
+        var link: [Row] = [
+            Row(label: "NTRIP client", value: Self.ntripState(h)),
+            Row(label: "Caster", value: h.ntripCaster ?? "—"),
+            Row(label: "RTCM Caster → iOS", value: Self.ntripRx(h)),
+            Row(label: "RTCM iOS → MCU", value: Self.rtcmWritten(h)),
+            Row(label: "RTCM MCU → F9P", value: Self.rtcmPushed(h)),
             Row(label: "Correction age", value: Self.corrAge(h.corrAgeMs)),
-            Row(label: "GGA from assembly", value: Self.age(h.lastAssemblyGgaAt))
-        ]))
+            Row(label: "GGA F9P → iOS", value: Self.age(h.lastAssemblyGgaAt))
+        ]
+        if let error = h.ntripLastError {
+            link.append(Row(label: "Last caster error", value: error + Self.since(h.ntripLastErrorAt)))
+        }
+        out.append(Section(title: "Correction link", rows: link))
 
         // GNSS quality
         out.append(Section(title: "Global Navigation Satellite System quality", rows: [
@@ -190,9 +198,36 @@ class AboutViewController: UITableViewController {
         return String(format: "%.1f KB", Double(bytes) / 1024)
     }
 
-    /// The app-side RTCM counter: rate over the last heartbeat interval
-    /// (comparable to "RTCM to receiver"), the total, and what the app's own
-    /// queue dropped.
+    /// The caster session, or why there is none.
+    private static func ntripState(_ h: DeviceHealthSnapshot) -> String {
+        if let state = h.ntripState {
+            var text = state.prefix(1).uppercased() + state.dropFirst() + since(h.ntripStateChangedAt)
+            if let n = h.ntripReconnects, n > 0 { text += " · \(n) reconnects" }
+            return text
+        }
+        guard h.bleConnected, h.assemblyKind == .rtkHeadtracker else {
+            return "Off (no RTK headtracker)"
+        }
+        if !h.rtcmDownlinkPresent { return "Off (assembly has no RTCM downlink)" }
+        return "Off (no caster configured)"
+    }
+
+    /// Caster -> iOS: the client's received counter, rate over the last
+    /// heartbeat interval plus the total.
+    private static func ntripRx(_ h: DeviceHealthSnapshot) -> String {
+        guard h.ntripState != nil, let total = h.ntripBytesRx else { return "–" }
+        return bytesPerSecond(h.ntripRxPerInterval) + " · " + kilobytes(total)
+    }
+
+    /// MCU -> F9P: what the firmware pushed into the receiver, from its
+    /// heartbeat (rate over the interval, total since connect).
+    private static func rtcmPushed(_ h: DeviceHealthSnapshot) -> String {
+        guard h.rtcmBytesPerInterval != nil else { return "–" }
+        return bytesPerSecond(h.rtcmBytesPerInterval) + " · " + kilobytes(h.rtcmBytesToReceiver)
+    }
+
+    /// iOS -> MCU: the app-side writer counter, rate over the last heartbeat
+    /// interval, the total, and what the app's own queue dropped.
     private static func rtcmWritten(_ h: DeviceHealthSnapshot) -> String {
         guard h.rtcmDownlinkPresent else {
             if h.bleConnected && h.assemblyKind == .rtkHeadtracker {

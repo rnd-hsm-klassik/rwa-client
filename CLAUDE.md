@@ -91,7 +91,8 @@ Player-specific facts:
 | Game data model | `RwaScene`, `RwaState`, `RwaAsset`, `RwaArea`, `RwaEntity`, `RwaLocation`, `RwaUtilities` (geo math, moving average) |
 | Import | `RwaImport.swift` — `.rwa` XML → the model |
 | Service layer (a view controller by accident) | `SecondViewController.swift` — BLE central, tracker text protocol, CoreMotion, north calibration, the 10 ms game-loop timer. See [Legacy structure](#legacy-view-controller-structure-read-before-touching-tabsble) |
-| Positioning | `CoreLocationController.swift` (internal GPS fallback) + the ublox path in `SecondViewController` + `Device.swift` (GATT UUIDs, raw frame parsing) |
+| Positioning | `CoreLocationController.swift` (internal GPS fallback) + the ublox path in `SecondViewController` + `Device.swift` (GATT UUIDs, raw frame parsing, the RTCM chunker) |
+| Corrections proxy (ADR-001) | `NtripClient.swift` (caster session on `NWConnection`, request/response/GGA helpers), `CasterSettings.swift` (caster settings + provisioning keys); the RTCM writer and GGA reader live in `HeadtrackerManager` |
 | Telemetry gateway | `Telemetry/` — `TelemetryService` (envelope, seq, uploader), `TelemetryStore` (SQLite), `DeviceTelemetryDecoder` + `TelemetryKeys` (CBOR, §5.3 key table), `AppTelemetrySampler` (app-side 1 Hz sampler), `TelemetryConfig`; `DeviceHealth.swift` is the shared snapshot the Diagnostics tab reads |
 | UI (five tabs) | `FirstViewController` (Games), `ControlViewController` (Control), `MapViewController` (Map), `AboutViewController` (Diagnostics), `SettingsViewController` (Settings) |
 | Content delivery | `DownloadManager`, `ZipExtractor`, `GameManager` — HTTP pull of games from the Creator, see `docs/GAME-DOWNLOAD.md` |
@@ -144,6 +145,22 @@ characteristic, with step detection derived from the acceleration) or CoreMotion
 orientation when `useHeadTracker == false`. North calibration is an azimuth offset applied on
 receipt; `inverseElevation` flips the elevation sign.
 
+## Corrections proxy (ADR-001, PROJECT-PLAN.md §5.6)
+
+Since rtk-rover 0.48.0 the assembly has no radio but BLE, and **the Player is the NTRIP
+client**: `NtripClient` holds the caster session over cellular (raw TCP on `NWConnection`,
+`ICY 200 OK` is not HTTP), writes the RTCM stream to the assembly through
+`HeadtrackerManager.writeRtcm` (713D0006, write without response, MTU-sized chunks,
+drop-oldest 8 KB queue, order is the only framing) and forwards the assembly's own GGA
+(713D0007) to the caster every 10 s, seeded from CoreLocation until the receiver has a fix.
+Caster settings live in Settings ▸ Caster / `player-settings.plist` (`CasterSettings`); the
+username is per unit and the accounts are single-session. The client runs while the
+connected assembly offers 713D0006 and the settings are complete (not keyed on the assembly
+kind: a ≤ 0.47 unit runs its own client on the same username). The session is reported as
+`ntrip_status` events and `heartbeat.ntrip_connected` with `source = phone`. The decision
+record is `../RTKRover_mod/ADR-001-ble-only-transport.md`; the app-side handover is
+`docs/HANDOVER-adr-001-ntrip-client.md`.
+
 ## Telemetry gateway (PROJECT-PLAN.md §6)
 
 Implemented end to end; the pieces are in `rwaClient/src/Telemetry/`.
@@ -176,7 +193,8 @@ Implemented end to end; the pieces are in `rwaClient/src/Telemetry/`.
 Still open here: gzip on the batch body, and surviving background/foreground cycles (the
 uploader uses an ephemeral `URLSession` today — no background configuration, no
 `BGTaskScheduler`). `app_event` coverage is thin: only `app_launched`, `walk_started`,
-`walk_stopped` and `upload_failed` are emitted.
+`walk_stopped`, `upload_failed`, `assembly_connected` and `assembly_disconnected` are
+emitted.
 
 Constraints:
 

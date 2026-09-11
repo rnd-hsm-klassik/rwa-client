@@ -35,6 +35,9 @@ struct DeviceHealthSnapshot {
     // corrAgeMs the assembly-side proof that corrections arrive. nil on
     // ≤ 0.47 firmware, which received its corrections over WiFi itself.
     var rtcmBytesPerInterval: Int?
+    // Sum of rtcmBytesPerInterval since the RTCM downlink was discovered:
+    // the receiver-side total, so the three RTCM hops read alike.
+    var rtcmBytesToReceiver = 0
     // LiPo pack voltage from the heartbeat (fw ≥ 0.44.0); nil until the first
     // heartbeat, and while the device reports 0 (= unknown). The firmware
     // ships no discharge curve, so this stays a raw voltage.
@@ -63,6 +66,22 @@ struct DeviceHealthSnapshot {
     var rtcmWrittenPerInterval: Int?
     var rtcmWrittenAtLastHeartbeat = 0
     var lastAssemblyGgaAt: Date?      // 713D0007 delivered: the receiver has a fix
+
+    // The app's caster session (NtripClient, ADR-001). state: nil = no
+    // client (no RTK assembly with the RTCM downlink connected, or no caster
+    // configured), "connecting" until the first transition, then the §4.3
+    // ntrip_status states connected / disconnected / reconnecting.
+    var ntripState: String?
+    var ntripStateChangedAt: Date?
+    var ntripCaster: String?          // host:port/mount, never the credentials
+    var ntripReconnects: Int?
+    var ntripBytesRx: Int?            // RTCM bytes received from the caster, cumulative
+    // Received between the assembly's last two heartbeats, like the two
+    // counters below it in the chain (nil until the first heartbeat).
+    var ntripRxPerInterval: Int?
+    var ntripRxAtLastHeartbeat = 0
+    var ntripLastError: String?
+    var ntripLastErrorAt: Date?
 
     // IMU status (PROJECT-PLAN.md §4.3 "imu_status"); live orientation is
     // read straight from the head-tracker globals by the UI.
@@ -116,6 +135,11 @@ final class DeviceHealth {
         let short = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
         return "\(short) (\(build))"
+    }()
+
+    /// Marketing version alone, for the NTRIP User-Agent.
+    static let appVersionShort: String = {
+        return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
     }()
 
     /// Injected at build time by the "Embed git hash" run-script phase.
@@ -183,6 +207,7 @@ final class DeviceHealth {
             $0.rtcmDownlinkPresent = present
             $0.rtcmWrittenAtLastHeartbeat = $0.rtcmBytesWritten
             $0.rtcmWrittenPerInterval = nil
+            $0.rtcmBytesToReceiver = 0
         }
     }
 
@@ -196,6 +221,44 @@ final class DeviceHealth {
 
     func setAssemblyGgaReceived() {
         mutate { $0.lastAssemblyGgaAt = Date() }
+    }
+
+    /// The caster session's owner: start ("connecting", with the caster) and
+    /// stop (nil). Counters survive a stop, the state does not; a start is
+    /// a new client whose byte counter begins at zero.
+    func setNtrip(state: String?, caster: String?) {
+        mutate {
+            if $0.ntripState != state { $0.ntripStateChangedAt = Date() }
+            $0.ntripState = state
+            $0.ntripCaster = caster
+            if state != nil {
+                $0.ntripBytesRx = 0
+                $0.ntripRxPerInterval = nil
+                $0.ntripRxAtLastHeartbeat = 0
+            }
+        }
+    }
+
+    /// NtripClient.onProgress: the received total while streaming.
+    func setNtripBytesRx(_ bytesRx: Int) {
+        mutate { $0.ntripBytesRx = bytesRx }
+    }
+
+    /// NtripClient state transitions (the §4.3 ntrip_status fields).
+    func setNtrip(state: String, reconnects: Int, bytesRx: Int) {
+        mutate {
+            if $0.ntripState != state { $0.ntripStateChangedAt = Date() }
+            $0.ntripState = state
+            $0.ntripReconnects = reconnects
+            $0.ntripBytesRx = bytesRx
+        }
+    }
+
+    func setNtripError(_ reason: String) {
+        mutate {
+            $0.ntripLastError = reason
+            $0.ntripLastErrorAt = Date()
+        }
     }
 
     func setUploadStats(pending: Int, failures: Int, lastStatus: Int?) {
@@ -219,9 +282,14 @@ final class DeviceHealth {
                 if let v = event["fw_version"] as? String { $0.fwVersion = v }
                 if let v = DeviceHealth.int(event["rtcm_bytes"]) {
                     $0.rtcmBytesPerInterval = v
+                    $0.rtcmBytesToReceiver += v
                     // Same interval on the app side, for the comparison.
                     $0.rtcmWrittenPerInterval = $0.rtcmBytesWritten - $0.rtcmWrittenAtLastHeartbeat
                     $0.rtcmWrittenAtLastHeartbeat = $0.rtcmBytesWritten
+                    if let rx = $0.ntripBytesRx {
+                        $0.ntripRxPerInterval = max(0, rx - $0.ntripRxAtLastHeartbeat)
+                        $0.ntripRxAtLastHeartbeat = rx
+                    }
                 }
                 // 0 mV means the device could not read the pack: keep the
                 // last known voltage rather than showing a flat battery.

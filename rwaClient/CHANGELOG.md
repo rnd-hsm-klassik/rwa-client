@@ -22,6 +22,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **NTRIP client** (ADR-001, PROJECT-PLAN.md §6 item 6): RWA Player holds
+  the caster session and proxies the correction loop for the RTK
+  headtracker, which has no radio but BLE since rtk-rover 0.48.0.
+  `NtripClient` is raw TCP on `NWConnection` (casters answer `ICY 200 OK`,
+  not HTTP, and stream forever; cellular allowed) and mirrors the ≤ 0.47
+  firmware's session logic, which ran against this caster for weeks: one
+  `GET /<mount> HTTP/1.0` per connection with `User-Agent: NTRIP RWA
+  Player/<version>` and Basic auth (re-sending with wrong settings gets the
+  account banned), response wait bounded at 10 s, `ICY 200 OK` /
+  `HTTP/1.x 200` opens the stream while `SOURCETABLE 200 OK` (unknown mount
+  point; a "200" substring match is not enough, the old firmware had that
+  bug) and 401 (bad credentials or a ban) are config errors that back off.
+  Every byte after the header block is RTCM and goes to
+  `HeadtrackerManager.writeRtcm` in order. The latest GGA goes to the caster
+  right after the 200 and every 10 s: the assembly's own sentence once one
+  has arrived on 713D0007 (sticky for the BLE connection: a stale real
+  position beats a fresh phone one for the VRS), before that one built from
+  the phone's CoreLocation fix (`Ntrip.gga`, quality 1, placeholder
+  satellites/HDOP, NMEA checksum), the cold-boot fix of ADR-001 §2. No RTCM
+  for 30 s after connect (VRS spin-up grace) or 10 s once data has flowed
+  drops the session; failed or dataless attempts back off 5 s doubling to
+  60 s, reset by received data.
+  Lifecycle: `HeadtrackerManager` starts the client when the connected
+  assembly offers the RTCM downlink (713D0006) and the caster settings are
+  complete, whether or not a walk runs, and stops it with the BLE
+  connection. Keyed on the characteristic rather than on the assembly kind
+  on purpose: a ≤ 0.47 unit runs its own NTRIP client on the same
+  single-session username, and a second session from the phone would starve
+  it. A Settings ▸ Caster edit restarts the session (debounced 2 s).
+  Diagnostics ▸ Correction link shows the client state (or why there is
+  none), the caster, RTCM received, and the last caster error.
+  Tests (`NtripClientTests`): request bytes, response classification
+  (ICY / HTTP 200 / SOURCETABLE / 401 / other, header completeness), the
+  GGA seed and its checksum against a sentence captured from the receiver.
+  The session itself is verified on a device against the caster (ADR-001
+  §7 step 1; still open, see `docs/HANDOVER-adr-001-ntrip-client.md` §3).
+  Not done here: background survival of the idle case (assembly connected,
+  no walk, screen locked) is untested; with a walk playing the audio
+  session keeps the app alive.
+
 - **Corrections over BLE, the app side of the link** (ADR-001,
   PROJECT-PLAN.md §5.6; rtk-rover ≥ 0.48.0). `Device` gains the RTCM
   downlink `713D0006` and the GGA uplink `713D0007`; neither enters the
