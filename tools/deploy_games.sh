@@ -10,13 +10,18 @@
 # com.fhnw.rwa.player, where GameManager picks it up on the next Games-tab scan.
 #
 # Usage:
-#   ./deploy_games.sh [-an] [-s <settings-plist>] <games-folder> [device ...]
+#   ./deploy_games.sh [-an] [-s <settings-plist>] <games-folder|game.rwa> [device ...]
 #   ./deploy_games.sh [-an] -s <settings-plist> [device ...]
 #
 #   <games-folder>  either a single game folder, or a folder whose immediate
 #                   subdirectories are game folders (all are deployed).
 #                   Omit it (second form) for a settings-only run: no game is
 #                   copied, only each phone's provisioning entry is pushed.
+#   <game.rwa>      a single .rwa file: only that file and the assets/ folder
+#                   next to it are deployed, which picks one game out of a
+#                   folder holding several .rwa files. The destination folder
+#                   stays the containing folder's name, so assets already on
+#                   the phone are recognised and skipped as usual.
 #   [device ...]    device names or UDIDs; default: every paired USB-connected
 #                   device (iOS 17+ via devicectl, iOS 16 via pymobiledevice3)
 #   -a              also target Wi-Fi-connected (network) devices (iOS 17+
@@ -65,7 +70,7 @@ if [ -n "$PMD3_BIN" ]; then
     fi
 fi
 
-usage() { sed -n '2,37p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+usage() { sed -n '2,42p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
 include_network=false
 dry_run=false
@@ -82,19 +87,19 @@ shift $((OPTIND - 1))
 
 # The games folder is optional when -s is given (settings-only run): with no
 # games folder every positional argument is a device. Tell the two apart by
-# whether the first argument is a directory, and refuse anything that looks
+# whether the first argument exists on disk, and refuse anything that looks
 # like a mistyped path so a typo never silently becomes a device name.
 src=""
-if [ -n "$settings_plist" ] && { [ $# -eq 0 ] || [ ! -d "$1" ]; }; then
-    if [ $# -ge 1 ] && case $1 in */*|.*|~*) true ;; *) false ;; esac; then
-        echo "error: '$1' is not a directory" >&2
+if [ -n "$settings_plist" ] && { [ $# -eq 0 ] || [ ! -e "$1" ]; }; then
+    if [ $# -ge 1 ] && case $1 in */*|.*|~*|*.rwa) true ;; *) false ;; esac; then
+        echo "error: '$1' is not a game folder or .rwa file" >&2
         exit 1
     fi
 else
     [ $# -ge 1 ] || usage
     src=$1
     shift
-    [ -d "$src" ] || { echo "error: '$src' is not a directory" >&2; exit 1; }
+    [ -e "$src" ] || { echo "error: '$src' is not a game folder or .rwa file" >&2; exit 1; }
 fi
 if [ -n "$settings_plist" ]; then
     plutil -lint "$settings_plist" >/dev/null || { echo "error: settings file '$settings_plist' is not a valid plist" >&2; exit 1; }
@@ -104,27 +109,49 @@ workdir=$(mktemp -d /tmp/deploy_games.XXXXXX)
 trap 'rm -rf "$workdir"' EXIT
 
 # --- collect game folders -----------------------------------------------------
+# One entry per game, "name<TAB>source-folder<TAB>rwa-file"; an empty rwa-file
+# means the whole folder is deployed. <name> is the destination folder under
+# Documents/ and, for a single .rwa, deliberately stays the name of the folder
+# the file lives in: the manifest/mtime comparison is per destination folder,
+# so assets pushed by an earlier deploy of the same game are then skipped.
+# Empty on a settings-only run.
 
-games=()   # absolute paths of game folders to deploy (empty on a settings-only run)
+games=()
+game_names=()
 if [ -n "$src" ]; then
-    shopt -s nullglob
-    rwa_here=("$src"/*.rwa)
-    if [ ${#rwa_here[@]} -gt 0 ]; then
-        games=("$src")
+    if [ -f "$src" ]; then
+        case $src in
+            *.rwa) ;;
+            *) echo "error: '$src' is not a .rwa file" >&2; exit 1 ;;
+        esac
+        gamedir=$(cd "$(dirname "$src")" && pwd)
+        if [ ! -d "$gamedir/assets" ]; then
+            echo "warning: no assets/ folder next to '$(basename "$src")' - deploying the .rwa alone" >&2
+        fi
+        games+=("$(basename "$gamedir")"$'\t'"$gamedir"$'\t'"$(basename "$src")")
     else
-        for d in "$src"/*/; do
-            d=${d%/}
-            inner=("$d"/*.rwa)
-            if [ ${#inner[@]} -gt 0 ]; then
-                games+=("$d")
-            else
-                echo "warning: skipping '$(basename "$d")': no .rwa file in it" >&2
-            fi
-        done
+        shopt -s nullglob
+        rwa_here=("$src"/*.rwa)
+        if [ ${#rwa_here[@]} -gt 0 ]; then
+            games=("$(basename "$(cd "$src" && pwd)")"$'\t'"$src"$'\t')
+        else
+            for d in "$src"/*/; do
+                d=${d%/}
+                inner=("$d"/*.rwa)
+                if [ ${#inner[@]} -gt 0 ]; then
+                    games+=("$(basename "$d")"$'\t'"$d"$'\t')
+                else
+                    echo "warning: skipping '$(basename "$d")': no .rwa file in it" >&2
+                fi
+            done
+        fi
+        shopt -u nullglob
     fi
-    shopt -u nullglob
 
     [ ${#games[@]} -gt 0 ] || { echo "error: no game folders (with a .rwa) found under '$src'" >&2; exit 1; }
+    for entry in "${games[@]}"; do
+        game_names+=("${entry%%$'\t'*}")
+    done
 fi
 
 # --- collect target devices ---------------------------------------------------
@@ -206,9 +233,18 @@ done
 # devicectl's skip-unmodified behaviour intact.
 
 mkdir -p "$workdir/stage"
-for game in ${games[@]+"${games[@]}"}; do
-    stage="$workdir/stage/$(basename "$game")"
-    cp -Rc "$game" "$stage"
+for entry in ${games[@]+"${games[@]}"}; do
+    IFS=$'\t' read -r gname gdir grwa <<< "$entry"
+    stage="$workdir/stage/$gname"
+    if [ -n "$grwa" ]; then
+        mkdir -p "$stage"
+        cp -Rc "$gdir/$grwa" "$stage/"
+        if [ -d "$gdir/assets" ]; then
+            cp -Rc "$gdir/assets" "$stage/assets"
+        fi
+    else
+        cp -Rc "$gdir" "$stage"
+    fi
     rm -rf "$stage/tilecache" "$stage/tmp" "$stage/undo" \
            "$stage/layouts.ini" "$stage/layout.ini"
     find "$stage" \( -name '.DS_Store' -o -name '._*' \) -delete
@@ -217,7 +253,7 @@ done
 # --- deploy -------------------------------------------------------------------
 
 if [ ${#games[@]} -gt 0 ]; then
-    echo "Games:   ${games[*]/#*\//}"
+    echo "Games:   ${game_names[*]}"
 else
     echo "Games:   none (settings-only run)"
 fi
@@ -260,7 +296,7 @@ for entry in "${devices[@]}"; do
     tool=${entry##*	}
 
     for game in ${games[@]+"${games[@]}"}; do
-        gname=$(basename "$game")
+        gname=${game%%$'\t'*}
         if $dry_run; then
             echo "[dry run] $gname -> $name ($udid, $tool) Documents/$gname"
         else

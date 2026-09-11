@@ -34,13 +34,21 @@ folder (same layout as `rwaGames/rwatest`). Each game lands in
 on the next Games-tab scan (relaunch the app after deploying).
 
 ```sh
-./deploy_games.sh [-an] [-s <settings-plist>] <games-folder> [device ...]
+./deploy_games.sh [-an] [-s <settings-plist>] <games-folder|game.rwa> [device ...]
 ```
 
 - `<games-folder>`: either a single game folder, or a folder whose immediate
   subdirectories are game folders (all are deployed; subdirectories without a
   `.rwa` are skipped with a warning). It may be omitted for a settings-only
   run, see [Provisioning without deploying games](#provisioning-without-deploying-games).
+- `<game.rwa>`: a single `.rwa` file instead of a folder. Only that file and
+  the `assets/` folder next to it are deployed, which picks one game out of a
+  folder holding several `.rwa` files (a Creator directory with a few
+  generations of the same walk, say). The destination folder is still the
+  containing folder's name, so the assets already on the phone are recognised
+  and skipped like on any other re-deploy. The other `.rwa` files in the
+  folder are not copied, but ones deployed earlier stay on the phone (deploys
+  never delete).
 - `[device ...]`: device names or UDIDs. Default: every paired USB-connected
   phone.
 - `-a`: also target Wi-Fi-connected phones (iOS 17+ only; the iOS 16 path is

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `tools/deploy_games.sh` accepts a single `.rwa` file as its source, not just a
+  game folder: only that file plus the `assets/` folder next to it are staged
+  and pushed, which picks one game out of a folder holding several `.rwa`
+  files. The destination folder stays the containing folder's name, so the
+  per-destination manifest (iOS 16) and devicectl's mtime comparison still
+  recognise the assets already on the phone and skip them.
+
 ## [1.3.20] - 2026-09-04
 
 ### Added
