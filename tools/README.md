@@ -114,6 +114,11 @@ All keys inside an entry are optional. Omit what should stay untouched:
 | `calibrateOnStart` | run north calibration automatically when a walk starts |
 | `defaultGame` | game to auto-load at launch: Documents-relative `.rwa` path, e.g. `rwatest/rwatest.rwa` |
 | `creatorIP` | IP of the machine running RWA Creator (OSC simulator) |
+| `casterHost` | NTRIP caster host (ADR-001: the app is the NTRIP client for rtk-rover ≥ 0.48.0). Shared across the fleet |
+| `casterPort` | caster port; omit for 2101 |
+| `casterMount` | mount point (no leading slash needed) |
+| `casterUser` | caster username, **one per unit**: the accounts are single-session, a second client on the same name starves the unit |
+| `casterPass` | caster password (shared); applied like the other keys, never logged |
 
 Identity follows the glossary (`PROJECT-PLAN.md` §1.1): the *unit* is
 phone + headset assembly, and one label normally covers device_id and BLE

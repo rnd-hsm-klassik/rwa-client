@@ -36,8 +36,18 @@ struct ProvisioningLoader {
         ("inverseElevation", defaultsKeys.inverseElevation),
         ("calibrateOnStart", defaultsKeys.calibrateOnStart),
         ("defaultGame", defaultsKeys.defaultGame),         // Documents-relative .rwa path
+        // NTRIP caster (ADR-001): host / port / mount point / password are
+        // shared across the fleet, the username is per unit (single-session
+        // accounts).
+        ("casterHost", defaultsKeys.casterHost),
+        ("casterPort", defaultsKeys.casterPort),           // empty/absent = 2101
+        ("casterMount", defaultsKeys.casterMount),
+        ("casterUser", defaultsKeys.casterUser),
+        ("casterPass", defaultsKeys.casterPass),
     ]
     static let deprecatedKeys: Set<String> = ["deviceId", "headtrackerId"]
+    /// Applied like the rest, never logged.
+    static let secretKeys: Set<String> = ["casterPass"]
 
     static func applyIfNeeded(defaults: UserDefaults) {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -61,7 +71,9 @@ struct ProvisioningLoader {
                 stringValue = "\(value)"
             }
             defaults.set(stringValue, forKey: defaultsKey)
-            if deprecatedKeys.contains(plistKey) {
+            if secretKeys.contains(plistKey) {
+                logger.info("provisioning: \(plistKey) = (set, not logged)")
+            } else if deprecatedKeys.contains(plistKey) {
                 logger.info("provisioning: \(plistKey) = \(stringValue) (deprecated key, use unitId/assemblyId)")
             } else {
                 logger.info("provisioning: \(plistKey) = \(stringValue)")

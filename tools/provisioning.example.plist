@@ -30,6 +30,14 @@
     calibrateOnStart  run north calibration automatically when a walk starts
     defaultGame       game to auto-load at launch: Documents-relative .rwa path
     creatorIP         IP of the machine running RWA Creator (OSC simulator)
+    casterHost        NTRIP caster host (the app is the NTRIP client since
+                      rtk-rover 0.48.0, ADR-001); shared across the fleet
+    casterPort        caster port; omit for 2101
+    casterMount       mount point (no leading slash needed)
+    casterUser        caster username, ONE PER UNIT: the accounts are
+                      single-session, a second client on the same name
+                      starves the unit
+    casterPass        caster password (shared); never logged
 
   Deprecated aliases, still applied (with a log notice): deviceId -> unitId,
   headtrackerId -> assemblyId.
@@ -48,6 +56,14 @@
 		<true/>
 		<key>defaultGame</key>
 		<string>rwatest.rwa</string>
+		<key>casterHost</key>
+		<string>caster.example.net</string>
+		<key>casterMount</key>
+		<string>YOUR_MOUNT_POINT</string>
+		<key>casterUser</key>
+		<string>YOUR_CASTER_USER_01</string>
+		<key>casterPass</key>
+		<string>YOUR_CASTER_PASSWORD</string>
 	</dict>
 
 	<!-- Unit running a stand-in assembly: telemetry stays rwa-hs-2, but the

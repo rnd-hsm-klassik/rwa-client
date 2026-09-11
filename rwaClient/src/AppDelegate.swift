@@ -58,6 +58,13 @@ struct defaultsKeys {
     static let defaultGame = ""
     static let calibrateOnStart = "false"
     static let gpsSource = "gpsSource"   // "internal" | "rtk"
+    // NTRIP caster (ADR-001; CasterSettings reads them). Port is stored as
+    // text like every other setting; empty = 2101.
+    static let casterHost = "casterHost"
+    static let casterPort = "casterPort"
+    static let casterMount = "casterMount"
+    static let casterUser = "casterUser"
+    static let casterPass = "casterPass"
 }
 
 @UIApplicationMain

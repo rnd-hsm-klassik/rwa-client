@@ -12,6 +12,8 @@
 //
 //  Sections:
 //    Identity      - unit ID (device_id in telemetry), headset assembly override
+//    Caster        - NTRIP caster host / port / mount point / username / password
+//                    (ADR-001: the app is the NTRIP client for the RTK headtracker)
 //    Data sources  - GPS (internal / RTK headtracker), heading (internal / assembly)
 //    Head tracking - inverse elevation, calibrate on start
 //    RWA Creator   - IP address, register/unregister, forward GPS to Creator
@@ -31,9 +33,51 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
         case inverseElevation = 20
         case calibrateOnStart = 21
         case sendGPS2Creator = 22
+        case casterHost = 30
+        case casterPort = 31
+        case casterMount = 32
+        case casterUser = 33
+        case casterPass = 34
+
+        /// The UserDefaults key behind a caster field.
+        var casterDefaultsKey: String? {
+            switch self {
+            case .casterHost: return defaultsKeys.casterHost
+            case .casterPort: return defaultsKeys.casterPort
+            case .casterMount: return defaultsKeys.casterMount
+            case .casterUser: return defaultsKeys.casterUser
+            case .casterPass: return defaultsKeys.casterPass
+            default: return nil
+            }
+        }
     }
 
-    private let sectionTitles = ["Identity", "Data sources", "Head tracking", "RWA Creator", "Soundwalk"]
+    private enum Section: Int {
+        case identity = 0, caster, dataSources, headTracking, creator, soundwalk
+        static let count = 6
+
+        var title: String {
+            switch self {
+            case .identity: return "Identity"
+            case .caster: return "Caster"
+            case .dataSources: return "Data sources"
+            case .headTracking: return "Head tracking"
+            case .creator: return "RWA Creator"
+            case .soundwalk: return "Soundwalk"
+            }
+        }
+
+        var rowCount: Int {
+            switch self {
+            case .identity: return 2
+            case .caster: return 5
+            case .dataSources: return 2
+            case .headTracking: return 2
+            case .creator: return 3
+            case .soundwalk: return 1
+            }
+        }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -48,67 +92,81 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
     // MARK: - Table structure
 
     override func numberOfSections(in tableView: UITableView) -> Int {
-        return sectionTitles.count
+        return Section.count
     }
 
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        return sectionTitles[section]
+        return Section(rawValue: section)?.title
     }
 
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        if section == 0 {
+        switch Section(rawValue: section) {
+        case .some(.identity):
             if let override = TelemetryService.shared?.config.unitIdOverride, !override.isEmpty {
                 return "Unit ID is currently overridden by Telemetry.plist (\"\(override)\")."
             }
             return "The Unit ID identifies this unit (phone + headset assembly) in telemetry; by convention it is also the assembly's Bluetooth name. Set Headset assembly only to connect to a different assembly (a spare, or a plain headtracker)."
-        }
-        if section == 1 {
+        case .some(.caster):
+            return "NTRIP caster for RTK corrections (rtk-rover 0.48.0 or newer): the app holds the caster session over cellular and forwards the corrections to the RTK headtracker over Bluetooth. One username per unit; the accounts are single-session, so never use this unit's username from another client. Changes take effect within a few seconds."
+        case .some(.dataSources):
             return "With RTK selected, the app falls back to internal GPS while the RTK headtracker delivers no coordinates."
-        }
-        if section == 3 {
+        case .some(.creator):
             return "Toggle Register to listen for location data from RWA Creator. GPS forwarding sends this device's position to RWA Creator (while not registered)."
+        default:
+            return nil
         }
-        return nil
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        switch section {
-        case 0: return 2
-        case 1: return 2
-        case 2: return 2
-        case 3: return 3
-        case 4: return 1
-        default: return 0
-        }
+        return Section(rawValue: section)?.rowCount ?? 0
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        switch (indexPath.section, indexPath.row) {
-        case (0, 0):
+        guard let section = Section(rawValue: indexPath.section) else { return UITableViewCell() }
+        let defaults = UserDefaults.standard
+        switch (section, indexPath.row) {
+        case (.identity, 0):
             return textFieldCell(label: "Unit ID", value: deviceId,
                                  placeholder: "e.g. rwa-hs-3", tag: .deviceId)
-        case (0, 1):
+        case (.identity, 1):
             return textFieldCell(label: "Headset assembly", value: headtrackerID,
                                  placeholder: "empty = Unit ID", tag: .trackerName)
-        case (1, 0):
+        // Caster fields show what is stored, verbatim; CasterSettings
+        // normalises (default port, leading slash) when the client reads them.
+        case (.caster, 0):
+            return textFieldCell(label: "Host", value: defaults.string(forKey: defaultsKeys.casterHost) ?? "",
+                                 placeholder: "caster host", tag: .casterHost, keyboard: .URL)
+        case (.caster, 1):
+            return textFieldCell(label: "Port", value: defaults.string(forKey: defaultsKeys.casterPort) ?? "",
+                                 placeholder: "\(CasterSettings.defaultPort)", tag: .casterPort, keyboard: .numberPad)
+        case (.caster, 2):
+            return textFieldCell(label: "Mount point", value: defaults.string(forKey: defaultsKeys.casterMount) ?? "",
+                                 placeholder: "mount point", tag: .casterMount)
+        case (.caster, 3):
+            return textFieldCell(label: "Username", value: defaults.string(forKey: defaultsKeys.casterUser) ?? "",
+                                 placeholder: "one per unit", tag: .casterUser)
+        case (.caster, 4):
+            return textFieldCell(label: "Password", value: defaults.string(forKey: defaultsKeys.casterPass) ?? "",
+                                 placeholder: "password", tag: .casterPass, secure: true)
+        case (.dataSources, 0):
             return segmentedCell(label: "GPS", options: ["Internal", "RTK tracker"],
                                  selectedIndex: useRtkGps ? 1 : 0, tag: .gpsSource)
-        case (1, 1):
+        case (.dataSources, 1):
             return segmentedCell(label: "Heading", options: ["Internal", "Assembly"],
                                  selectedIndex: useHeadTracker ? 1 : 0, tag: .headingSource)
-        case (2, 0):
+        case (.headTracking, 0):
             return switchCell(label: "Inverse elevation", isOn: inverseElevation, tag: .inverseElevation)
-        case (2, 1):
+        case (.headTracking, 1):
             return switchCell(label: "Calibrate on start", isOn: calibrateOnStart, tag: .calibrateOnStart)
-        case (3, 0):
+        case (.creator, 0):
             return textFieldCell(label: "IP address", value: rwaCreatorIP,
                                  placeholder: "192.168.0.1", tag: .creatorIP,
                                  keyboard: .numbersAndPunctuation)
-        case (3, 1):
+        case (.creator, 1):
             return actionCell(title: registered ? "Unregister" : "Register")
-        case (3, 2):
+        case (.creator, 2):
             return switchCell(label: "Send GPS to Creator", isOn: sendGPS2Creator, tag: .sendGPS2Creator)
-        case (4, 0):
+        case (.soundwalk, 0):
             let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
             cell.textLabel?.text = "Default game"
             let name = (defaultGame as NSString).lastPathComponent
@@ -122,14 +180,14 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        if indexPath == IndexPath(row: 1, section: 3) {
+        if indexPath == IndexPath(row: 1, section: Section.creator.rawValue) {
             // Live action, not a stored setting: announce/withdraw this device
             // to rwaCreator. Only the cell's own title depends on the result,
             // so just refresh that row.
             toggleCreatorRegistration()
             tableView.reloadRows(at: [indexPath], with: .none)
         }
-        if indexPath.section == 4 {
+        if indexPath.section == Section.soundwalk.rawValue {
             navigationController?.pushViewController(DefaultGamePickerViewController(style: .grouped), animated: true)
         }
     }
@@ -137,7 +195,8 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
     // MARK: - Cell builders
 
     private func textFieldCell(label: String, value: String, placeholder: String,
-                               tag: FieldTag, keyboard: UIKeyboardType = .default) -> UITableViewCell {
+                               tag: FieldTag, keyboard: UIKeyboardType = .default,
+                               secure: Bool = false) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         cell.selectionStyle = .none
         cell.textLabel?.text = label
@@ -150,6 +209,7 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
         field.autocapitalizationType = .none
         field.returnKeyType = .done
         field.keyboardType = keyboard
+        field.isSecureTextEntry = secure
         field.delegate = self
         field.tag = tag.rawValue
         field.addTarget(self, action: #selector(fieldEditingEnded(_:)), for: .editingDidEnd)
@@ -225,6 +285,17 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
             // Keep an already-configured OSC client in sync; otherwise it
             // sends to the old address until the next register toggle.
             oscClient.host = text
+        case .some(let tag) where tag.casterDefaultsKey != nil:
+            // Stored verbatim (the password untrimmed: it may contain
+            // spaces); CasterSettings normalises on read. Only a real
+            // change restarts the caster session, and one field at a time:
+            // the client's owner debounces the restarts.
+            let key = tag.casterDefaultsKey!
+            let value = tag == .casterPass ? (field.text ?? "") : text
+            if (defaults.string(forKey: key) ?? "") != value {
+                defaults.set(value, forKey: key)
+                NotificationCenter.default.post(name: CasterSettings.didChange, object: nil)
+            }
         default:
             break
         }

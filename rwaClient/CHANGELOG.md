@@ -22,6 +22,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Caster settings** (ADR-001, PROJECT-PLAN.md §6 item 6): the NTRIP caster
+  host, port, mount point, username and password the firmware used to embed
+  per unit are app settings now. Settings ▸ Caster (next to Identity; the
+  password field is masked), stored in UserDefaults under
+  `defaultsKeys.caster*`, read through `CasterSettings` (default port 2101,
+  a leading slash on the mount point dropped, completeness check). Any edit
+  posts `CasterSettings.didChange`, which the NTRIP client restarts on.
+  Provisioning (`player-settings.plist`, `tools/deploy_games.sh -s`) accepts
+  the same five keys (`casterHost`, `casterPort`, `casterMount`,
+  `casterUser`, `casterPass`); the password is applied like the rest but
+  never logged. One username per unit: the caster accounts are
+  single-session. Password in UserDefaults is acceptable for fleet phones we
+  own; move it to the Keychain if that changes.
+
 - `tools/deploy_games.sh` accepts a single `.rwa` file as its source, not just a
   game folder: only that file plus the `assets/` folder next to it are staged
   and pushed, which picks one game out of a folder holding several `.rwa`
