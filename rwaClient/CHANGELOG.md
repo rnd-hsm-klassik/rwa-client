@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- The WiFi/NTRIP fields of the firmware telemetry, retired with rtk-rover
+  0.48.0 (ADR-001, PROJECT-PLAN.md §4.3 / §5.3): heartbeat keys 12
+  `wifi_rssi`, 13 `ntrip_connected` and 18 `loops_ntrip` are gone from
+  `TelemetryKeys` (a ≤ 0.47 assembly still sending them is ignored like any
+  unknown key), and event type 3 `ntrip_status` is no longer decoded on the
+  BLE leg (dropped as an unknown type; the app creates that event itself
+  from now on). `DeviceHealth` lost `wifiRssi` / `ntripConnected` and the
+  Diagnostics "Correction link" section its "WiFi signal" and "NTRIP" rows.
+  The decoder tests' heartbeat fixture is rebuilt around keys 19/20/21,
+  byte-identical to the firmware's AUnit fixture.
+
 ### Added
 
 - `tools/deploy_games.sh` accepts a single `.rwa` file as its source, not just a
@@ -17,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   recognise the assets already on the phone and skip them.
 
 ### Changed
+
+- Heartbeat keys 20 `loops_corr` and 21 `rtcm_bytes` (rtk-rover ≥ 0.48.0)
+  are decoded; `rtcm_bytes` (RTCM bytes the firmware pushed into the
+  receiver since its previous heartbeat) is cached in `DeviceHealth` and
+  shown in Diagnostics ▸ Correction link as "RTCM to receiver" in bytes/s,
+  next to the correction age, which moved there from the GNSS section: the
+  two together are the assembly-side proof that corrections arrive.
 
 - Head-tracking statistics in the Diagnostics tab now measure *updates*, not
   notifications (`HeadingStats`). Nothing leaves the assembly between BLE

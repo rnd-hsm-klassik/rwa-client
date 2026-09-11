@@ -29,9 +29,12 @@ struct DeviceHealthSnapshot {
     var lastHeartbeatAt: Date?
     var uptimeMs: UInt32?
     var freeHeap: Int?
-    var wifiRssi: Int?            // ESP32 -> hotspot link quality (dBm)
-    var ntripConnected: Bool?
     var fwVersion: String?
+    // RTCM bytes the firmware pushed into the receiver since its previous
+    // heartbeat (key 21, rtk-rover ≥ 0.48.0; bytes/s = value / 15). With
+    // corrAgeMs the assembly-side proof that corrections arrive. nil on
+    // ≤ 0.47 firmware, which received its corrections over WiFi itself.
+    var rtcmBytesPerInterval: Int?
     // LiPo pack voltage from the heartbeat (fw ≥ 0.44.0); nil until the first
     // heartbeat, and while the device reports 0 (= unknown). The firmware
     // ships no discharge curve, so this stays a raw voltage.
@@ -76,6 +79,10 @@ struct DeviceHealthSnapshot {
 final class DeviceHealth {
 
     static let shared = DeviceHealth()
+
+    /// The firmware's heartbeat period (PROJECT-PLAN.md §4.3): the interval
+    /// counters it carries (rtcm_bytes, loops_*) are "per this many seconds".
+    static let firmwareHeartbeatInterval: TimeInterval = 15
 
     /// Posted after any mutation, in case a consumer prefers events to polling.
     static let didUpdate = Notification.Name("DeviceHealthDidUpdate")
@@ -175,9 +182,8 @@ final class DeviceHealth {
                 $0.lastHeartbeatAt = Date()
                 if let v = DeviceHealth.uint32(event["uptime_ms"]) { $0.uptimeMs = v }
                 if let v = DeviceHealth.int(event["free_heap"]) { $0.freeHeap = v }
-                if let v = DeviceHealth.int(event["wifi_rssi"]) { $0.wifiRssi = v }
-                if let v = event["ntrip_connected"] as? Bool { $0.ntripConnected = v }
                 if let v = event["fw_version"] as? String { $0.fwVersion = v }
+                if let v = DeviceHealth.int(event["rtcm_bytes"]) { $0.rtcmBytesPerInterval = v }
                 // 0 mV means the device could not read the pack: keep the
                 // last known voltage rather than showing a flat battery.
                 if let v = DeviceHealth.int(event["batt_mv"]), v > 0 { $0.batteryMv = v }

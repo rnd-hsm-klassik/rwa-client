@@ -20,17 +20,20 @@ final class DeviceTelemetryDecoderTests: XCTestCase {
         return Data([proto, UInt8(payload.count & 0xFF), UInt8(payload.count >> 8)] + payload)
     }
 
-    /// {0: 2 (heartbeat), 1: 65, 2: 1000, 12: -60, 13: true,
-    ///  14: "0.44.0+abc", 16: 3900}
+    /// {0: 2 (heartbeat), 1: 65, 2: 1000, 14: "0.48.0+abc", 19: 2, 20: 3,
+    ///  21: 1024, 16: 3900}. The 19/20/21 run is byte-identical to the
+    ///  firmware's frame_heartbeat_carries_heap_min_and_interval_counters
+    ///  fixture; batt_mv stays the last pair, as in the firmware encoder.
     private let heartbeatPayload: [UInt8] = [
-        0xA7,                    // map, 7 pairs
+        0xA8,                    // map, 8 pairs
         0x00, 0x02,              // 0: type = heartbeat
         0x01, 0x18, 0x41,        // 1: seq = 65
         0x02, 0x19, 0x03, 0xE8,  // 2: t_dev_ms = 1000
-        0x0C, 0x38, 0x3B,        // 12: wifi_rssi = -60
-        0x0D, 0xF5,              // 13: ntrip_connected = true
-        0x0E, 0x6A] + Array("0.44.0+abc".utf8)  // 14: fw_version
-        + [0x10, 0x19, 0x0F, 0x3C]  // 16: batt_mv = 3900
+        0x0E, 0x6A] + Array("0.48.0+abc".utf8)  // 14: fw_version
+        + [0x13, 0x02,               // 19: loops_pos = 2
+           0x14, 0x03,               // 20: loops_corr = 3
+           0x15, 0x19, 0x04, 0x00,   // 21: rtcm_bytes = 1024
+           0x10, 0x19, 0x0F, 0x3C]   // 16: batt_mv = 3900
 
     func testHeartbeatDecodes() throws {
         var stream = TelemetryFrameStream()
@@ -45,10 +48,33 @@ final class DeviceTelemetryDecoderTests: XCTestCase {
         XCTAssertNil(event["seq"])
         XCTAssertEqual(event["source"] as? String, "rtk_headtracker")
         XCTAssertEqual(event["t_dev_ms"] as? UInt64, 1000)
-        XCTAssertEqual(event["wifi_rssi"] as? Int64, -60)
-        XCTAssertEqual(event["ntrip_connected"] as? Bool, true)
-        XCTAssertEqual(event["fw_version"] as? String, "0.44.0+abc")
+        XCTAssertEqual(event["fw_version"] as? String, "0.48.0+abc")
+        XCTAssertEqual(event["loops_pos"] as? UInt64, 2)
+        XCTAssertEqual(event["loops_corr"] as? UInt64, 3)
+        XCTAssertEqual(event["rtcm_bytes"] as? UInt64, 1024)
         XCTAssertEqual(event["batt_mv"] as? UInt64, 3900)
+    }
+
+    /// Heartbeat keys 12 / 13 / 18 (wifi_rssi, ntrip_connected, loops_ntrip)
+    /// are retired since rtk-rover 0.48.0 (ADR-001). A ≤ 0.47 assembly still
+    /// sends them; they must be ignored like any unknown key, never mapped.
+    func testRetiredHeartbeatKeysAreIgnored() throws {
+        // {0: 2, 1: 1, 2: 1, 12: -60, 13: true, 18: 15}
+        let payload: [UInt8] = [
+            0xA6,
+            0x00, 0x02,
+            0x01, 0x01,
+            0x02, 0x01,
+            0x0C, 0x38, 0x3B,  // 12: -60
+            0x0D, 0xF5,        // 13: true
+            0x12, 0x0F,        // 18: 15
+        ]
+        let event = try XCTUnwrap(DeviceTelemetryDecoder.event(fromFramePayload: Data(payload)))
+        XCTAssertEqual(event["type"] as? String, "heartbeat")
+        XCTAssertNil(event["wifi_rssi"])
+        XCTAssertNil(event["ntrip_connected"])
+        XCTAssertNil(event["loops_ntrip"])
+        XCTAssertEqual(event.count, 4)  // type, source, dev_seq, t_dev_ms
     }
 
     func testGnssFixFloatsDecode() throws {
@@ -69,12 +95,13 @@ final class DeviceTelemetryDecoderTests: XCTestCase {
         XCTAssertEqual(event["pdop"] as? Double, 1.5)
     }
 
-    func testNtripStateMapsToString() throws {
+    /// Type 3 (ntrip_status) is retired on the BLE leg since rtk-rover
+    /// 0.48.0 (ADR-001): the app creates that event itself. A ≤ 0.47
+    /// assembly still sending it is dropped like any unknown type.
+    func testRetiredNtripStatusTypeIsDropped() {
         // {0: 3 (ntrip_status), 1: 2, 2: 9, 10: 1 (connected)}
         let payload: [UInt8] = [0xA4, 0x00, 0x03, 0x01, 0x02, 0x02, 0x09, 0x0A, 0x01]
-        let event = try XCTUnwrap(DeviceTelemetryDecoder.event(fromFramePayload: Data(payload)))
-        XCTAssertEqual(event["type"] as? String, "ntrip_status")
-        XCTAssertEqual(event["state"] as? String, "connected")
+        XCTAssertNil(DeviceTelemetryDecoder.event(fromFramePayload: Data(payload)))
     }
 
     func testFrameSpanningNotifications() {

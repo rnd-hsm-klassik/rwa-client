@@ -22,17 +22,18 @@ enum TelemetryKeys {
     static let keySeq: UInt64 = 1
     static let keyTDevMs: UInt64 = 2
 
-    // Event types (common key 0); JSON names per §4.3
+    // Event types (common key 0); JSON names per §4.3.
+    // 3 = ntrip_status: retired with rtk-rover 0.48.0 (ADR-001), the app
+    // creates that event itself (source `phone`). Never reuse on the BLE leg;
+    // a ≤ 0.47 assembly still sending it is dropped as an unknown type.
     static let typeGnssFix: UInt64 = 1
     static let typeHeartbeat: UInt64 = 2
-    static let typeNtripStatus: UInt64 = 3
     static let typeImuStatus: UInt64 = 4
     static let typeError: UInt64 = 5
 
     static let typeNames: [UInt64: String] = [
         typeGnssFix: "gnss_fix",
         typeHeartbeat: "heartbeat",
-        typeNtripStatus: "ntrip_status",
         typeImuStatus: "imu_status",
         typeError: "error",
     ]
@@ -44,14 +45,12 @@ enum TelemetryKeys {
             14: "carr_soln", 15: "h_acc_mm", 16: "v_acc_mm", 17: "num_sv",
             18: "pdop", 19: "corr_age_ms",
         ],
+        // 12 = wifi_rssi, 13 = ntrip_connected, 18 = loops_ntrip: retired
+        // with rtk-rover 0.48.0 (ADR-001), never reuse.
         typeHeartbeat: [
-            10: "uptime_ms", 11: "free_heap", 12: "wifi_rssi",
-            13: "ntrip_connected", 14: "fw_version", 15: "dropped_frames",
-            16: "batt_mv", 17: "heap_min", 18: "loops_ntrip",
-            19: "loops_pos",
-        ],
-        typeNtripStatus: [
-            10: "state", 11: "reconnects", 12: "bytes_rx",
+            10: "uptime_ms", 11: "free_heap", 14: "fw_version",
+            15: "dropped_frames", 16: "batt_mv", 17: "heap_min",
+            19: "loops_pos", 20: "loops_corr", 21: "rtcm_bytes",
         ],
         typeImuStatus: [
             10: "calib_status", 11: "report_rate_hz", 12: "resets",
@@ -59,12 +58,6 @@ enum TelemetryKeys {
         typeError: [
             10: "severity", 11: "code", 12: "msg",
         ],
-    ]
-
-    /// ntrip_status.state travels as a uint enum on BLE; JSON wants the
-    /// §4.3 strings.
-    static let ntripStateNames: [UInt64: String] = [
-        0: "disconnected", 1: "connected", 2: "reconnecting",
     ]
 
     // CTRL characteristic commands (§5.4): [u8 cmd][args...]

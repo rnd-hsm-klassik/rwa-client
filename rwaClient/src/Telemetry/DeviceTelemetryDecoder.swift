@@ -169,10 +169,6 @@ enum DeviceTelemetryDecoder {
             }
             // unknown keys within a known type: ignored (§5.3 additive rule)
         }
-
-        if typeRaw == TelemetryKeys.typeNtripStatus, let state = event["state"] as? UInt64 {
-            event["state"] = TelemetryKeys.ntripStateNames[state] ?? "unknown"
-        }
         return event
     }
 }

@@ -105,10 +105,11 @@ class AboutViewController: UITableViewController {
         }
         out.append(Section(title: "Motion data", rows: imu))
 
-        // Correction link (ESP32 -> hotspot -> NTRIP caster).
+        // Correction link (caster -> app -> BLE -> assembly -> receiver,
+        // ADR-001): what the assembly reports about the corrections it gets.
         out.append(Section(title: "Correction link", rows: [
-            Row(label: "WiFi signal", value: Self.dbm(h.wifiRssi)),
-            Row(label: "NTRIP", value: Self.bool(h.ntripConnected, on: "Connected", off: "Disconnected"))
+            Row(label: "RTCM to receiver", value: Self.bytesPerSecond(h.rtcmBytesPerInterval)),
+            Row(label: "Correction age", value: Self.corrAge(h.corrAgeMs))
         ]))
 
         // GNSS quality
@@ -120,7 +121,6 @@ class AboutViewController: UITableViewController {
             Row(label: "Vertical acc.", value: Self.mm(h.vAccMm)),
             Row(label: "Satellites", value: h.numSv.map { "\($0)" } ?? "—"),
             Row(label: "PDOP", value: h.pdop.map { String(format: "%.1f", $0) } ?? "—"),
-            Row(label: "Correction age", value: Self.corrAge(h.corrAgeMs)),
             Row(label: "Last fix", value: Self.age(h.lastFixAt))
         ]))
 
@@ -177,9 +177,10 @@ class AboutViewController: UITableViewController {
     private static func dbm(_ v: Int?) -> String { v.map { "\($0) dBm" } ?? "—" }
     private static func mm(_ v: Int?) -> String { v.map { "\($0) mm" } ?? "—" }
 
-    private static func bool(_ v: Bool?, on: String, off: String) -> String {
-        guard let v = v else { return "—" }
-        return v ? on : off
+    /// Firmware heartbeat interval counters shown as a rate.
+    private static func bytesPerSecond(_ perInterval: Int?) -> String {
+        guard let v = perInterval else { return "—" }
+        return String(format: "%.0f B/s", Double(v) / DeviceHealth.firmwareHeartbeatInterval)
     }
 
     /// Raw pack voltage: the firmware sends no percentage and a LiPo curve
