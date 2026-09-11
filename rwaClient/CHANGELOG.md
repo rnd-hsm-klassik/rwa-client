@@ -22,6 +22,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Corrections over BLE, the app side of the link** (ADR-001,
+  PROJECT-PLAN.md §5.6; rtk-rover ≥ 0.48.0). `Device` gains the RTCM
+  downlink `713D0006` and the GGA uplink `713D0007`; neither enters the
+  assembly-kind decision. `HeadtrackerManager` discovers both, keeps the
+  RTCM characteristic and subscribes to GGA. `writeRtcm(_:)` feeds an
+  ordered byte queue (`RtcmChunker`: 8 KB, drop-*oldest* beyond that, the
+  policy of the firmware's own FIFO) that is drained in writes without
+  response of at most `maximumWriteValueLength(for: .withoutResponse)`
+  bytes, gated by `canSendWriteWithoutResponse` and resumed from
+  `peripheralIsReady`. No framing, no alignment to RTCM message boundaries:
+  order on the wire is the only framing, so bytes are never reordered or
+  deduplicated. GGA notifications (the receiver's own `$GPGGA`, fix quality
+  only, no CRLF) are validated and kept as the latest assembly GGA, cleared
+  with the connection. Diagnostics ▸ Correction link gains "RTCM to assembly
+  (BLE)" (bytes/s over the last firmware heartbeat interval, comparable to
+  "RTCM to receiver", plus the total and what the app's queue dropped; "not
+  offered" on ≤ 0.47 firmware) and "GGA from assembly". Nothing feeds the
+  writer yet; the NTRIP client is the next entry. Tests: `RtcmChunkerTests`,
+  `GgaNotificationTests`.
+
 - **Caster settings** (ADR-001, PROJECT-PLAN.md §6 item 6): the NTRIP caster
   host, port, mount point, username and password the firmware used to embed
   per unit are app settings now. Settings ▸ Caster (next to Identity; the

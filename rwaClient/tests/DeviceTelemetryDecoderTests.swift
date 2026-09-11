@@ -277,6 +277,74 @@ final class AssemblyKindDetectionTests: XCTestCase {
     }
 }
 
+// MARK: - Corrections over BLE (ADR-001, §5.6)
+
+/// The RTCM downlink queue (713D0006): order preserved, writes capped at the
+/// ATT payload size, drop-oldest beyond the capacity.
+final class RtcmChunkerTests: XCTestCase {
+
+    private func bytes(_ range: Range<Int>) -> Data {
+        return Data(range.map { UInt8($0 & 0xFF) })
+    }
+
+    func testChunksPreserveOrderAndRespectTheLimit() {
+        var q = RtcmChunker()
+        q.append(bytes(0..<300))
+        q.append(bytes(300..<500))
+        var out = Data()
+        var writes = 0
+        while let chunk = q.nextChunk(maxLength: 182) {
+            XCTAssertLessThanOrEqual(chunk.count, 182)
+            out.append(chunk)
+            writes += 1
+        }
+        XCTAssertEqual(out, bytes(0..<500))
+        XCTAssertEqual(writes, 3)   // 182 + 182 + 136
+        XCTAssertTrue(q.isEmpty)
+        XCTAssertEqual(q.droppedBytes, 0)
+    }
+
+    func testDropsTheOldestBytesBeyondTheCapacity() {
+        var q = RtcmChunker()
+        q.append(Data(repeating: 0xAA, count: RtcmChunker.capacity))
+        q.append(Data(repeating: 0xBB, count: 100))
+        XCTAssertEqual(q.count, RtcmChunker.capacity)
+        XCTAssertEqual(q.droppedBytes, 100)
+        let older = q.nextChunk(maxLength: RtcmChunker.capacity - 100)
+        XCTAssertEqual(older, Data(repeating: 0xAA, count: RtcmChunker.capacity - 100))
+        let newest = q.nextChunk(maxLength: 514)
+        XCTAssertEqual(newest, Data(repeating: 0xBB, count: 100))
+        XCTAssertNil(q.nextChunk(maxLength: 514))
+    }
+
+    /// Before the MTU exchange or with a stalled link nothing must leave
+    /// the queue half-written.
+    func testZeroLimitWritesNothing() {
+        var q = RtcmChunker()
+        q.append(bytes(0..<10))
+        XCTAssertNil(q.nextChunk(maxLength: 0))
+        XCTAssertEqual(q.count, 10)
+    }
+}
+
+/// The GGA uplink (713D0007): the receiver's own sentence, one per
+/// notification, no CRLF; anything else is dropped.
+final class GgaNotificationTests: XCTestCase {
+
+    func testAcceptsTheReceiversSentence() {
+        let bench = "$GPGGA,214104.30,4733.3177986,N,00735.2118902,E,2,12,0.65,284.398,M,47.259,M,41.3,0285*4E"
+        XCTAssertEqual(Device.parseGgaSentence(Data(bench.utf8)), bench)
+        XCTAssertNotNil(Device.parseGgaSentence(Data("$GNGGA,1,2,3*00".utf8)))
+    }
+
+    func testRejectsOtherSentencesLineEndingsAndGarbage() {
+        XCTAssertNil(Device.parseGgaSentence(Data("$GPRMC,1*00".utf8)))
+        XCTAssertNil(Device.parseGgaSentence(Data("$GPGGA,1*00\r\n".utf8)))
+        XCTAssertNil(Device.parseGgaSentence(Data([0xFF, 0xFE, 0x24])))
+        XCTAssertNil(Device.parseGgaSentence(Data()))
+    }
+}
+
 // MARK: - Heading update statistics
 
 /// HeadingStats folds the frames of one BLE connection event into a single

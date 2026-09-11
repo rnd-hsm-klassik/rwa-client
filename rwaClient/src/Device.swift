@@ -19,6 +19,12 @@ struct Device {
     /// Binary heading, rtk-rover >= 0.46.0 and RWAHT >= 0.3.0.
     /// Exposed by both assembly kinds.
     static let TRACKERBINARYHEADING = "713D0005-503E-4C75-BA94-3148F18D941E"
+    /// Corrections over BLE (ADR-001, PROJECT-PLAN.md §5.6), rtk-rover >= 0.48.0:
+    /// RTCM downlink app -> assembly, write without response ...
+    static let TRACKERRTCM = "713D0006-503E-4C75-BA94-3148F18D941E"
+    /// ... and GGA uplink assembly -> app, notify. Neither enters the
+    /// assembly-kind decision (assemblyKind below).
+    static let TRACKERGGA = "713D0007-503E-4C75-BA94-3148F18D941E"
 
     // Telemetry GATT service (PROJECT-PLAN.md §5.1) — cross-repo contract
     static let TelemetryService = "713D0100-503E-4C75-BA94-3148F18D941E"
@@ -85,6 +91,20 @@ struct Device {
         }
     }
 
+    /// One GGA notification (TRACKERGGA, 713D0007): the receiver's own
+    /// `$GPGGA` / `$GNGGA` sentence, ASCII, no CRLF, one per notification
+    /// (§5.6). Returns the sentence, or nil for anything else (never trap on
+    /// radio data). Not parsed further: it is forwarded to the caster as is.
+    static func parseGgaSentence(_ data: Data) -> String? {
+        // Byte-level line-ending check: "\r\n" is one Character in Swift,
+        // which String.contains("\r") does not find.
+        guard !data.contains(0x0D), !data.contains(0x0A),
+              let text = String(data: data, encoding: .utf8),
+              text.hasPrefix("$GPGGA,") || text.hasPrefix("$GNGGA,")
+        else { return nil }
+        return text
+    }
+
     /// Returns nil unless the frame is exactly 16 bytes (never trap on radio data).
     static func parseBinaryHeadingFrame(_ data: Data) -> HeadingFrame? {
         guard data.count == 16 else { return nil }
@@ -101,5 +121,48 @@ struct Device {
             qw: Float(i16(12)) / q14,
             linAccelZ: Float(i16(14)) / 100
         )
+    }
+}
+
+/// Ordered byte queue for the RTCM downlink (TRACKERRTCM, 713D0006, §5.6):
+/// the caster's stream is appended as it arrives and leaves in writes of at
+/// most the ATT payload size. Order is the only framing there is (RTCM3 is
+/// self-delimiting: the receiver resyncs after a dropped chunk but not
+/// after a reordered one), so bytes go out in arrival order, never
+/// deduplicated or aligned to message boundaries. The capacity is a few VRS
+/// epochs; beyond it the *oldest* bytes are dropped, the policy of the
+/// firmware's own FIFO: after a BLE stall the newest corrections matter, not
+/// the backlog.
+struct RtcmChunker {
+
+    static let capacity = 8192
+
+    private var buffer = Data()
+    private(set) var droppedBytes = 0
+
+    var isEmpty: Bool { return buffer.isEmpty }
+    var count: Int { return buffer.count }
+
+    mutating func append(_ data: Data) {
+        buffer.append(data)
+        let excess = buffer.count - RtcmChunker.capacity
+        if excess > 0 {
+            buffer.removeFirst(excess)
+            droppedBytes += excess
+        }
+    }
+
+    /// The next write, at most `maxLength` bytes; nil when there is nothing
+    /// to write (or nothing can be written).
+    mutating func nextChunk(maxLength: Int) -> Data? {
+        guard !buffer.isEmpty, maxLength > 0 else { return nil }
+        let n = min(maxLength, buffer.count)
+        let chunk = Data(buffer.prefix(n))
+        buffer.removeFirst(n)
+        return chunk
+    }
+
+    mutating func removeAll() {
+        buffer.removeAll()
     }
 }

@@ -3,9 +3,10 @@
 //  rwa player
 //
 //  BLE central for the headset assembly: connection lifecycle, the tracker
-//  text protocol, raw RTK position frames and the telemetry CBOR ingest.
-//  Extracted from SecondViewController (the hidden "Current Scene" tab) and
-//  owned by the AppDelegate.
+//  text protocol, raw RTK position frames, the telemetry CBOR ingest and,
+//  since ADR-001, the app side of the correction loop (RTCM down to the
+//  assembly, its GGA up). Extracted from SecondViewController (the hidden
+//  "Current Scene" tab) and owned by the AppDelegate.
 //
 
 import Foundation
@@ -110,6 +111,19 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
     /// those stray frames must be dropped, not double-applied.
     var binaryHeadingPresent = false
     var rssiTimer:Timer?
+
+    // MARK: Corrections over BLE (ADR-001, PROJECT-PLAN.md §5.6), bleQueue
+
+    /// 713D0006 once discovered on this connection; nil = no RTCM downlink
+    /// (rtk-rover ≤ 0.47, or discovery still running).
+    private var rtcmCharacteristic: CBCharacteristic?
+    /// Caster bytes waiting for the link, in order.
+    private var rtcmQueue = RtcmChunker()
+    private var rtcmBytesWritten = 0
+    /// The assembly's latest GGA (713D0007) and when it arrived. Quiet means
+    /// the receiver has no fix, not a broken link (§5.6).
+    private(set) var latestAssemblyGga: String?
+    private(set) var latestAssemblyGgaAt: Date?
 
     override init() {
         super.init()
@@ -280,6 +294,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
             self.peripheral = nil
             stopRSSITimerOnMain()
             DeviceTelemetryReceiver.shared.connectionReset()
+            resetCorrectionsLink()
             headTrackerConnected = false
             DeviceHealth.shared.setBLEConnected(false)
             DeviceHealth.shared.setAssembly(kind: nil, id: nil)
@@ -355,6 +370,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         dataBuffer.length = 0
         binaryHeadingPresent = false
         HeadingStats.shared.reset()
+        resetCorrectionsLink()
 
         // IMPORTANT: Set the delegate property, otherwise we won't receive the discovery callbacks, like peripheral(_:didDiscoverServices)
         peripheral.delegate = self
@@ -389,6 +405,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         // A partially received telemetry frame must not be glued to bytes
         // from the next connection (the device also restarts its stream).
         DeviceTelemetryReceiver.shared.connectionReset()
+        resetCorrectionsLink()
         stopRSSITimerOnMain()
         DeviceHealth.shared.setBLEConnected(false)
         DeviceHealth.shared.setAssembly(kind: nil, id: nil)
@@ -462,7 +479,9 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                     peripheral.discoverCharacteristics([
                         CBUUID(string: Device.TransferCharacteristic),
                         CBUUID(string: Device.TRACKERBINARYHEADING),
-                        CBUUID(string: Device.TRACKERRAWDATA)
+                        CBUUID(string: Device.TRACKERRAWDATA),
+                        CBUUID(string: Device.TRACKERRTCM),
+                        CBUUID(string: Device.TRACKERGGA)
                     ], for: service)
                 }
 
@@ -513,8 +532,66 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                     logger.info("BT: Found telemetry TX, subscribing")
                     peripheral.setNotifyValue(true, for: characteristic)
                 }
+
+                // Corrections over BLE (rtk-rover >= 0.48.0, §5.6): keep the
+                // RTCM downlink for the writer, subscribe to the GGA uplink.
+                if characteristic.uuid == CBUUID(string: Device.TRACKERRTCM) {
+                    logger.info("BT: Found RTCM downlink")
+                    rtcmCharacteristic = characteristic
+                    DeviceHealth.shared.setRtcmDownlink(present: true)
+                    pumpRtcm()
+                }
+
+                if characteristic.uuid == CBUUID(string: Device.TRACKERGGA) {
+                    logger.info("BT: Found GGA uplink, subscribing")
+                    peripheral.setNotifyValue(true, for: characteristic)
+                }
             }
         }
+    }
+
+    // MARK: - RTCM writer (bleQueue)
+
+    /// Feed caster bytes to the assembly; any thread. Order is the only
+    /// framing (§5.6), so the queue is FIFO with drop-oldest beyond a few
+    /// epochs (RtcmChunker), and the bytes go out in writes of at most the
+    /// ATT payload size as CoreBluetooth accepts them.
+    func writeRtcm(_ data: Data) {
+        bleQueue.async {
+            self.rtcmQueue.append(data)
+            self.pumpRtcm()
+        }
+    }
+
+    /// Drains the queue while the peripheral accepts writes without
+    /// response; resumed from peripheralIsReady(toSendWriteWithoutResponse:).
+    /// maximumWriteValueLength is 20 until the MTU exchange (~0.2 s after
+    /// connect) and 514 at the MTU 517 iOS negotiates: whatever it is now.
+    private func pumpRtcm() {
+        guard let peripheral = peripheral, peripheral.state == .connected,
+              let characteristic = rtcmCharacteristic, !rtcmQueue.isEmpty else { return }
+        let maxLength = peripheral.maximumWriteValueLength(for: .withoutResponse)
+        while peripheral.canSendWriteWithoutResponse,
+              let chunk = rtcmQueue.nextChunk(maxLength: maxLength) {
+            peripheral.writeValue(chunk, for: characteristic, type: .withoutResponse)
+            rtcmBytesWritten += chunk.count
+        }
+        DeviceHealth.shared.setRtcmWritten(total: rtcmBytesWritten, dropped: rtcmQueue.droppedBytes)
+    }
+
+    func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
+        pumpRtcm()
+    }
+
+    /// Connect and disconnect: the downlink and the GGA belong to one
+    /// connection, and queued corrections are stale by the time a new one
+    /// exists.
+    private func resetCorrectionsLink() {
+        rtcmCharacteristic = nil
+        rtcmQueue.removeAll()
+        latestAssemblyGga = nil
+        latestAssemblyGgaAt = nil
+        DeviceHealth.shared.setRtcmDownlink(present: false)
     }
 
     @objc func pollRSSI() {
@@ -544,6 +621,20 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         // handle them before the UTF-8 text decode below.
         if characteristic.uuid == CBUUID(string: Device.TelemetryTxCharacteristic) {
             DeviceTelemetryReceiver.shared.ingest(value)
+            return
+        }
+
+        // GGA uplink (713D0007, rtk-rover >= 0.48.0): the receiver's own
+        // fix-quality sentence at <= 1 Hz, kept for the NTRIP client, which
+        // forwards it to the caster (§5.6).
+        if characteristic.uuid == CBUUID(string: Device.TRACKERGGA) {
+            guard let sentence = Device.parseGgaSentence(value) else {
+                logger.debug("BT: malformed GGA notification (\(value.count) B)")
+                return
+            }
+            latestAssemblyGga = sentence
+            latestAssemblyGgaAt = Date()
+            DeviceHealth.shared.setAssemblyGgaReceived()
             return
         }
 

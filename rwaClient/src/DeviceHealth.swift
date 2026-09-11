@@ -52,6 +52,18 @@ struct DeviceHealthSnapshot {
     var pdop: Double?
     var corrAgeMs: Int?
 
+    // Corrections over BLE (ADR-001, §5.6), the app side of the link
+    // (HeadtrackerManager's RTCM writer and GGA reader).
+    var rtcmDownlinkPresent = false   // 713D0006 discovered (rtk-rover ≥ 0.48.0)
+    var rtcmBytesWritten = 0          // caster bytes written to the assembly, cumulative
+    var rtcmBytesDropped = 0          // evicted unwritten from the app's queue, cumulative
+    // Bytes written between the assembly's last two heartbeats: the app-side
+    // counterpart of rtcmBytesPerInterval, so a gap between the two (what
+    // the assembly's FIFO lost) is visible.
+    var rtcmWrittenPerInterval: Int?
+    var rtcmWrittenAtLastHeartbeat = 0
+    var lastAssemblyGgaAt: Date?      // 713D0007 delivered: the receiver has a fix
+
     // IMU status (PROJECT-PLAN.md §4.3 "imu_status"); live orientation is
     // read straight from the head-tracker globals by the UI.
     var imuCalibStatus: Int?
@@ -164,6 +176,28 @@ final class DeviceHealth {
         }
     }
 
+    /// 713D0006 discovered on the current connection (false on connect and
+    /// disconnect). Realigns the per-interval writer counter.
+    func setRtcmDownlink(present: Bool) {
+        mutate {
+            $0.rtcmDownlinkPresent = present
+            $0.rtcmWrittenAtLastHeartbeat = $0.rtcmBytesWritten
+            $0.rtcmWrittenPerInterval = nil
+        }
+    }
+
+    /// HeadtrackerManager's RTCM writer, after every drain.
+    func setRtcmWritten(total: Int, dropped: Int) {
+        mutate {
+            $0.rtcmBytesWritten = total
+            $0.rtcmBytesDropped = dropped
+        }
+    }
+
+    func setAssemblyGgaReceived() {
+        mutate { $0.lastAssemblyGgaAt = Date() }
+    }
+
     func setUploadStats(pending: Int, failures: Int, lastStatus: Int?) {
         mutate {
             $0.pendingUploads = pending
@@ -183,7 +217,12 @@ final class DeviceHealth {
                 if let v = DeviceHealth.uint32(event["uptime_ms"]) { $0.uptimeMs = v }
                 if let v = DeviceHealth.int(event["free_heap"]) { $0.freeHeap = v }
                 if let v = event["fw_version"] as? String { $0.fwVersion = v }
-                if let v = DeviceHealth.int(event["rtcm_bytes"]) { $0.rtcmBytesPerInterval = v }
+                if let v = DeviceHealth.int(event["rtcm_bytes"]) {
+                    $0.rtcmBytesPerInterval = v
+                    // Same interval on the app side, for the comparison.
+                    $0.rtcmWrittenPerInterval = $0.rtcmBytesWritten - $0.rtcmWrittenAtLastHeartbeat
+                    $0.rtcmWrittenAtLastHeartbeat = $0.rtcmBytesWritten
+                }
                 // 0 mV means the device could not read the pack: keep the
                 // last known voltage rather than showing a flat battery.
                 if let v = DeviceHealth.int(event["batt_mv"]), v > 0 { $0.batteryMv = v }

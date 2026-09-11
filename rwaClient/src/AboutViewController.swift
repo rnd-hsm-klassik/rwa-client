@@ -106,10 +106,13 @@ class AboutViewController: UITableViewController {
         out.append(Section(title: "Motion data", rows: imu))
 
         // Correction link (caster -> app -> BLE -> assembly -> receiver,
-        // ADR-001): what the assembly reports about the corrections it gets.
+        // ADR-001): the app's side of the BLE leg next to what the assembly
+        // reports, so a gap between the two is visible.
         out.append(Section(title: "Correction link", rows: [
+            Row(label: "RTCM to assembly (BLE)", value: Self.rtcmWritten(h)),
             Row(label: "RTCM to receiver", value: Self.bytesPerSecond(h.rtcmBytesPerInterval)),
-            Row(label: "Correction age", value: Self.corrAge(h.corrAgeMs))
+            Row(label: "Correction age", value: Self.corrAge(h.corrAgeMs)),
+            Row(label: "GGA from assembly", value: Self.age(h.lastAssemblyGgaAt))
         ]))
 
         // GNSS quality
@@ -181,6 +184,27 @@ class AboutViewController: UITableViewController {
     private static func bytesPerSecond(_ perInterval: Int?) -> String {
         guard let v = perInterval else { return "—" }
         return String(format: "%.0f B/s", Double(v) / DeviceHealth.firmwareHeartbeatInterval)
+    }
+
+    private static func kilobytes(_ bytes: Int) -> String {
+        return String(format: "%.1f KB", Double(bytes) / 1024)
+    }
+
+    /// The app-side RTCM counter: rate over the last heartbeat interval
+    /// (comparable to "RTCM to receiver"), the total, and what the app's own
+    /// queue dropped.
+    private static func rtcmWritten(_ h: DeviceHealthSnapshot) -> String {
+        guard h.rtcmDownlinkPresent else {
+            if h.bleConnected && h.assemblyKind == .rtkHeadtracker {
+                return "not offered (firmware ≤ 0.47)"
+            }
+            return "—"
+        }
+        var text = bytesPerSecond(h.rtcmWrittenPerInterval) + " · " + kilobytes(h.rtcmBytesWritten)
+        if h.rtcmBytesDropped > 0 {
+            text += " · dropped " + kilobytes(h.rtcmBytesDropped)
+        }
+        return text
     }
 
     /// Raw pack voltage: the firmware sends no percentage and a LiPo curve
