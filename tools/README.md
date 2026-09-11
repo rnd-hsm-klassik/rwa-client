@@ -106,7 +106,7 @@ All keys inside an entry are optional. Omit what should stay untouched:
 
 | Key | Meaning |
 | --- | --- |
-| `unitId` | the unit label (`rwa-hs-N`): telemetry `device_id`, the phone's hotspot name, and (by convention) the BLE name of the assembly to connect to |
+| `unitId` | the unit label (`rwa-hs-N`): telemetry `device_id` and (by convention) the BLE name of the assembly to connect to |
 | `assemblyId` | override of the BLE name to connect to; set it **only** when this phone runs with an assembly that is not its unit's own (a spare, an RWAHT, or an un-provisioned board advertising `rtkrover-<chip-id>`). Equal to `unitId` it is dropped as redundant |
 | `gpsSource` | `"rtk"` (RTK headtracker) or `"internal"` (phone GPS) |
 | `useHeadtracker` | heading from the assembly IMU (`true`) or CoreMotion (`false`) |
@@ -116,8 +116,8 @@ All keys inside an entry are optional. Omit what should stay untouched:
 | `creatorIP` | IP of the machine running RWA Creator (OSC simulator) |
 
 Identity follows the glossary (`PROJECT-PLAN.md` §1.1): the *unit* is
-phone + headset assembly, and one label normally covers device_id, hotspot and
-BLE name, so a unit usually needs only `unitId`.
+phone + headset assembly, and one label normally covers device_id and BLE
+name, so a unit usually needs only `unitId`.
 
 Unknown keys are ignored with an error in the app log; boolean values may be
 written as plist `<true/>`/`<false/>` or strings.

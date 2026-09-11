@@ -12,13 +12,13 @@
   survive relaunches; push a changed entry to override them again.
 
   Identity per the glossary (PROJECT-PLAN.md par. 1.1): the *unit* is
-  phone + headset assembly; its label (rwa-hs-N) is the telemetry device_id,
-  the phone's WiFi hotspot name, and - by convention - the assembly's BLE
-  name, so a unit normally needs only unitId.
+  phone + headset assembly; its label (rwa-hs-N) is the telemetry device_id
+  and - by convention - the assembly's BLE name, so a unit normally needs
+  only unitId.
 
   All keys inside an entry are optional. Omit what should stay untouched:
     unitId            unit label (rwa-hs-N): device_id in the backend
-                      = hotspot name = the assembly BLE name to connect to
+                      = the assembly BLE name to connect to
     assemblyId        override of the BLE name to connect to; set it ONLY
                       when this phone runs with an assembly that is not its
                       unit's own (a spare, an RWAHT, or an un-provisioned
@@ -37,7 +37,7 @@
 
 <plist version="1.0">
 <dict>
-	<!-- The normal case: one label covers device_id, hotspot and BLE name. -->
+	<!-- The normal case: one label covers device_id and BLE name. -->
 	<key>00008030-001E0F42B10702E</key>
 	<dict>
 		<key>unitId</key>

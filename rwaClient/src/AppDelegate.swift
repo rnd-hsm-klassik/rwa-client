@@ -20,7 +20,7 @@ var registered = false;
 var headtrackerID = ""
 var rwaCreatorIP = ""
 // The unit label (Settings -> "Unit ID", §1.1): `device_id` in telemetry; by
-// convention also the assembly's BLE name and the phone's hotspot SSID.
+// convention also the assembly's BLE name.
 // (Swift name predates the glossary)
 var deviceId = ""
 

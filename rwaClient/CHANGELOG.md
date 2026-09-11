@@ -45,6 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PROJECT-PLAN.md` synced from rtk-rover (0.46.2): adds §5.5, the binary
   heading frame, with the one-frame-per-connection-event rate.
 
+- `PROJECT-PLAN.md` synced from rtk-rover (v4, 2026-09-11, branch
+  `ble-only-transport`): ADR-001 makes BLE the assembly's only radio and RWA
+  Player the NTRIP client (§1 connectivity, §3, §4.3, §5.1, §5.3, the new
+  §5.6 corrections-over-BLE contract, §6 item 6, §10). The convention that
+  the unit label is also the phone's hotspot name is gone from the glossary
+  with it: the Settings footer, the provisioning template and
+  `tools/README.md` no longer mention it.
+
 ## [1.3.20] - 2026-09-04
 
 ### Added

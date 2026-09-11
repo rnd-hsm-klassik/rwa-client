@@ -60,7 +60,7 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
             if let override = TelemetryService.shared?.config.unitIdOverride, !override.isEmpty {
                 return "Unit ID is currently overridden by Telemetry.plist (\"\(override)\")."
             }
-            return "The Unit ID identifies this unit (phone + headset assembly) in telemetry; by convention it is also the assembly's Bluetooth name and the phone's hotspot name. Set Headset assembly only to connect to a different assembly (a spare, or a plain headtracker)."
+            return "The Unit ID identifies this unit (phone + headset assembly) in telemetry; by convention it is also the assembly's Bluetooth name. Set Headset assembly only to connect to a different assembly (a spare, or a plain headtracker)."
         }
         if section == 1 {
             return "With RTK selected, the app falls back to internal GPS while the RTK headtracker delivers no coordinates."

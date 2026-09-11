@@ -4,7 +4,7 @@
 > Lives in Claude project knowledge and in the root of each repo. Update it when architectural
 > decisions change — it is the single source of truth for the cross-repo contract.
 
-Status: v3 2026-08-23 (v1 draft 2026-06-10, v2 draft 2026-06-29)
+Status: v4 2026-09-11 (v1 draft 2026-06-10, v2 draft 2026-06-29, v3 2026-08-23)
 
 This is currently tracked in the `rtk-rover` repository, to document the implementation process.
 Once done, move it back into the directory containing all project repos (or symlink it), so other repos can reference to it as well.
@@ -37,11 +37,11 @@ the "retired" column lists what they replace.
 
 | Term | Meaning | Identity / notes | Retired words |
 | --- | --- | --- | --- |
-| **Headset assembly** (short: *assembly*) | What the visitor wears: headphones + microphone + ESP32 board + LiPo cell + BNO080 IMU, plus ZED-F9P receiver and antenna in the RTK variant. Two kinds: the **RTK headtracker** (firmware rtk-rover; positioning, heading and diagnostics telemetry) and the plain **headtracker** (firmware RWAHT; heading only). | **Assembly label** = the BLE advertised name = the sticker.<br>RTK variant: assigned at build time from `tools/fleet-secrets.ini` (`ble_name`, defaulting to the section name, e.g. `rwa-hs-2`); assemblies without a fleet entry fall back to `rtkrover-<chip-id>`.<br>RWAHT variant: `rwahtNN`. | "headset", "tracker", "rover" (for the hardware), "device" (for the ESP32) |
+| **Headset assembly** (short: *assembly*) | What the visitor wears: headphones + microphone + ESP32 board + LiPo cell + BNO080 IMU, plus ZED-F9P receiver and antenna in the RTK variant. Two kinds: the **RTK headtracker** (firmware rtk-rover; positioning, heading and diagnostics telemetry) and the plain **headtracker** (firmware RWAHT; heading only). | **Assembly label** = the BLE advertised name = the sticker.<br>RTK variant: assigned at build time from the committed `tools/known-boards.txt` (the label, e.g. `rwa-hs-2`; `ble_name` in `tools/fleet-secrets.ini` overrides); boards not in that file fall back to `rtkrover-<chip-id>`.<br>RWAHT variant: `rwahtNN`. | "headset", "tracker", "rover" (for the hardware), "device" (for the ESP32) |
 | **Rover** | The RTK *role* of the GNSS receiver in the assembly: the mobile receiver whose position is corrected against a fixed base/reference station (the refnet NTRIP caster). Names a function, not hardware. | Lives on in the firmware/repo name *rtk-rover* and in GNSS prose only. | — |
 | **Board** | The bare ESP32 Feather. | CP2104 serial / chip id, mapped to the assembly label in `tools/known-boards.txt`. | "board label" (→ assembly label), "unit" for the bare board |
-| **Phone** | The iPhone running **RWA Player** (the *app*); the telemetry gateway. | Named after its unit, and its personal hotspot SSID is the unit label. Both are conventions applied by hand at provisioning time: iOS does not let the app read the phone's name, so the unit label is typed into Settings or provisioned. | — |
-| **Unit** | Assembly + phone + accessories: what is handed to a visitor. | **Unit label** `rwa-hs-N`. This is `device_id` on the wire (field name kept for backend compatibility; "device" in SQL and backend prose means the unit). By convention unit label == the unit's assembly label == hotspot SSID. | `hs-03`-style ids, "rwa-phone-N" |
+| **Phone** | The iPhone running **RWA Player** (the *app*); the telemetry gateway and, since ADR-001, the NTRIP client. | Named after its unit, a convention applied by hand at provisioning time: iOS does not let the app read the phone's name, so the unit label is typed into Settings or provisioned. (Until rtk-rover 0.47 the phone's personal hotspot SSID was the unit label too; the hotspot is no longer used.) | — |
+| **Unit** | Assembly + phone + accessories: what is handed to a visitor. | **Unit label** `rwa-hs-N`. This is `device_id` on the wire (field name kept for backend compatibility; "device" in SQL and backend prose means the unit). By convention unit label == the unit's assembly label. | `hs-03`-style ids, "rwa-phone-N" |
 | **Session** | One process launch of RWA Player. | `session_id` (UUID), minted at launch. Not rotated on BLE (re)connect. | — |
 | **Source** | Where the *data* in an event stems from (§4.2). Not "who sent it": every event reaches the backend through the app. | Closed enum `rtk_headtracker` / `headtracker` / `phone` / `creator`, present on every event. | `rtk_tracker`, `ios_gps`, `osc_sim`, `headtracker_rtk`, `ios_motion`, `ios_app` |
 | **seq** | Gateway-assigned event id: the Player's SQLite row id (§4.2). The dedup key. | Persists across launches; restarts only with an app wipe/reinstall. | the 2^32 app-seq offset |
@@ -66,8 +66,11 @@ Phone-side identity settings (Settings -> Identity, `player-settings.plist` prov
 
 ### Connectivity
 
-- assembly → phone: BLE (head tracking, position, **telemetry**)
-- assembly → refnet NTRIP caster: WiFi via the phone's personal hotspot (RTCM corrections)
+- assembly → phone: BLE (head tracking, position, **telemetry**, GGA for the caster)
+- phone → assembly: BLE (RTCM corrections, proxied from the caster)
+- phone → refnet NTRIP caster: cellular; the app is the NTRIP client (ADR-001, rtk-rover
+  ≥ 0.48.0; before that the assembly reached the caster itself over WiFi via the phone's
+  personal hotspot)
 - phone → backend: HTTPS over cellular (good coverage on site; near-real-time uploads)
 
 ### Identity & privacy
@@ -93,18 +96,22 @@ Phone-side identity settings (Settings -> Identity, `player-settings.plist` prov
 
 ## 3. Architecture: gateway pattern
 
-All telemetry flows **assembly → BLE → app → HTTPS → backend**. The ESP32 never talks
-to the backend directly.
+All telemetry flows **assembly → BLE → app → HTTPS → backend**, and all corrections flow
+**caster → cellular → app → BLE → assembly**. The ESP32 talks to the phone and to nothing
+else (ADR-001, rtk-rover ≥ 0.48.0).
 
-- refnet (NTRIP) ⇢ [WiFi via phone hotspot] ⇢ ESP32 (rtk-rover)
+- refnet (NTRIP) ⇢ [cellular] ⇢ phone app (rwa-player) ⇢ [BLE] ⇢ ESP32 (rtk-rover)
 - ESP32 (rtk-rover) ⇢ [BLE] ⇢ phone app (rwa-player) ⇢ [HTTPS] ⇢ backend (rwa-backend)
 
 ![rtk_rover_telemetry_architecture](./rtk_rover_telemetry_architecture.svg)
+(diagram predates ADR-001: it still shows the WiFi-via-hotspot leg to the caster)
 
 Rationale:
 
-- The BLE pipe already exists; telemetry is one more characteristic.
-- ESP32 WiFi stays dedicated to the NTRIP stream (RAM, power, reliability).
+- The BLE pipe already exists; telemetry, GGA and RTCM are three more characteristics.
+- One radio on the ESP32 (ADR-001): no WiFi/BLE coexistence fight over the antenna, ~54 kB
+  of heap back, no hotspot to keep awake. The phone holds the caster socket over cellular,
+  which stayed alive through the outages that starved the assembly's own hotspot path.
 - The app **enriches** firmware events with context only it knows (soundwalk ID, session,
   app version, wall-clock time) — essential for correlating GNSS quality with content.
 - Store-and-forward buffering belongs on the phone (SQLite), not the microcontroller.
@@ -180,7 +187,8 @@ for each type; "firmware" cells are created on the RTK headtracker and carry
 | `gnss_fix` | firmware | - | app (CoreLocation) | app (OSC position) |
 | `heading` | app (from the BLE text protocol) | app (from the BLE text protocol) | app (CoreMotion) | - |
 | `heartbeat` | firmware | - | app | - |
-| `ntrip_status`, `imu_status`, `error` | firmware | - | - | - |
+| `imu_status`, `error` | firmware | - | - | - |
+| `ntrip_status` | - | - | app (NTRIP client) | - |
 | `app_event` | - | - | app | - |
 
 There is exactly one `gnss_fix` stream per source: for the RTK headtracker the
@@ -220,21 +228,37 @@ assembly; absent for `phone`).
 | Field | Notes |
 | --- | --- |
 | `uptime_ms`, `free_heap` | basic health |
-| `wifi_rssi` | hotspot link quality (dBm) |
-| `ntrip_connected` | bool |
 | `fw_version` | redundant with envelope, but lets the backend detect mismatches. Cut off after 32 bytes on the BLE leg — enough for semver plus git hash |
 | `dropped_frames` | cumulative count of telemetry frames dropped on-device (ring-buffer overflow); resets on boot |
 | `heap_min` | lowest free heap since boot (bytes). Together with `free_heap` it bounds the between-heartbeat transients that point samples miss (added for the 2026-08-21 underrun diagnosis) |
-| `loops_ntrip`, `loops_pos` | NTRIP-task / position-task loop iterations completed since the previous heartbeat (healthy: ~15 / ~150 per 15 s). A collapse toward 1 is the GNSS-pipeline-slowdown signature (see the `gnss_pipe_stall` error) |
-| `batt_mv` | LiPo pack voltage in mV, read from the Feather's 2:1 divider on A13 (ADC1, unaffected by WiFi). Single-cell: ~4200 full, ~3300 empty. 0 = unknown. Consumers derive a percentage; the firmware ships no discharge curve |
+| `loops_corr`, `loops_pos` | corrections-task / position-task loop iterations completed since the previous heartbeat (healthy: ~150 / ~150 per 15 s). A collapse toward 1 is the GNSS-pipeline-slowdown signature (see the `gnss_pipe_stall` error). Firmware ≤ 0.47 sent `loops_ntrip` (the NTRIP task, ~15 per 15 s) instead of `loops_corr` |
+| `batt_mv` | LiPo pack voltage in mV, read from the Feather's 2:1 divider on A13 (ADC1). Single-cell: ~4200 full, ~3300 empty. 0 = unknown. Consumers derive a percentage; the firmware ships no discharge curve |
+| `rtcm_bytes` | RTCM bytes pushed into the receiver since the previous heartbeat (0.48.0; bytes/s = value / 15). 0 while no phone is connected or the app has no caster session. With `corr_age_ms` in `gnss_fix`, the assembly-side proof that corrections reach the receiver |
+
+Retired with ADR-001 (firmware ≤ 0.47 sent them; never reused): `wifi_rssi` (hotspot link
+quality) and `ntrip_connected`. The caster session is the app's now, so its state lives in
+the app heartbeat and in `ntrip_status`.
 
 **`heartbeat`** (app, `source` = `phone`): every 15 s from RWA Player: `uptime_ms` (app),
 `assembly_connected` (bool), `assembly_id` (BLE name of the connected assembly), `assembly_rssi`
 (dBm), `walk_running` (bool), `position_source` / `heading_source` (the `source` value currently
-driving the hero, or `none`), `batt_pct` (phone battery).
+driving the hero, or `none`), `batt_pct` (phone battery), `ntrip_connected` (bool, the app's
+caster session; since ADR-001).
 
-**`ntrip_status`**: on state change: `state` ("connected" / "disconnected" / "reconnecting"),
-`reconnects` (counter), `bytes_rx` (cumulative).
+**`ntrip_status`** (app, `source` = `phone`; rwa-player is the NTRIP client
+since ADR-001): on state change: `state` ("connected" / "disconnected" /
+"reconnecting"), `reconnects` (successful connects − 1), `bytes_rx` (cumulative
+./update_version.sh 1.3.20 bytes received from the caster). Both counters belong
+to one caster client, which lives as long as the BLE connection to the assembly:
+they restart at 0 after a BLE reconnect, a caster-settings change or an app
+relaunch. `reconnecting` is reported once per outage and only for caster-side
+drops; a BLE drop appears as `disconnected` followed by `connected` with fresh
+counters. `reconnects` in the last event of a client is therefore the
+caster-side reconnect count for that BLE connection, not for the app session.
+The app also records `app_event`s `ntrip_started` (`data.caster`) and
+`ntrip_failed` (`data.reason`, `data.caster`; once per outage), so a session
+that never opens is visible too. Firmware ≤ 0.47 emitted the same event as
+`rtk_headtracker` with counters per boot.
 
 **`imu_status`**: every 60 s, and only while a phone is connected over BLE:
 `calib_status`, `report_rate_hz`, `resets`. Unlike `heartbeat`, nothing is recorded while the
@@ -244,17 +268,13 @@ assembly sits disconnected, so a gap in this stream means "no phone attached", n
 `msg` (free text, ≤ 200 chars).
 
 The codes are part of the contract (they will be alert labels). What the firmware sends today
-(rtk-rover 0.44.3):
+(rtk-rover 0.48.0):
 
 | `code` | sev | when |
 | --- | --- | --- |
-| `wifi_disconnected` | 1 | hotspot missing or lost for more than 30 s, trying to get back on. |
-| `ntrip_connect_failed` | 1 | could not reach the caster, or it never answered the request |
-| `ntrip_rtcm_timeout` | 1 | no corrections for 10 s, dropping the caster connection |
-| `ntrip_bad_response` | 2 | caster answered, but not with a correction stream (`msg` carries the reply) |
-| `ntrip_request_overflow` | 2 | the request to the caster did not fit its buffer: a config mistake, not a field fault |
-| `gnss_pipe_stall` | 1 | a GNSS-pipeline step ran over threshold (5 s): one NTRIP-task iteration (`msg` carries the mutex/checkUblox/push/GGA phase breakdown; the remainder is connect/response time) or one position-task `updatePosition` mutex hold. Diagnosis instrumentation for the 2026-08 slowdowns; rate-limited to one per 10 s per site |
-| `gnss_degraded` | 2 | the receiver produced no GGA for 30 s (mute module, bench 4.1 2026-08-24) and a recovery-ladder rung ran: `msg` carries silence duration, attempt number and action (reconfigure → sw reset → hard reset). While silent, caster connects are skipped (a VRS streams nothing without GGA) |
+| `gnss_pipe_stall` | 1 | a GNSS-pipeline step ran over threshold (5 s): one corrections-task iteration or one position-task `updatePosition` mutex hold (`msg` carries the time). Diagnosis instrumentation for the 2026-08 slowdowns; rate-limited to one per 10 s per site |
+| `gnss_degraded` | 2 | the receiver produced no GGA for 30 s (mute module, bench 4.1 2026-08-24) and a recovery-ladder rung ran: `msg` carries silence duration, attempt number and action (reconfigure → sw reset → hard reset) |
+| `rtcm_fifo_overflow` | 1 | RTCM chunks the app wrote (§5.6) were evicted before reaching the receiver: the corrections task could not take the GNSS mutex for seconds, so corrections arrive but do not get through on the assembly. `msg` carries the count since the last report; rate-limited to one per 10 s |
 | `gnss_config_retry` | 1 | the receiver answered `begin()` but did not acknowledge one configuration write during setup; the whole configuration is retried and `msg` names the step. Not a wiring fault (until 0.46.2 this raised `i2c_gnss_not_detected` instead) |
 | `i2c_bus_rtk_failed` | 3 | the sensor bus would not start |
 | `i2c_bno080_not_detected` | 3 | head-tracking IMU not answering |
@@ -268,6 +288,10 @@ the ring buffer until a phone connects, and are evicted like any other frame onc
 (~40 s of `gnss_fix`). Clean resets (power-on, software reset) emit nothing: a reboot is then
 only visible as `dev_seq` / `t_dev_ms` jumping backwards. New codes may appear at any time (§4.4);
 the backend stores ones it does not know about without any change.
+
+Retired with ADR-001 (firmware ≤ 0.47; never reused): `wifi_disconnected`,
+`ntrip_connect_failed`, `ntrip_rtcm_timeout`, `ntrip_bad_response`, `ntrip_request_overflow`.
+The caster session is the app's; it reports that state through `ntrip_status`.
 
 **`app_event`**: app-created (`source` = `phone`): `name` (e.g. `app_launched`, `walk_started`,
 `walk_stopped`, `upload_failed`), `data` (small JSON object).
@@ -288,8 +312,8 @@ the backend stores ones it does not know about without any change.
 - Frames: `[u8 proto_version][u16 length][CBOR payload]`, CBOR map mirroring §4 fields
   with short integer keys (mapping table below; mirrored as `telemetry_keys.h` in
   `rtk-rover` and `TelemetryKeys.swift` in `rwa-player`).
-- Firmware side: ring buffer (4 KB — 8 KB exceeded the ESP32 heap budget next to
-  BLE + WiFi) drained by a dedicated low-priority FreeRTOS task.
+- Firmware side: ring buffer (4 KB; 8 KB exceeded the ESP32 heap budget back when
+  WiFi shared the chip with BLE) drained by a dedicated low-priority FreeRTOS task.
   **Drop-oldest** on overflow; never block sensor or BLE tasks. Increment a dropped-frames
   counter reported in `heartbeat`. The ring holds roughly 40 s of `gnss_fix` at 1 Hz; events
   are produced into it regardless of the BLE link state, so after a reconnect the app receives
@@ -308,13 +332,15 @@ Same vendor family as the existing tracker service (`713D0000-...`), new service
 | TX (notify) | `713D0101-503E-4C75-BA94-3148F18D941E` |
 | CTRL (write) | `713D0102-503E-4C75-BA94-3148F18D941E` |
 
-Tracker service (`713D0000-...`), all notify-only:
+Tracker service (`713D0000-...`), notify-only except where marked:
 
 | | UUID | |
 | --- | --- | --- |
 | Heading, binary (§5.5) | `713D0005-503E-4C75-BA94-3148F18D941E` | rtk-rover >= 0.46.0; RWAHT ≥ 0.3.0 |
 | Heading, ASCII (legacy) | `713D0002-503E-4C75-BA94-3148F18D941E` | RWAHT (all versions); rtk-rover <= 0.45.x |
 | Raw position | `713D0004-503E-4C75-BA94-3148F18D941E` | rtk-rover |
+| RTCM downlink, **write** (§5.6) | `713D0006-503E-4C75-BA94-3148F18D941E` | rtk-rover ≥ 0.48.0; app → assembly |
+| GGA uplink (§5.6) | `713D0007-503E-4C75-BA94-3148F18D941E` | rtk-rover ≥ 0.48.0 |
 | *(reserved)* | `713D0003-503E-4C75-BA94-3148F18D941E` | historic `TRACKERSERVICERX`, never reuse |
 
 The telemetry service is **not advertised**: the 31-byte advertisement is
@@ -356,7 +382,7 @@ for JSON. The app drops unknown type ids (count, log).
 | --- | --- |
 | 1 | `gnss_fix` |
 | 2 | `heartbeat` |
-| 3 | `ntrip_status` |
+| 3 | *(retired 0.48.0: `ntrip_status` is app-created now, §4.3; never reuse)* |
 | 4 | `imu_status` |
 | 5 | `error` |
 
@@ -381,17 +407,17 @@ Type-specific keys start at 10 (`type` disambiguates, so numbers repeat across t
 | | 19 | `corr_age_ms` | uint |
 | `heartbeat` | 10 | `uptime_ms` | uint |
 | | 11 | `free_heap` | uint |
-| | 12 | `wifi_rssi` | int (negative dBm) |
-| | 13 | `ntrip_connected` | bool |
+| | 12 | *(retired 0.48.0: `wifi_rssi`)* | |
+| | 13 | *(retired 0.48.0: `ntrip_connected`)* | |
 | | 14 | `fw_version` | text (≤ 32 B) |
 | | 15 | `dropped_frames` | uint |
 | | 16 | `batt_mv` | uint |
 | | 17 | `heap_min` | uint |
-| | 18 | `loops_ntrip` | uint |
+| | 18 | *(retired 0.48.0: `loops_ntrip`)* | |
 | | 19 | `loops_pos` | uint |
-| `ntrip_status` | 10 | `state` | uint: 0 = disconnected, 1 = connected, 2 = reconnecting |
-| | 11 | `reconnects` | uint |
-| | 12 | `bytes_rx` | uint |
+| | 20 | `loops_corr` | uint |
+| | 21 | `rtcm_bytes` | uint |
+| `ntrip_status` | – | *(type retired on the BLE leg; keys 10–12 were `state` / `reconnects` / `bytes_rx`)* | |
 | `imu_status` | 10 | `calib_status` | uint |
 | | 11 | `report_rate_hz` | float |
 | | 12 | `resets` | uint |
@@ -422,8 +448,11 @@ not an app one. (The app does not write CTRL today.)
 One notification = one frame = **16 bytes, little-endian, packed** (fits the 20 B
 default-MTU notify payload; no reassembly, no length prefix). One frame per BLE
 connection event while a central is connected (RWAHT: while subscribed, §5.1),
-so the rate is the connection interval the central grants: roughly 22–45 Hz on
-iOS. This is a cross-repo contract: encoders in `rtk-rover` `src/main.cpp` and
+so the rate is the connection interval the central grants. rtk-rover ≥ 0.48.0
+requests 15 ms (ADR-001 §5; iOS granted it on the bench, where a 15–30 ms request
+had come back as 30 ms), i.e. ~66 events/s carrying one frame per ~13.5 ms sensor
+tick, ~74 frames/s; ≤ 0.47 ran at the 22–45 ms iOS picked unasked. This is a
+cross-repo contract: encoders in `rtk-rover` `src/main.cpp` and
 `rwa-headtracker` `rwaht/rwaht.ino` (`heading_frame_t` in both), decoders in
 `rwa-player` (`HeadtrackerManager.swift`) and `rwa-creator`
 (`bluetooth/devicehandler.cpp`).
@@ -437,7 +466,7 @@ drained every 10 ms and the cached frame always holds the newest sample, but
 only one frame is put on the wire per connection event. Nothing can leave the
 device between connection events anyway, so a faster notify rate only queued
 frames that arrived in the same burst and were discarded by the app, at the cost
-of radio airtime (WiFi blackout through coex) and Bluedroid TX buffers.
+of radio airtime and Bluedroid TX buffers.
 `t_dev_ms` is stamped at sample time, so the gap between it and arrival is the
 real sample age; `seq` counts frames put on the wire, so a gap in it still means
 lost notifications, not coalesced samples.
@@ -468,6 +497,38 @@ elevation_deg = -atan2(2(qj \* qk + qi \* qw), −qi^2 − qj^2 + qk^2 + qw^2)  
 linAccelZ_ms2 = linAccelZ / 100
 ```
 
+### 5.6 Corrections over BLE (ADR-001, rtk-rover ≥ 0.48.0)
+
+The app is the NTRIP client (§6 item 6); the assembly is a pure BLE peripheral. The
+correction loop rides on the tracker service:
+
+| | UUID | direction | property |
+| --- | --- | --- | --- |
+| RTCM downlink | `713D0006-503E-4C75-BA94-3148F18D941E` | app → assembly | write without response (write with response is accepted too) |
+| GGA uplink | `713D0007-503E-4C75-BA94-3148F18D941E` | assembly → app | notify |
+
+**RTCM downlink.** The app writes the caster's byte stream as it arrives, each write
+carrying the next bytes of the stream in order, at most ATT MTU − 3 bytes per write (514 at
+the MTU 517 iOS negotiates, 182 at 185). No framing, no length prefix, no alignment to RTCM
+message boundaries: RTCM3 is self-delimiting (preamble, length, CRC) and the receiver
+resyncs on it. Nothing is acknowledged; the app must not wait for anything before the next
+write. On the assembly each chunk lands in a 4 KB drop-oldest FIFO (~3 VRS epochs) and is
+pushed to the ZED-F9P over I²C by the corrections task; `rtcm_bytes` in `heartbeat` and
+`corr_age_ms` in `gnss_fix` prove the bytes reached the receiver, `rtcm_fifo_overflow`
+(§4.3) reports chunks that did not. Wire load: VRS epochs are 1.0–1.4 KB at 1 Hz, i.e.
+6–8 writes per second at MTU 185, well inside one connection interval.
+
+**GGA uplink.** The receiver's own `$GPGGA` sentence, ASCII without the trailing CRLF, one
+notification per sentence, at most 1 Hz (the receiver emits GGA every tenth navigation
+epoch), and only sentences with a fix (quality field ≥ 1): a fixless GGA is useless to the
+VRS, which computes its virtual station from it. The app forwards the latest one to the
+caster with CRLF appended every ~10 s, and seeds the caster from CoreLocation until the
+first one arrives (ADR-001 par. 2). The sentence is sent as-is from the receiver; the app
+neither parses nor rebuilds it. Until the MTU exchange (MTU 23) the ~80 B sentence does not
+fit one notification and is skipped, not split: there is no framing to reassemble. The
+characteristic going quiet means the receiver lost its fix (like `713D0004` going quiet);
+the app keeps sending its last GGA or the CoreLocation one.
+
 ---
 
 ## 6. App responsibilities (rwa-player)
@@ -482,6 +543,11 @@ linAccelZ_ms2 = linAccelZ / 100
    (backend dedupes on `(device_id, session_id, seq, time)`, §4.2).
 5. Surface assembly health minimally in a debug screen (last fix quality, NTRIP state,
    connected assembly kind and id).
+6. **NTRIP client** (ADR-001): hold the caster session over cellular with the unit's
+   credentials (a setting next to Unit ID; the firmware embeds none), write the RTCM
+   stream to the assembly and forward the assembly's GGA to the caster every ~10 s
+   (§5.6; CoreLocation-seeded until the assembly delivers one), and report the session
+   as `ntrip_status` events plus `heartbeat.ntrip_connected` (`source` = `phone`).
 
 ---
 
@@ -523,8 +589,11 @@ Operations: nightly `pg_dump` to S3 (host cron + `scripts/backup.sh`), disk-usag
 
 ## 8. OTA groundwork (decisions made now, delivery later)
 
-1. **Firmware**: ESP32 flash partitioned with the standard two-OTA-slot scheme from the
-   first deployed build. `fw_version` (semver + git hash) reported in every heartbeat.
+1. **Firmware**: ESP32 flash partitioned with a two-OTA-slot scheme. Shipped:
+   `no_ota.csv` (one 2 MB slot) through 2026-09-11, `min_spiffs.csv` (two 1.92 MB
+   slots, `ota_0`/`ota_1` + `otadata`) from then on; the stock `default.csv` slots
+   (1.25 MB) are too small for the ~1.6 MB image. `fw_version` (semver + git hash)
+   reported in every heartbeat.
    Future delivery path: backend → app → BLE chunked transfer (CTRL characteristic),
    protocol already versioned.
 2. **Content (soundwalks)**: versioned asset bundles described by a manifest, fetched
@@ -539,7 +608,9 @@ Operations: nightly `pg_dump` to S3 (host cron + `scripts/backup.sh`), disk-usag
 2. Backend stack up; build dashboards against `scripts/fake_data.py` synthetic traffic.
 3. rwa-player: SQLite buffer + uploader, tested with canned events.
 4. rtk-rover: telemetry GATT service + trace task; watch real events land in Grafana.
-5. OTA partition table ships with the first trace-task firmware build.
+5. ~~OTA partition table ships with the first trace-task firmware build.~~ Shipped
+   2026-09-11 (`min_spiffs.csv`), later than planned; the single-slot table did
+   not block anything before OTA delivery exists.
 
 ## 10. Decision log
 
@@ -558,4 +629,6 @@ Operations: nightly `pg_dump` to S3 (host cron + `scripts/backup.sh`), disk-usag
 | 2026-08 | §4–5 re-checked against shipped firmware 0.44.3 | key tables matched exactly; the prose had drifted (status_dump scope, imu_status cadence, frame splitting, error codes, advertising) |
 | 2026-08 | Reduced positioning reporting frequency to 10 Hz | reduce I2C load on ZED-F9P |
 | 2026-08 | Binary heading frame on `713D0005` (§5.5), rtk-rover 0.46.0; `713D0002` ASCII heading frozen as RWAHT-only | head-tracking latency: the ASCII path quantized to integer degrees, carried no seq/timestamp, and rode on a sensor FIFO that delivered stale oldest-first samples; no dual-emit, so fleet firmware and apps ship together |
+| 2026-09 | rtk-rover partition table `min_spiffs.csv` (two 1.92 MB OTA slots) | the image (~1.63 MB) outgrew the stock `default.csv` OTA slots (1.25 MB); `min_spiffs.csv` keeps ~330 KB headroom and nothing in the firmware uses SPIFFS. One USB flash per unit to apply |
 | 2026-08 | RWAHT 0.3.0 adopts the `713D0005` binary frame alongside the legacy `713D0002`, one active path per connection selected by CCCD subscription (binary wins) | RWAHT serves clients outside the fleet-shipping cycle (RWA Monitor, pd-based projects), so unlike rtk-rover it keeps the ASCII path for unmodified clients; subscription selection means the inactive path costs nothing. Kind detection must key on `713D0004`/telemetry, no longer on `713D0005` presence |
+| 2026-09 | ADR-001: BLE is the assembly's only radio; rwa-player is the NTRIP client and proxies RTCM down / GGA up over BLE (rtk-rover 0.48.0). Retired: heartbeat `wifi_rssi` / `ntrip_connected` / `loops_ntrip`, firmware `ntrip_status`, the five WiFi/NTRIP error codes, per-unit caster credentials in the image | WiFi/BLE coexistence pinned the heading link at the ~45 ms interval iOS grants unasked and added 100–150 ms beacon-wake jitter tails; a faster interval starved the NTRIP stream; heap sat at the escalation threshold; the hotspot's cellular path dozed. One radio removes all four. No dual-transport period: fleet firmware and app ship together |
