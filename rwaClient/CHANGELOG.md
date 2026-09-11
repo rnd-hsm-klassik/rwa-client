@@ -16,6 +16,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per-destination manifest (iOS 16) and devicectl's mtime comparison still
   recognise the assets already on the phone and skip them.
 
+### Changed
+
+- Head-tracking statistics in the Diagnostics tab now measure *updates*, not
+  notifications (`HeadingStats`). Nothing leaves the assembly between BLE
+  connection events, so the frames riding one event arrive back to back and
+  refresh the same orientation; they used to be counted as separate arrivals,
+  which read ~73 Hz on a ~33 Hz link with rtk-rover 0.46.0 (2-3 frames per
+  event) and mixed sub-millisecond intra-burst gaps into the interval
+  statistics. Frames arriving within 5 ms of the previous one (far below the
+  15 ms minimum interval iOS grants) now fold into one update. Shown: update
+  rate, update interval as mean ± standard deviation / max, and frames per
+  update (1.0 = the firmware's one-frame-per-event pacing from rtk-rover
+  0.46.2 holds). Every frame is still applied to the hero and to step
+  detection; only the statistics coalesce.
+  `HeadingStatsTests` pins the folding and the mean / sd / max figures
+  against an injected clock.
+
+  Dropped with it, as debugging aids from the binary-heading bring-up: the
+  cumulative frame and dropped-frame counters (`seq` gaps; the link layer
+  retransmits and 0.46.2 skips a tick under TX congestion instead of
+  overflowing), the azimuth-changed ratio (frames now go out only when
+  fresh, so it merely measured head motion) and the device-to-phone delay
+  jitter (with one frame per event it sits near one connection interval by
+  construction). The firmware heartbeat's IMU rate is labelled
+  "IMU sample rate (device)" so it is not mistaken for the delivery rate.
+
+- `PROJECT-PLAN.md` synced from rtk-rover (0.46.2): adds §5.5, the binary
+  heading frame, with the one-frame-per-connection-event rate.
+
 ## [1.3.20] - 2026-09-04
 
 ### Added

@@ -248,13 +248,14 @@ The codes are part of the contract (they will be alert labels). What the firmwar
 
 | `code` | sev | when |
 | --- | --- | --- |
-| `wifi_disconnected` | 1 | hotspot lost, trying to get back on |
+| `wifi_disconnected` | 1 | hotspot missing or lost for more than 30 s, trying to get back on. |
 | `ntrip_connect_failed` | 1 | could not reach the caster, or it never answered the request |
 | `ntrip_rtcm_timeout` | 1 | no corrections for 10 s, dropping the caster connection |
 | `ntrip_bad_response` | 2 | caster answered, but not with a correction stream (`msg` carries the reply) |
 | `ntrip_request_overflow` | 2 | the request to the caster did not fit its buffer: a config mistake, not a field fault |
 | `gnss_pipe_stall` | 1 | a GNSS-pipeline step ran over threshold (5 s): one NTRIP-task iteration (`msg` carries the mutex/checkUblox/push/GGA phase breakdown; the remainder is connect/response time) or one position-task `updatePosition` mutex hold. Diagnosis instrumentation for the 2026-08 slowdowns; rate-limited to one per 10 s per site |
 | `gnss_degraded` | 2 | the receiver produced no GGA for 30 s (mute module, bench 4.1 2026-08-24) and a recovery-ladder rung ran: `msg` carries silence duration, attempt number and action (reconfigure → sw reset → hard reset). While silent, caster connects are skipped (a VRS streams nothing without GGA) |
+| `gnss_config_retry` | 1 | the receiver answered `begin()` but did not acknowledge one configuration write during setup; the whole configuration is retried and `msg` names the step. Not a wiring fault (until 0.46.2 this raised `i2c_gnss_not_detected` instead) |
 | `i2c_bus_rtk_failed` | 3 | the sensor bus would not start |
 | `i2c_bno080_not_detected` | 3 | head-tracking IMU not answering |
 | `i2c_gnss_not_detected` | 3 | GNSS receiver not answering: the assembly is useless without it |
@@ -299,7 +300,7 @@ the backend stores ones it does not know about without any change.
 
 ### 5.1 GATT UUIDs
 
-Same vendor family as the existing tracker service (`713D0000-…`), new service:
+Same vendor family as the existing tracker service (`713D0000-...`), new service:
 
 | | UUID |
 | --- | --- |
@@ -307,11 +308,31 @@ Same vendor family as the existing tracker service (`713D0000-…`), new service
 | TX (notify) | `713D0101-503E-4C75-BA94-3148F18D941E` |
 | CTRL (write) | `713D0102-503E-4C75-BA94-3148F18D941E` |
 
-The telemetry service is **not advertised**: the 31-byte advertisement is already full with the
-tracker service UUID. The app connects on the tracker service as before and discovers telemetry
-afterwards. This is also how the app tells the two assembly kinds apart: the plain headtracker
-(RWAHT) exposes only the tracker service with `713D0002`; the RTK headtracker additionally
-exposes the raw position characteristic `713D0004` and the telemetry service.
+Tracker service (`713D0000-...`), all notify-only:
+
+| | UUID | |
+| --- | --- | --- |
+| Heading, binary (§5.5) | `713D0005-503E-4C75-BA94-3148F18D941E` | rtk-rover >= 0.46.0; RWAHT ≥ 0.3.0 |
+| Heading, ASCII (legacy) | `713D0002-503E-4C75-BA94-3148F18D941E` | RWAHT (all versions); rtk-rover <= 0.45.x |
+| Raw position | `713D0004-503E-4C75-BA94-3148F18D941E` | rtk-rover |
+| *(reserved)* | `713D0003-503E-4C75-BA94-3148F18D941E` | historic `TRACKERSERVICERX`, never reuse |
+
+The telemetry service is **not advertised**: the 31-byte advertisement is
+already full with the tracker service UUID. The app connects on the tracker
+service as before and discovers telemetry afterwards. The app tells the two
+assembly kinds apart by the RTK-only attributes: the RTK headtracker exposes the
+raw position characteristic `713D0004` and the telemetry service, the plain
+headtracker (RWAHT) does not. (Before RWAHT 0.3.0 the binary heading
+characteristic `713D0005` was RTK-only too; since RWAHT 0.3.0 both kinds expose
+it, so `713D0005` presence must not be used for kind detection.) The apps pick
+the heading decoder per characteristic: binary frames on `713D0005` when it
+exists, the ASCII format on `713D0002` otherwise (pre-0.3.0 RWAHT fallback). An
+rtk-rover >= 0.46.0 assembly emits no ASCII heading, so apps older than the
+`713D0005` decoder get no heading from it. RWAHT >= 0.3.0 instead keeps both
+characteristics and selects one active path per connectio* by the client's
+notify subscription (CCCD): a subscription on `713D0005` silences the ASCII
+path; with only `713D0002` subscribed (or none) the ASCII path runs, so older
+clients keep working unchanged. Subscriptions reset on disconnect.
 
 ### 5.2 Framing details
 
@@ -395,6 +416,57 @@ Write `[u8 cmd][args…]` to the CTRL characteristic. Unknown commands are ignor
 asked for on demand — the app waits for the next state change, or the next 60 s IMU report.
 If the Diagnostics tab ever needs a complete snapshot on demand, that is a firmware change,
 not an app one. (The app does not write CTRL today.)
+
+### 5.5 Binary heading frame (`713D0005`, rtk-rover ≥ 0.46.0, RWAHT >= 0.3.0)
+
+One notification = one frame = **16 bytes, little-endian, packed** (fits the 20 B
+default-MTU notify payload; no reassembly, no length prefix). One frame per BLE
+connection event while a central is connected (RWAHT: while subscribed, §5.1),
+so the rate is the connection interval the central grants: roughly 22–45 Hz on
+iOS. This is a cross-repo contract: encoders in `rtk-rover` `src/main.cpp` and
+`rwa-headtracker` `rwaht/rwaht.ino` (`heading_frame_t` in both), decoders in
+`rwa-player` (`HeadtrackerManager.swift`) and `rwa-creator`
+(`bluetooth/devicehandler.cpp`).
+
+Consumers **must not assume a sample interval**: derive rotation speed as delta
+angle / delta `t_dev_ms` from consecutive frames. The rate is set by the central
+and can change mid-session.
+
+Sampling and transmission are separate in rtk-rover (>= 0.46.2): the IMU is
+drained every 10 ms and the cached frame always holds the newest sample, but
+only one frame is put on the wire per connection event. Nothing can leave the
+device between connection events anyway, so a faster notify rate only queued
+frames that arrived in the same burst and were discarded by the app, at the cost
+of radio airtime (WiFi blackout through coex) and Bluedroid TX buffers.
+`t_dev_ms` is stamped at sample time, so the gap between it and arrival is the
+real sample age; `seq` counts frames put on the wire, so a gap in it still means
+lost notifications, not coalesced samples.
+
+| offset | field | type | meaning |
+| --- | --- | --- | --- |
+| 0 | `seq` | u16 | frame counter; starts at 1 each boot, wraps at 65535. Gaps = dropped frames (diagnostic only, like `dev_seq`) |
+| 2 | `t_dev_ms` | u32 | device `millis()` when the frame was built |
+| 6 | `qi` | i16 Q14 | quaternion x \* 16384 |
+| 8 | `qj` | i16 Q14 | quaternion y \* 16384 |
+| 10 | `qk` | i16 Q14 | quaternion z \* 16384 |
+| 12 | `qw` | i16 Q14 | quaternion w (real) \* 16384 |
+| 14 | `linAccelZ` | i16 | linear acceleration z in cm/s² (m/s² \* 100) |
+
+The quaternion is the BNO080 **ARVR-stabilized rotation vector** (mag-fused,
+yaw-referenced to magnetic north), unit-length before quantization; components are
+clamped to the i16 range. Apps drop frames whose length is not exactly 16 (count, log).
+
+Canonical angle conversion: all consumers implement this specific math so a
+given frame renders the same everywhere (it reproduces the pre-0.46 firmware's
+Euler convention; normalizing the decoded quaternion is unnecessary — both
+`atan2` forms are scale-invariant):
+
+```
+azimuth_deg   = -atan2(2(qi \* qj + qk \* qw), qi^2 − qj^2 − qk^2 + qw^2)  \*  180/pi
+                if azimuth_deg < 0: azimuth_deg += 360        -> [0, 360), clockwise-positive
+elevation_deg = -atan2(2(qj \* qk + qi \* qw), −qi^2 − qj^2 + qk^2 + qw^2)  \*  180/pi
+linAccelZ_ms2 = linAccelZ / 100
+```
 
 ---
 
@@ -485,3 +557,5 @@ Operations: nightly `pg_dump` to S3 (host cron + `scripts/backup.sh`), disk-usag
 | 2026-08 | `source` enum on every event (`rtk_headtracker` / `headtracker` / `phone` / `creator`); one `gnss_fix` stream per source | the old values mixed sensor and emitter and were absent on firmware events; the RTK assembly produced two fixes per second |
 | 2026-08 | §4–5 re-checked against shipped firmware 0.44.3 | key tables matched exactly; the prose had drifted (status_dump scope, imu_status cadence, frame splitting, error codes, advertising) |
 | 2026-08 | Reduced positioning reporting frequency to 10 Hz | reduce I2C load on ZED-F9P |
+| 2026-08 | Binary heading frame on `713D0005` (§5.5), rtk-rover 0.46.0; `713D0002` ASCII heading frozen as RWAHT-only | head-tracking latency: the ASCII path quantized to integer degrees, carried no seq/timestamp, and rode on a sensor FIFO that delivered stale oldest-first samples; no dual-emit, so fleet firmware and apps ship together |
+| 2026-08 | RWAHT 0.3.0 adopts the `713D0005` binary frame alongside the legacy `713D0002`, one active path per connection selected by CCCD subscription (binary wins) | RWAHT serves clients outside the fleet-shipping cycle (RWA Monitor, pd-based projects), so unlike rtk-rover it keeps the ASCII path for unmodified clients; subscription selection means the inactive path costs nothing. Kind detection must key on `713D0004`/telemetry, no longer on `713D0005` presence |

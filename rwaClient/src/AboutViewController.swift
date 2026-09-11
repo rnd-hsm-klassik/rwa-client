@@ -87,21 +87,21 @@ class AboutViewController: UITableViewController {
             Row(label: "Steps", value: "\(hero.stepCount)")
         ]
         if let c = h.imuCalibStatus { imu.append(Row(label: "Calibration", value: "\(c)")) }
-        if let r = h.imuReportRateHz { imu.append(Row(label: "Report rate", value: String(format: "%.0f Hz", r))) }
-        // Heading-feed arrival stats (HeadingStats, fed per BLE frame): the
-        // latency/staleness view. "Changed" well below 100 % with the head
-        // moving means stale or quantized frames, not a still head.
+        // Two different rates: the IMU samples on the device at ~75-100 Hz
+        // (firmware imu_status), but the orientation reaches the app only once
+        // per BLE connection event (HeadingStats, ~22-45 Hz on iOS depending on
+        // the interval the phone granted).
+        if let r = h.imuReportRateHz {
+            imu.append(Row(label: "IMU sample rate (device)", value: String(format: "%.0f Hz", r)))
+        }
         let hs = HeadingStats.shared.snapshot()
         if let format = hs.format {
             imu.append(Row(label: "Heading feed", value: format.rawValue))
-            imu.append(Row(label: "Arrival rate", value: String(format: "%.0f Hz", hs.rateHz)))
-            imu.append(Row(label: "Interval mean / max",
-                           value: String(format: "%.1f / %.0f ms", hs.meanIntervalMs, hs.maxIntervalMs)))
-            imu.append(Row(label: "Changed frames", value: String(format: "%.0f %%", hs.changedRatio * 100)))
-            if hs.format == .binary {
-                imu.append(Row(label: "Dropped frames", value: "\(hs.dropCount) of \(hs.frameCount)"))
-                imu.append(Row(label: "Delay jitter", value: String(format: "%.0f ms", hs.delayJitterMs)))
-            }
+            imu.append(Row(label: "Update rate (BLE)", value: String(format: "%.1f Hz", hs.updateRateHz)))
+            imu.append(Row(label: "Interval mean ± sd / max",
+                           value: String(format: "%.1f ± %.1f / %.0f ms",
+                                         hs.meanIntervalMs, hs.sdIntervalMs, hs.maxIntervalMs)))
+            imu.append(Row(label: "Frames per update", value: String(format: "%.2f", hs.framesPerUpdate)))
         }
         out.append(Section(title: "Motion data", rows: imu))
 

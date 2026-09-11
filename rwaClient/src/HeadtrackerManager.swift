@@ -563,9 +563,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
                 // Full float precision from the wire (Q14 quaternion, sub-0.01 deg);
                 // rounding happens only where degrees are displayed.
                 let azimuthOrgNew = wrap360(Double(frame.azimuthDeg))
-                HeadingStats.shared.record(format: .binary,
-                                           azimuthChanged: Int(azimuthOrgNew.rounded()) != Int(azimuthOrg.rounded()),
-                                           seq: frame.seq, tDevMs: frame.tDevMs)
+                HeadingStats.shared.record(format: .binary)
                 applyHeadingSample(azimuthOrgNew: azimuthOrgNew,
                                    elevationOrgNew: Double(frame.elevationDeg),
                                    linAccelNew: frame.linAccelZ)
@@ -655,9 +653,7 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
 
                 os_signpost(.event, log: headtrackingSignpostLog, name: "heading_frame")
                 let azimuthOrgNew = wrap360(azimuthParsed)
-                HeadingStats.shared.record(format: .ascii,
-                                           azimuthChanged: Int(azimuthOrgNew.rounded()) != Int(azimuthOrg.rounded()),
-                                           seq: nil, tDevMs: nil)
+                HeadingStats.shared.record(format: .ascii)
                 applyHeadingSample(azimuthOrgNew: azimuthOrgNew,
                                    elevationOrgNew: elevationParsed,
                                    linAccelNew: NSString(string: linAccTmp).floatValue)

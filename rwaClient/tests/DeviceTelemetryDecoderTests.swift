@@ -249,3 +249,59 @@ final class AssemblyKindDetectionTests: XCTestCase {
                        .rtkHeadtracker)
     }
 }
+
+// MARK: - Heading update statistics
+
+/// HeadingStats folds the frames of one BLE connection event into a single
+/// update and reports the update interval's mean / sd / max.
+final class HeadingStatsTests: XCTestCase {
+
+    private let t0: CFAbsoluteTime = 1_000_000
+
+    override func setUp() {
+        super.setUp()
+        HeadingStats.shared.reset()
+    }
+
+    /// rtk-rover 0.46.0 pattern: two frames per 30 ms connection event, 1 ms
+    /// apart. Old per-notification counting read this as ~67 Hz.
+    func testFramesOfOneConnectionEventFoldIntoOneUpdate() {
+        let stats = HeadingStats.shared
+        for i in 0...200 {   // 6 s of events; the 5 s window publishes at i = 167
+            let at = t0 + Double(i) * 0.030
+            stats.record(format: .binary, at: at)
+            stats.record(format: .binary, at: at + 0.001)
+        }
+        let s = stats.snapshot(at: t0 + 6.1)
+        XCTAssertEqual(s.updateRateHz, 33.3, accuracy: 0.2)
+        XCTAssertEqual(s.framesPerUpdate, 2.0, accuracy: 0.001)
+        XCTAssertEqual(s.meanIntervalMs, 30, accuracy: 0.01)
+        XCTAssertEqual(s.sdIntervalMs, 0, accuracy: 0.01)
+        XCTAssertEqual(s.maxIntervalMs, 30, accuracy: 0.01)
+    }
+
+    /// Alternating 24 / 36 ms updates: mean 30 ms, sd 6 ms, max 36 ms.
+    func testIntervalJitterIsStandardDeviation() {
+        let stats = HeadingStats.shared
+        var at = t0
+        for i in 0...200 {
+            stats.record(format: .ascii, at: at)
+            at += (i % 2 == 0) ? 0.024 : 0.036
+        }
+        let s = stats.snapshot(at: at)
+        XCTAssertEqual(s.format, .ascii)
+        XCTAssertEqual(s.updateRateHz, 33.3, accuracy: 0.2)
+        XCTAssertEqual(s.framesPerUpdate, 1.0, accuracy: 0.001)
+        XCTAssertEqual(s.meanIntervalMs, 30, accuracy: 0.05)
+        XCTAssertEqual(s.sdIntervalMs, 6, accuracy: 0.05)
+        XCTAssertEqual(s.maxIntervalMs, 36, accuracy: 0.01)
+    }
+
+    /// The rate reads 0 once the stream has been quiet for 2 s.
+    func testRateZeroesWhenStreamStops() {
+        let stats = HeadingStats.shared
+        for i in 0...200 { stats.record(format: .binary, at: t0 + Double(i) * 0.030) }
+        XCTAssertGreaterThan(stats.snapshot(at: t0 + 6.5).updateRateHz, 30)
+        XCTAssertEqual(stats.snapshot(at: t0 + 9).updateRateHz, 0)
+    }
+}

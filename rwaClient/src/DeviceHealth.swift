@@ -240,15 +240,24 @@ final class DeviceHealth {
     }
 }
 
-/// Head-tracking arrival statistics for the Diagnostics tab: rate,
-/// inter-arrival jitter, staleness evidence (frames whose azimuth actually
-/// changed vs frames received), plus drop count and device -> phone delay
-/// jitter when the binary format's seq / t_dev_ms are available.
+/// Head-tracking update statistics for the Diagnostics tab: the rate at
+/// which the app's orientation is actually refreshed over BLE, with the mean,
+/// jitter (standard deviation) and max of the update interval.
 ///
-/// Fed by HeadtrackerManager on every heading frame (either wire format). Not
-/// part of DeviceHealth: its mutate() posts a notification per write, which at
-/// ~100 Hz would flood the main run loop. This class just accumulates under a
-/// lock over 5s windows.
+/// One update is one distinct arrival instant. Nothing leaves the assembly
+/// between BLE connection events, so frames that ride the same event arrive
+/// back to back (within ~1 ms) and refresh the same orientation: they are
+/// folded into one update, not counted as separate ones. rtk-rover 0.46.0
+/// sent 2-3 frames per event (which made the old per-notification count read
+/// ~73 Hz on a ~33 Hz link); 0.46.2 paces to ~1.1. "Frames per update" says
+/// how well that pacing holds (target 1.0). The fold threshold is far below
+/// the shortest connection interval iOS grants (15 ms).
+///
+/// Fed by HeadtrackerManager on every heading frame (either wire format);
+/// every frame is still applied to the hero and to step detection, only the
+/// statistics coalesce. Not part of DeviceHealth: its mutate() posts a
+/// notification per write, which at this rate would flood the main run loop.
+/// This class just accumulates under a lock over tumbling 5 s windows.
 final class HeadingStats {
 
     static let shared = HeadingStats()
@@ -260,26 +269,28 @@ final class HeadingStats {
 
     struct Snapshot {
         var format: WireFormat?
-        var rateHz: Double = 0
+        var updateRateHz: Double = 0
         var meanIntervalMs: Double = 0
+        var sdIntervalMs: Double = 0     // jitter: standard deviation of the update interval
         var maxIntervalMs: Double = 0
-        var changedRatio: Double = 0     // azimuth-changed frames / frames, last window
-        var frameCount = 0               // cumulative since connect
-        var dropCount = 0                // cumulative seq gaps (binary only)
-        var delayJitterMs: Double = 0    // spread of (arrival - t_dev_ms), last window
+        var framesPerUpdate: Double = 0  // notifications folded into one update, last window
     }
+
+    /// A frame this close to the previous one arrived in the same BLE
+    /// connection event.
+    static let sameEventThresholdMs = 5.0
+    static let windowSeconds = 5.0
 
     private let lock = NSLock()
     private var published = Snapshot()
-    private var lastArrival: CFAbsoluteTime = 0
+    private var lastUpdate: CFAbsoluteTime = 0   // arrival of the current update
     private var windowStart: CFAbsoluteTime = 0
     private var windowFrames = 0
-    private var windowChanged = 0
-    private var windowIntervalSum = 0.0
-    private var windowIntervalMax = 0.0
-    private var windowSkewMin = Double.infinity   // arrival - t_dev, ms
-    private var windowSkewMax = -Double.infinity
-    private var lastSeq: UInt16?
+    private var windowUpdates = 0
+    private var intervalCount = 0
+    private var intervalSum = 0.0
+    private var intervalSumSq = 0.0
+    private var intervalMax = 0.0
 
     private init() {}
 
@@ -287,72 +298,71 @@ final class HeadingStats {
     func reset() {
         lock.lock(); defer { lock.unlock() }
         published = Snapshot()
-        lastArrival = 0; windowStart = 0
+        lastUpdate = 0; windowStart = 0
         resetWindowLocked()
-        lastSeq = nil
     }
 
-    func record(format: WireFormat, azimuthChanged: Bool, seq: UInt16?, tDevMs: UInt32?) {
-        let now = CFAbsoluteTimeGetCurrent()
+    /// `now` is injectable for tests only.
+    func record(format: WireFormat, at now: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()) {
         lock.lock(); defer { lock.unlock() }
 
         published.format = format
-        published.frameCount += 1
-        if let seq = seq {
-            if let last = lastSeq {
-                // Wrapping distance; a device reboot (seq restart) shows up as
-                // a huge "gap" - ignore anything implausible for one interval.
-                let gap = Int(seq &- last) - 1
-                if gap > 0 && gap < 1000 { published.dropCount += gap }
-            }
-            lastSeq = seq
+
+        let dt = (now - lastUpdate) * 1000
+        if lastUpdate > 0 && dt < HeadingStats.sameEventThresholdMs {
+            windowFrames += 1
+            return   // same connection event as the previous frame: not a new update
         }
 
-        if windowStart == 0 { windowStart = now }
-        windowFrames += 1
-        if azimuthChanged { windowChanged += 1 }
-        if lastArrival > 0 {
-            let dt = (now - lastArrival) * 1000
-            windowIntervalSum += dt
-            if dt > windowIntervalMax { windowIntervalMax = dt }
-        }
-        lastArrival = now
-        if let t = tDevMs {
-            let skew = now * 1000 - Double(t)
-            if skew < windowSkewMin { windowSkewMin = skew }
-            if skew > windowSkewMax { windowSkewMax = skew }
-        }
-
-        // Tumbling 5 s window: publish and start over.
-        let age = now - windowStart
-        if age >= 5.0 {
-            published.rateHz = Double(windowFrames) / age
-            published.meanIntervalMs = windowFrames > 1
-                ? windowIntervalSum / Double(windowFrames - 1) : 0
-            published.maxIntervalMs = windowIntervalMax
-            published.changedRatio = Double(windowChanged) / Double(windowFrames)
-            published.delayJitterMs = windowSkewMax > windowSkewMin
-                ? windowSkewMax - windowSkewMin : 0
+        // Tumbling window, closed by the first update that falls outside it,
+        // so every update (and its folded frames) belongs to exactly one window.
+        if windowStart > 0 && now - windowStart >= HeadingStats.windowSeconds {
+            publishLocked(age: now - windowStart)
             resetWindowLocked()
-            windowStart = now
+            windowStart = 0
         }
+        if windowStart == 0 { windowStart = now }
+
+        windowFrames += 1
+        windowUpdates += 1
+        if lastUpdate > 0 {
+            intervalCount += 1
+            intervalSum += dt
+            intervalSumSq += dt * dt
+            if dt > intervalMax { intervalMax = dt }
+        }
+        lastUpdate = now
+    }
+
+    private func publishLocked(age: CFAbsoluteTime) {
+        published.updateRateHz = Double(windowUpdates) / age
+        if intervalCount > 0 {
+            let mean = intervalSum / Double(intervalCount)
+            let variance = max(0, intervalSumSq / Double(intervalCount) - mean * mean)
+            published.meanIntervalMs = mean
+            published.sdIntervalMs = variance.squareRoot()
+        } else {
+            published.meanIntervalMs = 0
+            published.sdIntervalMs = 0
+        }
+        published.maxIntervalMs = intervalMax
+        published.framesPerUpdate = windowUpdates > 0
+            ? Double(windowFrames) / Double(windowUpdates) : 0
     }
 
     /// For the Diagnostics refresh (0.5 s). Stats are those of the last
-    /// completed 5 s window; the rate is zeroed once the stream stops.
-    func snapshot() -> Snapshot {
-        let now = CFAbsoluteTimeGetCurrent()
+    /// completed window; the rate is zeroed once the stream stops.
+    func snapshot(at now: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()) -> Snapshot {
         lock.lock(); defer { lock.unlock() }
         var out = published
-        if lastArrival == 0 || now - lastArrival > 2.0 {
-            out.rateHz = 0
+        if lastUpdate == 0 || now - lastUpdate > 2.0 {
+            out.updateRateHz = 0
         }
         return out
     }
 
     private func resetWindowLocked() {
-        windowFrames = 0; windowChanged = 0
-        windowIntervalSum = 0; windowIntervalMax = 0
-        windowSkewMin = .infinity; windowSkewMax = -.infinity
+        windowFrames = 0; windowUpdates = 0
+        intervalCount = 0; intervalSum = 0; intervalSumSq = 0; intervalMax = 0
     }
 }
