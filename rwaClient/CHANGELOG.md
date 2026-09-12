@@ -7,18 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Removed
+## [1.4.0] - 2026-09-12
 
-- The WiFi/NTRIP fields of the firmware telemetry, retired with rtk-rover
-  0.48.0 (ADR-001, PROJECT-PLAN.md §4.3 / §5.3): heartbeat keys 12
-  `wifi_rssi`, 13 `ntrip_connected` and 18 `loops_ntrip` are gone from
-  `TelemetryKeys` (a ≤ 0.47 assembly still sending them is ignored like any
-  unknown key), and event type 3 `ntrip_status` is no longer decoded on the
-  BLE leg (dropped as an unknown type; the app creates that event itself
-  from now on). `DeviceHealth` lost `wifiRssi` / `ntripConnected` and the
-  Diagnostics "Correction link" section its "WiFi signal" and "NTRIP" rows.
-  The decoder tests' heartbeat fixture is rebuilt around keys 19/20/21,
-  byte-identical to the firmware's AUnit fixture.
+ADR-001: BLE is the assembly's only radio and RWA Player is the NTRIP
+client (`ADR-001-ble-only-transport.md` in rtk-headtracker repo). **Pairs with
+rtk-headtracker 0.48.0**. Assemblies on <= 0.47.0 keep working for heading,
+position and telemetry but lose the Diagnostics "Correction link" rows (their
+WiFi/NTRIP telemetry fields are retired) and get no corrections from the app (no
+RTCM downlink; they keep their own WiFi client).
 
 ### Added
 
@@ -183,6 +179,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The convention that the unit label is also the phone's hotspot name is gone
   from the glossary with it: the Settings footer, the provisioning template and
   `tools/README.md` no longer mention it.
+
+### Removed
+
+- The WiFi/NTRIP fields of the firmware telemetry, retired with rtk-rover
+  0.48.0 (ADR-001, PROJECT-PLAN.md §4.3 / §5.3): heartbeat keys 12
+  `wifi_rssi`, 13 `ntrip_connected` and 18 `loops_ntrip` are gone from
+  `TelemetryKeys` (a ≤ 0.47 assembly still sending them is ignored like any
+  unknown key), and event type 3 `ntrip_status` is no longer decoded on the
+  BLE leg (dropped as an unknown type; the app creates that event itself
+  from now on). `DeviceHealth` lost `wifiRssi` / `ntripConnected` and the
+  Diagnostics "Correction link" section its "WiFi signal" and "NTRIP" rows.
+  The decoder tests' heartbeat fixture is rebuilt around keys 19/20/21,
+  byte-identical to the firmware's AUnit fixture.
 
 ## [1.3.20] - 2026-09-04
 
