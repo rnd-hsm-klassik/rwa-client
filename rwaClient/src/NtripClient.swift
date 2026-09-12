@@ -197,6 +197,11 @@ final class NtripClient {
     var onProgress: ((Int) -> Void)?
     /// The reason for every failed or dropped session, for Diagnostics.
     var onError: ((String) -> Void)?
+    /// The first failure of an outage only (after start, or after a session
+    /// that had streamed), for telemetry: the ≤ 0.47 firmware's
+    /// once-per-outage error rule, so a retry loop is one event, not one
+    /// per attempt.
+    var onOutage: ((String) -> Void)?
 
     private let appVersion: String
     private let queue = DispatchQueue(label: "ch.rwa.ntrip", qos: .utility)
@@ -218,6 +223,7 @@ final class NtripClient {
     private var successfulConnects = 0
     private var wasConnected = false
     private var reconnectingReported = false
+    private var outageReported = false
     private var bytesRx = 0
     private var bytesRxReported = 0
     private var assemblyGga: String?
@@ -388,6 +394,7 @@ final class NtripClient {
         lastDataAt = Date()
         successfulConnects += 1
         reconnectingReported = false
+        outageReported = false
         wasConnected = true
         logger.info("ntrip: stream open (connect #\(self.successfulConnects))")
         report(.connected)
@@ -453,6 +460,10 @@ final class NtripClient {
     private func fail(_ reason: String, backoff: Bool) {
         logger.error("ntrip: \(reason)")
         onError?(reason)
+        if !outageReported {
+            outageReported = true
+            onOutage?(reason)
+        }
         if backoff {
             attemptDelay = reconnectDelay
             reconnectDelay = min(reconnectDelay * 2, NtripClient.backoffMax)

@@ -22,6 +22,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **App-side `ntrip_status`, `heartbeat.ntrip_connected` and the `ntrip_started`
+  / `ntrip_failed` app events**. The NTRIP client's transitions are recorded as
+  `ntrip_status` events with the same three states and counters the firmware
+  emitted until 0.47: `state` connected / disconnected / reconnecting,
+  `reconnects` (successful connects − 1) and the cumulative `bytes_rx`;
+  transitions only, never per retry. Both counters belong to one caster client,
+  which lives as long as the BLE connection to the assembly, so they restart at
+  0 after a BLE reconnect, a caster-settings change or an app relaunch;
+  `reconnecting` is reported only for caster-side drops. The app heartbeat
+  carries `ntrip_connected`. Because the first transition is `connected`, a
+  session that never opens (unreachable caster, 401, unknown mount point, no
+  RTCM within the grace window) would leave nothing in the backend, where the ≤
+  0.47 firmware reported `ntrip_connect_failed` / `ntrip_bad_response`: the app
+  records `app_event`s `ntrip_started` (`data.caster` = host:port/mount) and
+  `ntrip_failed` (`data.reason`, `data.caster`; the firmware's once-per-outage
+  rule via `NtripClient.onOutage`, so a retry loop is one event), the latter
+  also when the assembly offers the RTCM downlink but the caster settings are
+  incomplete.
+
 - **NTRIP client** (ADR-001, PROJECT-PLAN.md §6 item 6): RWA Player holds
   the caster session and proxies the correction loop for the RTK
   headtracker, which has no radio but BLE since rtk-rover 0.48.0.
@@ -52,7 +71,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   single-session username, and a second session from the phone would starve
   it. A Settings ▸ Caster edit restarts the session (debounced 2 s).
   Diagnostics ▸ Correction link shows the client state (or why there is
-  none), the caster, RTCM received, and the last caster error.
+  none), the caster, the last caster error and "RTCM Caster → iOS": rate over
+  the assembly's heartbeat interval plus the total, taken at the same heartbeats
+  as the writer's row (`ntripRxPerInterval`) so a loss shows as a gap between
+  neighbouring rows. The client reports its byte count once per second while
+  streaming, when it moved (`onProgress` -> `DeviceHealth.setNtripBytesRx`);
+  `ntrip_status` telemetry stays transition-only.
   Tests (`NtripClientTests`): request bytes, response classification
   (ICY / HTTP 200 / SOURCETABLE / 401 / other, header completeness), the
   GGA seed and its checksum against a sentence captured from the receiver.
@@ -75,12 +99,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   order on the wire is the only framing, so bytes are never reordered or
   deduplicated. GGA notifications (the receiver's own `$GPGGA`, fix quality
   only, no CRLF) are validated and kept as the latest assembly GGA, cleared
-  with the connection. Diagnostics ▸ Correction link gains "RTCM to assembly
-  (BLE)" (bytes/s over the last firmware heartbeat interval, comparable to
-  "RTCM to receiver", plus the total and what the app's queue dropped; "not
-  offered" on ≤ 0.47 firmware) and "GGA from assembly". Nothing feeds the
-  writer yet; the NTRIP client is the next entry. Tests: `RtcmChunkerTests`,
-  `GgaNotificationTests`.
+  with the connection. Diagnostics ▸ Correction link names the RTCM hops: it
+  gains "RTCM iOS → MCU" (rate over the assembly's heartbeat interval,
+  comparable to "RTCM MCU → F9P", plus the total and what the app's queue
+  dropped; "not offered" on <= 0.47.0 firmware) and "GGA F9P → iOS". Nothing
+  feeds the writer yet; the NTRIP client is the next entry. Tests:
+  `RtcmChunkerTests`, `GgaNotificationTests`.
 
 - **Caster settings** (ADR-001, PROJECT-PLAN.md §6 item 6): the NTRIP caster
   host, port, mount point, username and password the firmware used to embed
@@ -108,9 +132,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Heartbeat keys 20 `loops_corr` and 21 `rtcm_bytes` (rtk-rover ≥ 0.48.0)
   are decoded; `rtcm_bytes` (RTCM bytes the firmware pushed into the
   receiver since its previous heartbeat) is cached in `DeviceHealth` and
-  shown in Diagnostics ▸ Correction link as "RTCM to receiver" in bytes/s,
-  next to the correction age, which moved there from the GNSS section: the
-  two together are the assembly-side proof that corrections arrive.
+  shown in Diagnostics > Correction link as "RTCM MCU → F9P", rate over the
+  heartbeat interval plus the total summed since the RTCM downlink was
+  discovered (`DeviceHealth.rtcmBytesToReceiver`), next to the correction age,
+  which moved there from the GNSS section: the two together are the
+  assembly-side proof that corrections arrive.
 
 - Head-tracking statistics in the Diagnostics tab now measure *updates*, not
   notifications (`HeadingStats`). Nothing leaves the assembly between BLE
@@ -142,9 +168,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PROJECT-PLAN.md` synced from rtk-rover (v4, 2026-09-11, branch
   `ble-only-transport`): ADR-001 makes BLE the assembly's only radio and RWA
   Player the NTRIP client (§1 connectivity, §3, §4.3, §5.1, §5.3, the new
-  §5.6 corrections-over-BLE contract, §6 item 6, §10). The convention that
-  the unit label is also the phone's hotspot name is gone from the glossary
-  with it: the Settings footer, the provisioning template and
+  §5.6 corrections-over-BLE contract, §6 item 6, §10; the §4.3 `ntrip_status`
+  paragraph states the counter scope as the app implements it, per caster client
+  / BLE connection, and lists the `ntrip_started` / `ntrip_failed` app events).
+  The convention that the unit label is also the phone's hotspot name is gone
+  from the glossary with it: the Settings footer, the provisioning template and
   `tools/README.md` no longer mention it.
 
 ## [1.3.20] - 2026-09-04

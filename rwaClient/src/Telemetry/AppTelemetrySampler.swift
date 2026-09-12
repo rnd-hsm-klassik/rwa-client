@@ -28,6 +28,9 @@
 //  heading is always app-created (the firmware has no heading event type);
 //  its source is the connected assembly's kind, or `phone` for CoreMotion.
 //
+//  ntrip_status is not sampled here: HeadtrackerManager records it straight
+//  from the NTRIP client's state transitions (ADR-001).
+//
 
 import Foundation
 import UIKit
@@ -208,7 +211,10 @@ final class AppTelemetrySampler {
             "assembly_connected": snapshot.bleConnected,
             "walk_running": rwagameloop.isRunning,
             "position_source": lastPositionSource?.rawValue ?? "none",
-            "heading_source": lastHeadingSource?.rawValue ?? "none"
+            "heading_source": lastHeadingSource?.rawValue ?? "none",
+            // The app's caster session (ADR-001): true only while the NTRIP
+            // client has an open stream.
+            "ntrip_connected": snapshot.ntripState == NtripClient.State.connected.rawValue
         ]
 
         // The assembly actually connected (advertised BLE name captured at

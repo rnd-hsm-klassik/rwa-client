@@ -615,8 +615,12 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         guard ntripClient == nil, rtcmCharacteristic != nil else { return }
         let settings = CasterSettings.load()
         guard settings.isComplete else {
+            // Visible in the backend as well: an unprovisioned phone on a
+            // 0.48.0 assembly is a fleet mistake, not a field condition.
             logger.info("ntrip: caster settings incomplete, no session (Settings ▸ Caster)")
             DeviceHealth.shared.setNtrip(state: nil, caster: nil)
+            TelemetryService.shared?.recordAppEvent(name: "ntrip_failed",
+                                                    data: ["reason": "caster settings incomplete"])
             return
         }
         let client = NtripClient(settings: settings, appVersion: DeviceHealth.appVersionShort)
@@ -637,6 +641,15 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
             DeviceHealth.shared.setNtrip(state: status.state.rawValue,
                                          reconnects: status.reconnects,
                                          bytesRx: status.bytesRx)
+            // ntrip_status (PROJECT-PLAN.md §4.3), app-created since
+            // ADR-001: the states and counters the firmware emitted until
+            // 0.47, on transitions only.
+            TelemetryService.shared?.recordAppOriginEvent(type: "ntrip_status", fields: [
+                TelemetrySource.fieldName: TelemetrySource.phone.rawValue,
+                "state": status.state.rawValue,
+                "reconnects": status.reconnects,
+                "bytes_rx": status.bytesRx
+            ])
         }
         client.onProgress = { bytesRx in
             DeviceHealth.shared.setNtripBytesRx(bytesRx)
@@ -644,8 +657,19 @@ class HeadtrackerManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelega
         client.onError = { reason in
             DeviceHealth.shared.setNtripError(reason)
         }
+        // ntrip_status only starts with the first `connected`; the session
+        // start and the failures before (or between) connections would be
+        // invisible in the backend without these app_events (the ≤ 0.47
+        // firmware had ntrip_connect_failed / ntrip_bad_response for that).
+        client.onOutage = { reason in
+            TelemetryService.shared?.recordAppEvent(name: "ntrip_failed",
+                                                    data: ["reason": reason,
+                                                           "caster": settings.endpointDescription])
+        }
         ntripClient = client
         DeviceHealth.shared.setNtrip(state: "connecting", caster: settings.endpointDescription)
+        TelemetryService.shared?.recordAppEvent(name: "ntrip_started",
+                                                data: ["caster": settings.endpointDescription])
         // A GGA that arrived before the client existed is still the best
         // position for the VRS.
         if let gga = latestAssemblyGga {

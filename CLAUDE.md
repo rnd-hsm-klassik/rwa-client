@@ -157,7 +157,9 @@ Caster settings live in Settings ▸ Caster / `player-settings.plist` (`CasterSe
 username is per unit and the accounts are single-session. The client runs while the
 connected assembly offers 713D0006 and the settings are complete (not keyed on the assembly
 kind: a ≤ 0.47 unit runs its own client on the same username). The session is reported as
-`ntrip_status` events and `heartbeat.ntrip_connected` with `source = phone`. The decision
+`ntrip_status` events (transitions only, the first one is `connected`),
+`heartbeat.ntrip_connected`, and the app events `ntrip_started` / `ntrip_failed` (once per
+outage, with the reason), all with `source = phone`. The decision
 record is `../RTKRover_mod/ADR-001-ble-only-transport.md`; the app-side handover is
 `docs/HANDOVER-adr-001-ntrip-client.md`.
 
@@ -193,8 +195,8 @@ Implemented end to end; the pieces are in `rwaClient/src/Telemetry/`.
 Still open here: gzip on the batch body, and surviving background/foreground cycles (the
 uploader uses an ephemeral `URLSession` today — no background configuration, no
 `BGTaskScheduler`). `app_event` coverage is thin: only `app_launched`, `walk_started`,
-`walk_stopped`, `upload_failed`, `assembly_connected` and `assembly_disconnected` are
-emitted.
+`walk_stopped`, `upload_failed`, `assembly_connected`, `assembly_disconnected`,
+`ntrip_started` and `ntrip_failed` are emitted.
 
 Constraints:
 
