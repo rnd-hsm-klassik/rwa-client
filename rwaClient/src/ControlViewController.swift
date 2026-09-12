@@ -269,26 +269,26 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
         }
     }
 
-    /// WGS84 position driving the walk, tagged "(RTK)" while the tracker's
-    /// RTK coordinates are the active source: selected in Settings,
-    /// delivering within the freshness window, and not overridden by OSC
-    /// registration — same priority as CoreLocationController.
+    /// WGS84 position driving the walk, tagged with the tracker's fix quality
+    /// while the tracker is the active source (PositioningPolicy): "RTK
+    /// fixed" / "RTK float" only while the receiver reports a carrier
+    /// solution, "tracker, no RTK" otherwise. Internal GPS and OSC positions
+    /// carry no tag.
     private func updateCoordinates() {
-        let rtkFresh = ubloxUpdatedAt.map {
-            Date().timeIntervalSince($0) < PositioningPolicy.freshnessWindow } ?? false
-        let rtkActive = useRtkGps && !registered && rtkFresh
+        let quality = PositioningPolicy.trackerFixQuality()
         // %.5f ≈ 1 m resolution; enough to watch movement without the line
         // turning into a number wall.
         coordsLabel.text = String(format: "WGS84 %.5f, %.5f", hero.coordinates.latitude,
-                                  hero.coordinates.longitude) + (rtkActive ? " (RTK)" : "")
-        if fixArrivedSinceLastTick(rtkActive: rtkActive) {
+                                  hero.coordinates.longitude)
+            + (quality.map { " (\($0.label))" } ?? "")
+        if fixArrivedSinceLastTick(trackerActive: quality != nil) {
             flashGpsDot()
         }
     }
 
     /// True when the active positioning source delivered a new fix since
     /// the previous poll tick.
-    private func fixArrivedSinceLastTick(rtkActive: Bool) -> Bool {
+    private func fixArrivedSinceLastTick(trackerActive: Bool) -> Bool {
         if registered {
             // OSC-sim coordinates carry no timestamp; a change is the signal.
             let current = (lat: hero.coordinates.latitude, lon: hero.coordinates.longitude)
@@ -296,7 +296,7 @@ class ControlViewController: UIViewController, F53OSCPacketDestination {
             guard let seen = seenOscCoordinate else { return false }
             return seen != current
         }
-        if rtkActive, let at = ubloxUpdatedAt {
+        if trackerActive, let at = ubloxUpdatedAt {
             defer { seenUbloxFixAt = at }
             return seenUbloxFixAt != nil && at != seenUbloxFixAt
         }

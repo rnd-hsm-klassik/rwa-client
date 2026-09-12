@@ -60,7 +60,7 @@ extension MapViewController {
                 ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
             view.annotation = annotation
             view.glyphImage = UIImage(systemName: "figure.walk")
-            view.markerTintColor = PositioningPolicy.rtkTrackerActive() ? .systemGreen : .systemOrange
+            view.markerTintColor = MapViewController.heroTint()
             view.displayPriority = .required
             return view
         }
@@ -210,17 +210,27 @@ class MapViewController: UIViewController, MKMapViewDelegate
     private let heroAnnotation = HeroAnnotation()
     private var heroMarkerTimer: Timer?
 
+    /// Green only while the tracker's position is RTK-corrected (float or
+    /// fixed); a tracker position without corrections is no better than the
+    /// phone's and gets the same orange.
+    private static func heroTint() -> UIColor {
+        return (PositioningPolicy.trackerFixQuality()?.isRtk ?? false) ? .systemGreen : .systemOrange
+    }
+
     /// Follow hero.coordinates at 1 Hz and re-tint on source changes. Also
     /// re-adds the marker after redraw(), which clears all annotations.
     @objc private func updateHeroMarker() {
-        let rtkActive = PositioningPolicy.rtkTrackerActive()
         heroAnnotation.coordinate = hero.coordinates
-        heroAnnotation.title = rtkActive ? "RTK" : (registered ? "OSC" : "GPS")
+        if let quality = PositioningPolicy.trackerFixQuality() {
+            heroAnnotation.title = quality.label
+        } else {
+            heroAnnotation.title = registered ? "OSC" : "GPS"
+        }
         if !mapView.annotations.contains(where: { $0 === heroAnnotation }) {
             mapView.addAnnotation(heroAnnotation)
         }
         if let view = mapView.view(for: heroAnnotation) as? MKMarkerAnnotationView {
-            view.markerTintColor = rtkActive ? .systemGreen : .systemOrange
+            view.markerTintColor = MapViewController.heroTint()
         }
     }
     

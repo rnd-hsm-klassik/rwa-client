@@ -129,6 +129,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Control tab's coordinate readout and the Map tab's hero marker no longer
+  call every tracker position "RTK". They now show the receiver's carrier
+  solution from the firmware's `gnss_fix` (`PositioningPolicy.
+  trackerFixQuality()`, fresh within the 8 s window): "RTK fixed", "RTK float",
+  or "tracker, no RTK" while the tracker drives the hero without corrections;
+  the marker is green only for the two RTK cases. Internal GPS and OSC positions
+  stay untagged / orange. Since ADR-001 a tracker position with no corrections
+  is the normal state whenever the app has no caster session.
+
 - Heartbeat keys 20 `loops_corr` and 21 `rtcm_bytes` (rtk-rover ≥ 0.48.0)
   are decoded; `rtcm_bytes` (RTCM bytes the firmware pushed into the
   receiver since its previous heartbeat) is cached in `DeviceHealth` and
