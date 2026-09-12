@@ -107,7 +107,7 @@ class SettingsViewController: UITableViewController, UITextFieldDelegate {
             }
             return "The Unit ID identifies this unit (phone + headset assembly) in telemetry; by convention it is also the assembly's Bluetooth name. Set Headset assembly only to connect to a different assembly (a spare, or a plain headtracker)."
         case .some(.caster):
-            return "NTRIP caster for RTK corrections (rtk-rover 0.48.0 or newer): the app holds the caster session over cellular and forwards the corrections to the RTK headtracker over Bluetooth. One username per unit; the accounts are single-session, so never use this unit's username from another client. Changes take effect within a few seconds."
+            return "NTRIP caster for RTK corrections."
         case .some(.dataSources):
             return "With RTK selected, the app falls back to internal GPS while the RTK headtracker delivers no coordinates."
         case .some(.creator):
